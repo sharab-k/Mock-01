@@ -202,7 +202,7 @@ export default function MarksDashboard() {
                     <span className="text-success font-bold">{e.to}</span>
                   </span>
                 </div>
-                <span className="block text-[11.5px] text-neutral-400 mt-0.5">"{e.reason}" · edited by {e.editor}</span>
+                <span className="block text-[11.5px] text-neutral-400 mt-0.5">&ldquo;{e.reason}&rdquo; · edited by {e.editor}</span>
               </div>
               <span className="text-[11px] font-mono text-neutral-400 shrink-0">{e.time}</span>
             </div>

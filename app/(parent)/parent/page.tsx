@@ -103,7 +103,7 @@ export default function ParentDashboard() {
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-[20px] font-bold text-neutral-900">Parent Dashboard</h1>
-          <p className="text-[13px] text-neutral-500 mt-0.5">Real-time view of your children's academic progress at JE Academy.</p>
+          <p className="text-[13px] text-neutral-500 mt-0.5">Real-time view of your children&apos;s academic progress at JE Academy.</p>
         </div>
         <span className="inline-flex items-center gap-2 text-[12px] font-medium text-ink-600 bg-ink-50 border border-ink-100 px-3.5 py-1.5 rounded-full">
           <ShieldCheck size={13} />
@@ -156,7 +156,7 @@ export default function ParentDashboard() {
         {/* Marks — 2/3 */}
         <div className="xl:col-span-2 bg-white rounded-2xl border border-neutral-200 shadow-1 overflow-hidden">
           <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-100">
-            <h2 className="text-[14px] font-semibold text-neutral-900">{activeChild.name.split(' ')[0]}'s Marks</h2>
+            <h2 className="text-[14px] font-semibold text-neutral-900">{activeChild.name.split(' ')[0]}&apos;s Marks</h2>
             <a href="/parent/marks" className="text-[12px] text-ink-600 hover:text-ink-800 no-underline font-medium">Full report →</a>
           </div>
           <table className="w-full text-[13px]">

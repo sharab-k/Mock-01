@@ -71,7 +71,7 @@ export default function TeacherDashboard() {
         {/* Today's timetable — 1/3 */}
         <div className="bg-white rounded-2xl border border-neutral-200 shadow-1 p-6">
           <div className="flex items-center justify-between mb-5">
-            <h2 className="text-[14px] font-semibold text-neutral-900">Today's Timetable</h2>
+            <h2 className="text-[14px] font-semibold text-neutral-900">Today&apos;s Timetable</h2>
             <a href="/teacher/timetable" className="text-[12px] text-ink-600 hover:text-ink-800 no-underline font-medium">Full →</a>
           </div>
           <div className="space-y-3">
