@@ -1,0 +1,30 @@
+<svg viewBox="0 0 220 220" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="innerBg" cx="50%" cy="42%" r="58%">
+      <stop offset="0%" stop-color="#1B6A9A"/>
+      <stop offset="100%" stop-color="#0E3D5C"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Outer bright-blue ring -->
+  <circle cx="110" cy="110" r="110" fill="#1D87BE"/>
+
+  <!-- Dashed white border -->
+  <circle cx="110" cy="110" r="100" fill="none" stroke="white" stroke-width="2" stroke-dasharray="8 5" opacity="0.75"/>
+
+  <!-- Inner dark circle -->
+  <circle cx="110" cy="110" r="92" fill="url(#innerBg)"/>
+
+  <!-- J.E -->
+  <text x="110" y="80" font-family="Georgia,'Times New Roman',serif" font-size="44" font-weight="bold" fill="white" text-anchor="middle" letter-spacing="-1">J.E</text>
+
+  <!-- ACADEMY -->
+  <text x="110" y="122" font-family="Georgia,'Times New Roman',serif" font-size="32" font-weight="bold" fill="white" text-anchor="middle" letter-spacing="2">ACADEMY</text>
+
+  <!-- SCIENCE & COMMERCE -->
+  <text x="110" y="143" font-family="Arial,Helvetica,sans-serif" font-size="9.5" fill="white" text-anchor="middle" letter-spacing="3" font-weight="400">SCIENCE &amp; COMMERCE</text>
+
+  <!-- Bottom banner -->
+  <rect x="18" y="158" width="184" height="24" rx="12" fill="rgba(255,255,255,0.93)"/>
+  <text x="110" y="174" font-family="Arial,Helvetica,sans-serif" font-size="8.8" fill="#0E3D5C" text-anchor="middle" font-weight="500">Under The Supervision Of Sir Abdullah</text>
+</svg>

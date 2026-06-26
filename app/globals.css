@@ -1,0 +1,75 @@
+@import "tailwindcss";
+
+@theme {
+  /* ── Neutral palette (warm grays) ── */
+  --color-neutral-50: #FBFAF9;
+  --color-neutral-100: #F5F4F2;
+  --color-neutral-200: #E9E6E2;
+  --color-neutral-300: #D6D2CC;
+  --color-neutral-400: #B5AEA6;
+  --color-neutral-500: #938B80;
+  --color-neutral-600: #756C61;
+  --color-neutral-700: #5A5349;
+  --color-neutral-800: #3C372F;
+  --color-neutral-900: #26221D;
+  --color-neutral-950: #181511;
+
+  /* ── Ink palette (blue-slate — THE only accent) ── */
+  --color-ink-50: #F5F6FA;
+  --color-ink-100: #E8EBF3;
+  --color-ink-200: #CED4E3;
+  --color-ink-300: #A5B0CA;
+  --color-ink-400: #6F83AE;
+  --color-ink-500: #495F8D;
+  --color-ink-600: #334671;
+  --color-ink-700: #233357;
+  --color-ink-800: #18243E;
+  --color-ink-900: #162757;
+
+  /* ── Semantic colors ── */
+  --color-success: #3D7157;
+  --color-success-bg: #EAF5F0;
+  --color-warning: #A97C2D;
+  --color-warning-bg: #F7F0E3;
+  --color-danger: #973F35;
+  --color-danger-bg: #F7EBE9;
+
+  /* ── Role identity (6px bar or small chip ONLY — never full backgrounds) ── */
+  --color-role-super: #233357;
+  --color-role-super-bg: #E8EBF3;
+  --color-role-admissions: #A26D53;
+  --color-role-admissions-bg: #F1ECE9;
+  --color-role-attendance: #487A63;
+  --color-role-attendance-bg: #EAF0ED;
+  --color-role-marks: #7E587E;
+  --color-role-marks-bg: #EFECEF;
+  --color-role-student: #547B96;
+  --color-role-student-bg: #EAEEF0;
+  --color-role-parent: #988671;
+  --color-role-parent-bg: #EFEDEC;
+
+  /* ── Radii ── */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-pill: 999px;
+
+  /* ── Shadows ── */
+  --shadow-1: 0 1px 2px rgba(38,34,29,0.06), 0 1px 1px rgba(38,34,29,0.04);
+  --shadow-2: 0 4px 12px rgba(38,34,29,0.08), 0 1px 2px rgba(38,34,29,0.06);
+  --shadow-3: 0 16px 40px rgba(22,39,87,0.18);
+
+  /* ── Fonts — next/font CSS vars wired in here ── */
+  --font-serif: var(--font-newsreader, 'Newsreader'), Georgia, serif;
+  --font-sans: var(--font-ibm-plex-sans, 'IBM Plex Sans'), -apple-system, sans-serif;
+  --font-mono: var(--font-ibm-plex-mono, 'IBM Plex Mono'), 'SF Mono', monospace;
+}
+
+body {
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  background-color: var(--color-neutral-50);
+  color: var(--color-neutral-900);
+  font-size: 15px;
+  line-height: 1.6;
+}
