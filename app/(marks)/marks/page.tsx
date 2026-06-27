@@ -1,28 +1,37 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import Link from 'next/link'
+import { useState } from 'react'
 import StatCard from '@/components/dashboard/StatCard'
-import { PenLine, BookOpen, Users, CheckCircle, Upload, X } from 'lucide-react'
+import { PenLine, BookOpen, CheckCircle, Users, Upload, X } from 'lucide-react'
 
-const STATS = [
-  { label: 'Entries This Week', value: '89',  icon: <PenLine size={22} />,     iconBg: 'bg-ink-100',    iconColor: 'text-ink-600', sub: 'across 4 subjects'          },
-  { label: 'Subjects Covered',  value: '6',   icon: <BookOpen size={22} />,    iconBg: 'bg-warning-bg', iconColor: 'text-warning', sub: 'of 8 this term'             },
-  { label: 'Students Graded',   value: '142', icon: <CheckCircle size={22} />, iconBg: 'bg-success-bg', iconColor: 'text-success', sub: '76.3% of 186', subUp: true   },
-  { label: 'Pending Entry',     value: '44',  icon: <Users size={22} />,       iconBg: 'bg-danger-bg',  iconColor: 'text-danger',  sub: '23.7% remaining'            },
-]
-
-const ALL_MARKS = [
-  { student: 'Ahmed Ali',    roll: 'JE-2026-001', grade: '10', section: 'A', subject: 'Mathematics', exam: 'Monthly',     score: 87, max: 100, grade_val: 'A'  },
-  { student: 'Sara Khan',    roll: 'JE-2026-002', grade: '9',  section: 'A', subject: 'English',     exam: 'Monthly',     score: 91, max: 100, grade_val: 'A+' },
-  { student: 'Bilal Raza',   roll: 'JE-2026-003', grade: '12', section: 'A', subject: 'Physics',     exam: 'Half-Yearly', score: 74, max: 100, grade_val: 'B'  },
-  { student: 'Fatima Noor',  roll: 'JE-2026-004', grade: '11', section: 'B', subject: 'Chemistry',   exam: 'Half-Yearly', score: 68, max: 100, grade_val: 'B-' },
-  { student: 'Hina Baig',    roll: 'JE-2026-018', grade: '9',  section: 'B', subject: 'Mathematics', exam: 'Monthly',     score: 55, max: 100, grade_val: 'C+' },
-  { student: 'Kamran Malik', roll: 'JE-2026-031', grade: '12', section: 'B', subject: 'Biology',     exam: 'Monthly',     score: 79, max: 100, grade_val: 'B+' },
-  { student: 'Sana Mir',     roll: 'JE-2026-044', grade: '12', section: 'A', subject: 'Urdu',        exam: 'Monthly',     score: 88, max: 100, grade_val: 'A'  },
-  { student: 'Dawood Ilyas', roll: 'JE-2026-057', grade: '11', section: 'A', subject: 'Physics',     exam: 'Monthly',     score: 63, max: 100, grade_val: 'C+' },
-  { student: 'Tariq Ansari', roll: 'JE-2026-071', grade: '11', section: 'B', subject: 'Mathematics', exam: 'Half-Yearly', score: 80, max: 100, grade_val: 'A-' },
-  { student: 'Amna Farooq',  roll: 'JE-2026-079', grade: '10', section: 'C', subject: 'Biology',     exam: 'Monthly',     score: 74, max: 100, grade_val: 'B'  },
-]
+// ── Per-class marks stats (TODO: replace with Supabase aggregate query) ───────
+const CLASS_MARKS: Record<string, Record<string, { avg: number; entries: number; graded: number; total: number }>> = {
+  '9':  {
+    A: { avg: 78, entries: 28, graded: 28, total: 30 },
+    B: { avg: 65, entries: 24, graded: 24, total: 28 },
+    C: { avg: 82, entries: 30, graded: 30, total: 32 },
+    D: { avg: 71, entries: 20, graded: 20, total: 26 },
+  },
+  '10': {
+    A: { avg: 85, entries: 31, graded: 31, total: 31 },
+    B: { avg: 60, entries: 22, graded: 22, total: 27 },
+    C: { avg: 74, entries: 27, graded: 27, total: 29 },
+    D: { avg: 88, entries: 33, graded: 33, total: 33 },
+  },
+  '11': {
+    A: { avg: 58, entries: 20, graded: 20, total: 28 },
+    B: { avg: 79, entries: 28, graded: 28, total: 30 },
+    C: { avg: 67, entries: 24, graded: 24, total: 26 },
+    D: { avg: 72, entries: 27, graded: 27, total: 29 },
+  },
+  '12': {
+    A: { avg: 81, entries: 24, graded: 24, total: 24 },
+    B: { avg: 76, entries: 25, graded: 25, total: 27 },
+    C: { avg: 63, entries: 22, graded: 22, total: 25 },
+    D: { avg: 55, entries: 18, graded: 18, total: 23 },
+  },
+}
 
 const TIERS = [
   { tier: 'Distinction', range: '80% and above', count: 58, color: 'bg-success', textColor: 'text-success', bgColor: 'bg-success-bg' },
@@ -40,43 +49,31 @@ const SUBJECTS = [
   { name: 'Urdu',        entries: 45, avg: 83 },
 ]
 
-const EXAM_STYLE: Record<string, string> = {
-  'Monthly':     'bg-ink-100 text-ink-700',
-  'Half-Yearly': 'bg-warning-bg text-warning',
-  'Final':       'bg-success-bg text-success',
-}
-
-const GRADE_COLOR = (g: string) => {
-  if (g.startsWith('A')) return 'text-success font-bold'
-  if (g.startsWith('B')) return 'text-ink-600 font-bold'
-  if (g.startsWith('C')) return 'text-warning font-bold'
-  return 'text-danger font-bold'
-}
-
-const SCORE_BAR = (score: number, max: number) => {
-  const pct = (score / max) * 100
-  return pct >= 80 ? 'bg-success' : pct >= 65 ? 'bg-ink-400' : pct >= 50 ? 'bg-warning' : 'bg-danger'
-}
-
-const INITIALS = (name: string) => name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
-
+// ── Derived global totals ─────────────────────────────────────────────────────
+const ALL_CLASSES   = Object.values(CLASS_MARKS).flatMap(g => Object.values(g))
+const TOTAL_ENTRIES = ALL_CLASSES.reduce((a, c) => a + c.entries, 0)
+const TOTAL_GRADED  = ALL_CLASSES.reduce((a, c) => a + c.graded,  0)
+const TOTAL_ENROLL  = ALL_CLASSES.reduce((a, c) => a + c.total,   0)
+const TOTAL_PENDING = TOTAL_ENROLL - TOTAL_GRADED
 const TOTAL_TIERED  = TIERS.reduce((a, t) => a + t.count, 0)
-const ALL_SUBJECTS  = ['All Subjects', ...Array.from(new Set(ALL_MARKS.map(m => m.subject))).sort()]
-const ALL_GRADES    = ['All Grades', '9', '10', '11', '12']
 
+const STATS = [
+  { label: 'Entries This Week', value: String(TOTAL_ENTRIES), icon: <PenLine size={22} />,     iconBg: 'bg-ink-100',    iconColor: 'text-ink-600', sub: 'across all classes'                       },
+  { label: 'Subjects Covered',  value: '6',                   icon: <BookOpen size={22} />,    iconBg: 'bg-warning-bg', iconColor: 'text-warning', sub: 'of 8 this term'                           },
+  { label: 'Students Graded',   value: String(TOTAL_GRADED),  icon: <CheckCircle size={22} />, iconBg: 'bg-success-bg', iconColor: 'text-success', sub: `${Math.round((TOTAL_GRADED/TOTAL_ENROLL)*100)}% of ${TOTAL_ENROLL}`, subUp: true },
+  { label: 'Pending Entry',     value: String(TOTAL_PENDING), icon: <Users size={22} />,       iconBg: 'bg-danger-bg',  iconColor: 'text-danger',  sub: `${Math.round((TOTAL_PENDING/TOTAL_ENROLL)*100)}% remaining` },
+]
+
+function avgStyle(avg: number): { badge: string; bar: string } {
+  if (avg >= 80) return { badge: 'text-success',  bar: 'bg-success'  }
+  if (avg >= 65) return { badge: 'text-ink-600',  bar: 'bg-ink-400'  }
+  if (avg >= 50) return { badge: 'text-warning',  bar: 'bg-warning'  }
+  return             { badge: 'text-danger',   bar: 'bg-danger'   }
+}
+
+// ── Page ─────────────────────────────────────────────────────────────────────
 export default function MarksDashboard() {
-  const [gradeFilter,    setGradeFilter]   = useState('All Grades')
-  const [subjectFilter,  setSubjectFilter] = useState('All Subjects')
-  const [showBulkHint,   setShowBulkHint] = useState(false)
-
-  const filteredMarks = useMemo(() =>
-    ALL_MARKS.filter(m => {
-      const g = gradeFilter   === 'All Grades'   || m.grade   === gradeFilter
-      const s = subjectFilter === 'All Subjects' || m.subject === subjectFilter
-      return g && s
-    }),
-    [gradeFilter, subjectFilter]
-  )
+  const [showBulkHint, setShowBulkHint] = useState(false)
 
   return (
     <>
@@ -84,7 +81,7 @@ export default function MarksDashboard() {
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
           <h1 className="text-[20px] font-bold text-neutral-900">Grade Entry Pipeline</h1>
-          <p className="text-[13px] text-neutral-500 mt-0.5">Scholastic grade entries and tier evaluations — Grades 9–12</p>
+          <p className="text-[13px] text-neutral-500 mt-0.5">Select a class to view and enter marks — Grades 9–12</p>
         </div>
         <div className="flex items-center gap-2 shrink-0 flex-wrap">
           <div className="relative">
@@ -111,6 +108,68 @@ export default function MarksDashboard() {
       {/* KPI */}
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
         {STATS.map(s => <StatCard key={s.label} {...s} />)}
+      </div>
+
+      {/* Class / Section marks grid */}
+      <div className="bg-white rounded-2xl border border-neutral-200 shadow-1 overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-100 gap-3">
+          <div>
+            <h2 className="text-[14px] font-semibold text-neutral-900">Class Score Overview</h2>
+            <p className="text-[11.5px] text-neutral-400 mt-0.5 hidden sm:block">Click a class to view, enter, and filter marks by subject</p>
+          </div>
+          <span className="text-[12px] font-mono text-neutral-400 shrink-0">{TOTAL_ENROLL} students</span>
+        </div>
+
+        <div className="p-5 space-y-5">
+          {(['9', '10', '11', '12'] as const).map(grade => (
+            <div key={grade}>
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Grade {grade}</span>
+                <div className="flex-1 h-px bg-neutral-100" />
+                <span className="text-[10px] font-mono text-neutral-400">
+                  {Object.values(CLASS_MARKS[grade]).reduce((a, c) => a + c.total, 0)} students
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {(['A', 'B', 'C', 'D'] as const).map(section => {
+                  const c   = CLASS_MARKS[grade][section]
+                  const st  = avgStyle(c.avg)
+                  const pct = Math.round((c.graded / c.total) * 100)
+                  return (
+                    <Link
+                      key={section}
+                      href={`/marks/${grade}/${section}`}
+                      className="group relative flex flex-col items-center justify-center rounded-2xl border border-neutral-200 bg-white no-underline py-6 px-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md hover:border-ink-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink-400 focus-visible:ring-offset-2"
+                      aria-label={`Grade ${grade} Section ${section} — avg ${c.avg}%`}
+                    >
+                      {/* Graded % bar at bottom */}
+                      <div className="absolute bottom-0 left-0 right-0 h-[3px] rounded-b-2xl overflow-hidden bg-neutral-100">
+                        <div className="h-full bg-ink-200 group-hover:bg-ink-300 transition-colors" style={{ width: `${pct}%` }} />
+                      </div>
+
+                      {/* Class label */}
+                      <span className="font-mono leading-none select-none">
+                        <span className="text-[26px] font-bold text-ink-700">{grade}</span>
+                        <span className="text-[20px] font-semibold text-ink-400">{section}</span>
+                      </span>
+
+                      {/* Average */}
+                      <span className={`text-[13px] font-bold mt-1.5 tabular-nums font-mono ${st.badge}`}>{c.avg}%</span>
+
+                      {/* Entries */}
+                      <span className="text-[10.5px] font-medium mt-0.5 text-neutral-400 tabular-nums group-hover:text-neutral-600 transition-colors">
+                        {c.entries} entries
+                      </span>
+
+                      <span className="absolute top-3 right-3.5 text-[11px] text-neutral-200 group-hover:text-ink-400 transition-colors font-medium">→</span>
+                    </Link>
+                  )
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Tier evaluation */}
@@ -148,105 +207,22 @@ export default function MarksDashboard() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
-        {/* Recent entries — 2/3 */}
-        <div className="xl:col-span-2 bg-white rounded-2xl border border-neutral-200 shadow-1 overflow-hidden">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-100 gap-3 flex-wrap">
-            <h2 className="text-[14px] font-semibold text-neutral-900">Recent Entries</h2>
-            <div className="flex items-center gap-2 flex-wrap">
-              {/* Class filter */}
-              <select value={gradeFilter} onChange={e => setGradeFilter(e.target.value)} className="text-[12px] border border-neutral-200 rounded-lg px-2.5 py-1.5 text-neutral-700 bg-white focus:outline-none focus:ring-1 focus:ring-ink-300 cursor-pointer">
-                {ALL_GRADES.map(g => <option key={g}>{g}</option>)}
-              </select>
-              {/* Subject filter */}
-              <select value={subjectFilter} onChange={e => setSubjectFilter(e.target.value)} className="text-[12px] border border-neutral-200 rounded-lg px-2.5 py-1.5 text-neutral-700 bg-white focus:outline-none focus:ring-1 focus:ring-ink-300 cursor-pointer">
-                {ALL_SUBJECTS.map(s => <option key={s}>{s}</option>)}
-              </select>
-              {(gradeFilter !== 'All Grades' || subjectFilter !== 'All Subjects') && (
-                <button onClick={() => { setGradeFilter('All Grades'); setSubjectFilter('All Subjects') }} className="text-[11.5px] text-ink-600 font-medium">Clear ×</button>
-              )}
-              <a href="/marks/enter" className="text-[12px] text-ink-600 hover:text-ink-800 no-underline font-medium ml-1">Enter →</a>
-            </div>
-          </div>
-
-          {filteredMarks.length === 0 ? (
-            <div className="flex flex-col items-center py-14 text-center px-8">
-              <div className="w-12 h-12 rounded-2xl bg-neutral-100 flex items-center justify-center mb-4">
-                <BookOpen size={22} className="text-neutral-300" />
+      {/* Subject averages */}
+      <div className="bg-white rounded-2xl border border-neutral-200 shadow-1 p-5">
+        <h2 className="text-[14px] font-semibold text-neutral-900 mb-5">Subject Averages</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-x-8 gap-y-4">
+          {SUBJECTS.map(s => (
+            <div key={s.name}>
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[12px] text-neutral-700">{s.name}</span>
+                <span className={`text-[12px] font-semibold font-mono ${s.avg >= 80 ? 'text-success' : s.avg >= 65 ? 'text-warning' : 'text-danger'}`}>{s.avg}%</span>
               </div>
-              <p className="text-[14px] font-semibold text-neutral-600 mb-1">No entries for this filter</p>
-              <p className="text-[12.5px] text-neutral-400">Marks for this grade/subject combination have not been entered yet.</p>
-              <button onClick={() => { setGradeFilter('All Grades'); setSubjectFilter('All Subjects') }} className="mt-4 text-[12.5px] font-medium text-ink-600 hover:text-ink-800">Clear filters →</button>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-[13px] min-w-[480px]">
-                <thead>
-                  <tr className="bg-neutral-50 text-left">
-                    <th className="px-5 py-3 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">Student</th>
-                    <th className="px-3 py-3 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider hidden sm:table-cell">Grade</th>
-                    <th className="px-3 py-3 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">Subject</th>
-                    <th className="px-3 py-3 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">Score</th>
-                    <th className="px-3 py-3 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">Grade</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-neutral-100">
-                  {filteredMarks.map(m => (
-                    <tr key={`${m.roll}-${m.subject}-${m.exam}`} className="hover:bg-neutral-50 transition-colors">
-                      <td className="px-5 py-3.5">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-ink-100 text-ink-700 flex items-center justify-center font-mono text-[10px] font-bold shrink-0">
-                            {INITIALS(m.student)}
-                          </div>
-                          <div className="min-w-0">
-                            <span className="block font-medium text-neutral-900 truncate">{m.student}</span>
-                            <span className="block text-[11px] font-mono text-neutral-400">{m.roll}</span>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-3 py-3.5 hidden sm:table-cell">
-                        <span className="inline-flex bg-ink-50 text-ink-700 text-[11px] font-semibold px-2 py-0.5 rounded-full font-mono">{m.grade}-{m.section}</span>
-                      </td>
-                      <td className="px-3 py-3.5">
-                        <div>
-                          <span className="text-[13px] text-neutral-700">{m.subject}</span>
-                          <span className={`block mt-0.5 text-[10px] inline-flex items-center px-1.5 py-0.5 rounded-full font-semibold ${EXAM_STYLE[m.exam] ?? ''}`}>{m.exam}</span>
-                        </div>
-                      </td>
-                      <td className="px-3 py-3.5">
-                        <div className="flex flex-col gap-1.5">
-                          <span className="font-mono text-[12px] text-neutral-700">{m.score}/{m.max}</span>
-                          <div className="h-1 bg-neutral-100 rounded-full overflow-hidden w-full max-w-[4rem]">
-                            <div className={`h-full rounded-full ${SCORE_BAR(m.score, m.max)}`} style={{ width: `${Math.round((m.score / m.max) * 100)}%` }} />
-                          </div>
-                        </div>
-                      </td>
-                      <td className={`px-3 py-3.5 font-mono text-[13px] ${GRADE_COLOR(m.grade_val)}`}>{m.grade_val}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-
-        {/* Subject averages — 1/3 */}
-        <div className="bg-white rounded-2xl border border-neutral-200 shadow-1 p-5">
-          <h2 className="text-[14px] font-semibold text-neutral-900 mb-5">Subject Averages</h2>
-          <div className="space-y-4">
-            {SUBJECTS.map(s => (
-              <div key={s.name}>
-                <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-[12px] text-neutral-700">{s.name}</span>
-                  <span className={`text-[12px] font-semibold font-mono ${s.avg >= 80 ? 'text-success' : s.avg >= 65 ? 'text-warning' : 'text-danger'}`}>{s.avg}%</span>
-                </div>
-                <div className="h-2 bg-neutral-100 rounded-full overflow-hidden">
-                  <div className={`h-full rounded-full ${s.avg >= 80 ? 'bg-success' : s.avg >= 65 ? 'bg-warning' : 'bg-danger'}`} style={{ width: `${s.avg}%` }} />
-                </div>
-                <p className="text-[10.5px] text-neutral-400 mt-1">{s.entries} students</p>
+              <div className="h-2 bg-neutral-100 rounded-full overflow-hidden">
+                <div className={`h-full rounded-full ${s.avg >= 80 ? 'bg-success' : s.avg >= 65 ? 'bg-warning' : 'bg-danger'}`} style={{ width: `${s.avg}%` }} />
               </div>
-            ))}
-          </div>
+              <p className="text-[10.5px] text-neutral-400 mt-1">{s.entries} students</p>
+            </div>
+          ))}
         </div>
       </div>
     </>
