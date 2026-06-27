@@ -152,7 +152,7 @@ export default function ClassRosterPage({
             <h2 className="text-[14px] font-semibold text-neutral-900">Class Roster</h2>
             <p className="text-[11.5px] text-neutral-400 mt-0.5 hidden sm:block">Tap student name for full profile · click status to cycle it</p>
           </div>
-          <a href="/attendance/roster" className="text-[12px] text-ink-600 hover:text-ink-800 no-underline font-medium shrink-0">Export →</a>
+          <Link href="/attendance/roster" className="text-[12px] text-ink-600 hover:text-ink-800 no-underline font-medium shrink-0">Export →</Link>
         </div>
 
         {EMPTY ? (

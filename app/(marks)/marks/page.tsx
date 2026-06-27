@@ -99,9 +99,9 @@ export default function MarksDashboard() {
               </div>
             )}
           </div>
-          <a href="/marks/enter" className="flex items-center gap-2 px-3.5 py-2 bg-white border border-neutral-200 text-neutral-700 text-[13px] font-medium rounded-xl hover:bg-neutral-50 transition-colors no-underline">
+          <Link href="/marks/enter" className="flex items-center gap-2 px-3.5 py-2 bg-white border border-neutral-200 text-neutral-700 text-[13px] font-medium rounded-xl hover:bg-neutral-50 transition-colors no-underline">
             <PenLine size={14} /> Enter Marks
-          </a>
+          </Link>
         </div>
       </div>
 
@@ -179,7 +179,7 @@ export default function MarksDashboard() {
             <h2 className="text-[14px] font-semibold text-neutral-900">Student Tier Evaluation</h2>
             <p className="text-[11.5px] text-neutral-400 mt-0.5">Current term · {TOTAL_TIERED} students evaluated</p>
           </div>
-          <a href="/marks/reports" className="text-[12px] text-ink-600 hover:text-ink-800 no-underline font-medium shrink-0">Full report →</a>
+          <Link href="/marks/reports" className="text-[12px] text-ink-600 hover:text-ink-800 no-underline font-medium shrink-0">Full report →</Link>
         </div>
         <div className="grid grid-cols-2 xl:grid-cols-4 divide-y xl:divide-y-0 xl:divide-x divide-neutral-100">
           {TIERS.map(t => (

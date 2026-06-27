@@ -136,9 +136,9 @@ export default function ClassMarksPage({
                 </div>
               )}
             </div>
-            <a href="/marks/enter" className="flex items-center gap-2 px-3.5 py-2 bg-white border border-neutral-200 text-neutral-700 text-[13px] font-medium rounded-xl hover:bg-neutral-50 transition-colors no-underline">
+            <Link href="/marks/enter" className="flex items-center gap-2 px-3.5 py-2 bg-white border border-neutral-200 text-neutral-700 text-[13px] font-medium rounded-xl hover:bg-neutral-50 transition-colors no-underline">
               <PenLine size={14} /> Enter Marks
-            </a>
+            </Link>
           </div>
         </div>
       </div>
@@ -172,7 +172,7 @@ export default function ClassMarksPage({
             {(subjectFilter !== 'All Subjects' || examFilter !== 'All Exams') && (
               <button onClick={() => { setSubjectFilter('All Subjects'); setExamFilter('All Exams') }} className="text-[11.5px] text-ink-600 font-medium">Clear ×</button>
             )}
-            <a href="/marks/enter" className="text-[12px] text-ink-600 hover:text-ink-800 no-underline font-medium ml-1">Enter →</a>
+            <Link href="/marks/enter" className="text-[12px] text-ink-600 hover:text-ink-800 no-underline font-medium ml-1">Enter →</Link>
           </div>
         </div>
 
@@ -183,9 +183,9 @@ export default function ClassMarksPage({
             </div>
             <p className="text-[15px] font-semibold text-neutral-600 mb-1">No marks for {grade}{section}</p>
             <p className="text-[13px] text-neutral-400 mb-5">Marks entered for this class will appear here.</p>
-            <a href="/marks/enter" className="inline-flex items-center gap-2 px-4 py-2.5 bg-ink-700 text-white text-[13px] font-semibold rounded-xl hover:bg-ink-800 transition-colors no-underline">
+            <Link href="/marks/enter" className="inline-flex items-center gap-2 px-4 py-2.5 bg-ink-700 text-white text-[13px] font-semibold rounded-xl hover:bg-ink-800 transition-colors no-underline">
               <PenLine size={14} /> Enter First Marks
-            </a>
+            </Link>
           </div>
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center py-14 text-center px-8">

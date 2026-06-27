@@ -68,7 +68,7 @@ export default function AttendanceDashboard() {
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
           <h1 className="text-[20px] font-bold text-neutral-900">Attendance Dashboard</h1>
-          <p className="text-[13px] text-neutral-500 mt-0.5">Select a class to mark and view today's roster — 24 Jun 2026</p>
+          <p className="text-[13px] text-neutral-500 mt-0.5">Select a class to mark and view today&apos;s roster — 24 Jun 2026</p>
         </div>
         {ALERTS_PENDING > 0 && (
           <div className="flex items-center gap-2 px-3.5 py-2 bg-danger-bg border border-danger/20 rounded-xl text-[12.5px] font-medium text-danger">
@@ -84,7 +84,7 @@ export default function AttendanceDashboard() {
       <div className="bg-white rounded-2xl border border-neutral-200 shadow-1 overflow-hidden">
         <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-100 gap-3">
           <div>
-            <h2 className="text-[14px] font-semibold text-neutral-900">Today's Class Overview</h2>
+            <h2 className="text-[14px] font-semibold text-neutral-900">Today&apos;s Class Overview</h2>
             <p className="text-[11.5px] text-neutral-400 mt-0.5 hidden sm:block">Click a class to mark attendance and view the full roster</p>
           </div>
           <span className="text-[12px] font-mono text-neutral-400 shrink-0">{TOTAL_ALL} students</span>

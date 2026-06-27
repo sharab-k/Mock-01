@@ -93,9 +93,9 @@ export default function AdmissionsDashboard() {
           >
             <ArrowUpCircle size={14} className="text-ink-600" /> Transfer / Promote
           </button>
-          <a href="/admissions/students/new" className="flex items-center gap-2 px-3.5 py-2 bg-ink-700 text-white text-[13px] font-semibold rounded-xl hover:bg-ink-800 transition-colors no-underline">
+          <Link href="/admissions/students/new" className="flex items-center gap-2 px-3.5 py-2 bg-ink-700 text-white text-[13px] font-semibold rounded-xl hover:bg-ink-800 transition-colors no-underline">
             <UserPlus size={14} /> Enrol Student
-          </a>
+          </Link>
         </div>
       </div>
 
@@ -166,7 +166,7 @@ export default function AdmissionsDashboard() {
             <h2 className="text-[14px] font-semibold text-neutral-900">Incoming Enquiries</h2>
             <p className="text-[11.5px] text-neutral-400 mt-0.5 hidden sm:block">Click any row to expand · copy phone numbers instantly</p>
           </div>
-          <a href="/admissions/enquiries" className="text-[12px] text-ink-600 hover:text-ink-800 no-underline font-medium shrink-0">View all →</a>
+          <Link href="/admissions/enquiries" className="text-[12px] text-ink-600 hover:text-ink-800 no-underline font-medium shrink-0">View all →</Link>
         </div>
         <div className="divide-y divide-neutral-100">
           {ENQUIRIES.map((e, i) => (
@@ -200,9 +200,9 @@ export default function AdmissionsDashboard() {
                     <a href={`tel:${e.phone}`} onClick={ev => ev.stopPropagation()} className="flex items-center gap-1.5 text-[12px] font-medium text-ink-600 hover:text-ink-800 bg-white border border-neutral-200 px-3 py-2 rounded-xl transition-colors no-underline">
                       Call {e.parent.split(' ')[0]}
                     </a>
-                    <a href="/admissions/students/new" onClick={ev => ev.stopPropagation()} className="flex items-center gap-1.5 text-[12px] font-semibold text-white bg-ink-700 hover:bg-ink-800 px-3 py-2 rounded-xl transition-colors no-underline">
+                    <Link href="/admissions/students/new" onClick={ev => ev.stopPropagation()} className="flex items-center gap-1.5 text-[12px] font-semibold text-white bg-ink-700 hover:bg-ink-800 px-3 py-2 rounded-xl transition-colors no-underline">
                       <UserPlus size={12} /> Enrol Student
-                    </a>
+                    </Link>
                   </div>
                 </div>
               )}

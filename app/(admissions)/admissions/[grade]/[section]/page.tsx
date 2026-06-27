@@ -88,12 +88,12 @@ export default function ClassPipelinePage({
               </div>
             </div>
           </div>
-          <a
+          <Link
             href="/admissions/students/new"
             className="flex items-center gap-2 px-3.5 py-2 bg-ink-700 text-white text-[13px] font-semibold rounded-xl hover:bg-ink-800 transition-colors no-underline shrink-0"
           >
             <UserPlus size={14} /> Enrol Student
-          </a>
+          </Link>
         </div>
       </div>
 
@@ -119,9 +119,9 @@ export default function ClassPipelinePage({
             </div>
             <p className="text-[15px] font-semibold text-neutral-600 mb-1">No records for {grade}{section}</p>
             <p className="text-[13px] text-neutral-400 mb-5">Students registered in this class will appear here.</p>
-            <a href="/admissions/students/new" className="inline-flex items-center gap-2 px-4 py-2.5 bg-ink-700 text-white text-[13px] font-semibold rounded-xl hover:bg-ink-800 transition-colors no-underline">
+            <Link href="/admissions/students/new" className="inline-flex items-center gap-2 px-4 py-2.5 bg-ink-700 text-white text-[13px] font-semibold rounded-xl hover:bg-ink-800 transition-colors no-underline">
               <UserPlus size={14} /> Enrol First Student
-            </a>
+            </Link>
           </div>
         ) : (
           <div className="overflow-x-auto">
