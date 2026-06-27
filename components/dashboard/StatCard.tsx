@@ -1,3 +1,5 @@
+import Link from 'next/link'
+
 type Props = {
   label: string
   value: string | number
@@ -6,11 +8,12 @@ type Props = {
   iconColor: string
   sub?: string
   subUp?: boolean
+  href?: string
 }
 
-export default function StatCard({ label, value, icon, iconBg, iconColor, sub, subUp }: Props) {
-  return (
-    <div className="bg-white rounded-2xl border border-neutral-200 p-5 flex items-start gap-4 shadow-1">
+export default function StatCard({ label, value, icon, iconBg, iconColor, sub, subUp, href }: Props) {
+  const inner = (
+    <div className={`bg-white rounded-2xl border border-neutral-200 p-5 flex items-start gap-4 shadow-1 transition-all ${href ? 'hover:border-ink-200 hover:shadow-md cursor-pointer' : ''}`}>
       <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${iconBg}`}>
         <span className={iconColor}>{icon}</span>
       </div>
@@ -26,6 +29,10 @@ export default function StatCard({ label, value, icon, iconBg, iconColor, sub, s
           </span>
         )}
       </div>
+      {href && <span className="text-neutral-300 text-[12px] self-center shrink-0 mt-1">→</span>}
     </div>
   )
+
+  if (href) return <Link href={href} className="no-underline block">{inner}</Link>
+  return inner
 }

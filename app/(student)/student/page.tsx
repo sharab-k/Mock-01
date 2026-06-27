@@ -3,10 +3,10 @@ import { CalendarCheck, BookOpen, PlayCircle, ClipboardList, CheckCircle2, Clock
 
 // ── Data ──────────────────────────────────────────────────────────────────────
 const STATS = [
-  { label: 'My Attendance',    value: '94%', icon: <CalendarCheck size={22} />, iconBg: 'bg-success-bg', iconColor: 'text-success', sub: '↑ 2% this month', subUp: true },
-  { label: 'Average Score',    value: '81%', icon: <BookOpen size={22} />,      iconBg: 'bg-ink-100',    iconColor: 'text-ink-600', sub: 'Grade B+'                     },
-  { label: 'Lectures Watched', value: '12',  icon: <PlayCircle size={22} />,    iconBg: 'bg-warning-bg', iconColor: 'text-warning', sub: '3 remaining this term'        },
-  { label: 'Pending Tasks',    value: '2',   icon: <ClipboardList size={22} />, iconBg: 'bg-danger-bg',  iconColor: 'text-danger',  sub: '1 assignment due soon'        },
+  { label: 'My Attendance',    value: '94%', icon: <CalendarCheck size={22} />, iconBg: 'bg-success-bg', iconColor: 'text-success', sub: '↑ 2% this month', subUp: true, href: '/student/attendance' },
+  { label: 'Average Score',    value: '81%', icon: <BookOpen size={22} />,      iconBg: 'bg-ink-100',    iconColor: 'text-ink-600', sub: 'Grade B+',                     href: '/student/marks'      },
+  { label: 'Lectures Watched', value: '12',  icon: <PlayCircle size={22} />,    iconBg: 'bg-warning-bg', iconColor: 'text-warning', sub: '3 unwatched this term',         href: '/student/lectures'   },
+  { label: 'Pending Tasks',    value: '2',   icon: <ClipboardList size={22} />, iconBg: 'bg-danger-bg',  iconColor: 'text-danger',  sub: '1 assignment due soon',         href: '/student/assignments'},
 ]
 
 const MY_MARKS = [
@@ -66,13 +66,14 @@ const ASSIGN_PILL: Record<string, string> = {
   'Not Started':'bg-neutral-100 text-neutral-500',
 }
 
-const scoreColor = (s: number) =>
-  s >= 80 ? 'bg-success' : s >= 65 ? 'bg-warning' : 'bg-danger'
+const scoreColor = (s: number, max: number) => {
+  const pct = (s / max) * 100
+  return pct >= 80 ? 'bg-success' : pct >= 65 ? 'bg-warning' : 'bg-danger'
+}
 
 const gradeColor = (g: string) =>
   g.startsWith('A') ? 'text-success' : g.startsWith('B') ? 'text-ink-600' : 'text-warning'
 
-// Subject color chips (left-column accent)
 const SUBJ_COLOR: Record<string, string> = {
   Mathematics: 'bg-ink-200 text-ink-800',
   English:     'bg-success-bg text-success',
@@ -84,19 +85,17 @@ const SUBJ_COLOR: Record<string, string> = {
 export default function StudentDashboard() {
   const presentCount = ATTENDANCE_WEEK.filter(d => d.status === 'Present').length
   const lateCount    = ATTENDANCE_WEEK.filter(d => d.status === 'Late').length
+  const weekRate     = Math.round(((presentCount + lateCount * 0.5) / ATTENDANCE_WEEK.length) * 100)
 
   return (
     <>
       {/* ── Identity card ───────────────────────────────────────────────── */}
       <div className="bg-ink-900 rounded-2xl overflow-hidden">
-        {/* top accent line */}
         <div className="h-[3px]" style={{ background: 'linear-gradient(90deg, #495F8D 0%, #6F83AE 60%, transparent 100%)' }} />
         <div className="px-7 py-6 flex flex-col sm:flex-row sm:items-center gap-5">
-          {/* Avatar */}
           <div className="w-14 h-14 rounded-xl bg-ink-700 border border-ink-500/40 flex items-center justify-center text-white font-bold text-[17px] font-mono shrink-0">
             AA
           </div>
-          {/* Info */}
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-3 flex-wrap">
               <h2 className="text-white text-[17px] font-semibold tracking-tight">Ahmed Ali</h2>
@@ -115,7 +114,6 @@ export default function StudentDashboard() {
               <span>Term 2, 2025–26</span>
             </p>
           </div>
-          {/* CTAs */}
           <div className="flex items-center gap-2.5 shrink-0">
             <a href="/student/marks"    className="px-4 py-2 text-[12px] font-medium text-ink-200 bg-white/8 hover:bg-white/14 border border-white/10 rounded-xl transition-colors no-underline">My Marks</a>
             <a href="/student/lectures" className="px-4 py-2 text-[12px] font-semibold text-ink-900 bg-white hover:bg-neutral-100 rounded-xl transition-colors no-underline">Lectures →</a>
@@ -149,7 +147,7 @@ export default function StudentDashboard() {
             </thead>
             <tbody className="divide-y divide-neutral-100">
               {MY_MARKS.map((m) => (
-                <tr key={m.subject} className="hover:bg-neutral-50/70 transition-colors group">
+                <tr key={m.subject} className="hover:bg-neutral-50/70 transition-colors">
                   <td className="px-6 py-3.5">
                     <div className="flex items-center gap-2.5">
                       <span className={`w-2 h-2 rounded-full shrink-0 ${SUBJ_COLOR[m.subject]?.split(' ')[0] ?? 'bg-neutral-300'}`} />
@@ -162,8 +160,11 @@ export default function StudentDashboard() {
                   <td className="px-4 py-3.5">
                     <div className="flex flex-col gap-1.5">
                       <span className="font-mono text-[12px] text-neutral-700">{m.score}/{m.max}</span>
-                      <div className="h-1 bg-neutral-100 rounded-full overflow-hidden w-20">
-                        <div className={`h-full rounded-full ${scoreColor(m.score)}`} style={{ width: `${m.score}%` }} />
+                      <div className="h-1 bg-neutral-100 rounded-full overflow-hidden w-full max-w-[5rem]">
+                        <div
+                          className={`h-full rounded-full ${scoreColor(m.score, m.max)}`}
+                          style={{ width: `${Math.round((m.score / m.max) * 100)}%` }}
+                        />
                       </div>
                     </div>
                   </td>
@@ -178,7 +179,10 @@ export default function StudentDashboard() {
         {/* Attendance this week — 1/3 */}
         <div className="bg-white rounded-2xl border border-neutral-200 shadow-1 p-6 flex flex-col">
           <div className="flex items-center justify-between mb-5">
-            <h2 className="text-[14px] font-semibold text-neutral-900">This Week</h2>
+            <div>
+              <h2 className="text-[14px] font-semibold text-neutral-900">This Week</h2>
+              <p className="text-[11px] text-neutral-400 mt-0.5 font-mono">Jun 20 – 24, 2026</p>
+            </div>
             <a href="/student/attendance" className="text-[12px] text-ink-600 hover:text-ink-800 no-underline font-medium">History →</a>
           </div>
 
@@ -189,7 +193,8 @@ export default function StudentDashboard() {
               const Icon = cfg.icon
               return (
                 <div key={d.day} className="flex-1 flex flex-col items-center gap-1.5">
-                  <span className="text-[10px] font-mono text-neutral-400">{d.date}</span>
+                  <span className="text-[9px] font-mono text-neutral-400 leading-tight">Jun</span>
+                  <span className="text-[10px] font-mono text-neutral-600 font-semibold leading-none">{d.date}</span>
                   <div className={`w-10 h-10 rounded-full border-2 flex items-center justify-center ${cfg.ring} ${cfg.bg}`}>
                     <Icon size={14} strokeWidth={2.5} className={cfg.text} />
                   </div>
@@ -217,11 +222,14 @@ export default function StudentDashboard() {
           </div>
 
           {/* Rate pill */}
-          <div className="mt-4 p-3 bg-neutral-50 rounded-xl flex items-center justify-between">
-            <span className="text-[12px] text-neutral-500">Week rate</span>
-            <span className={`text-[13px] font-bold font-mono ${presentCount >= 4 ? 'text-success' : 'text-warning'}`}>
-              {Math.round(((presentCount + lateCount * 0.5) / ATTENDANCE_WEEK.length) * 100)}%
-            </span>
+          <div className="mt-4 p-3 bg-neutral-50 rounded-xl">
+            <div className="flex items-center justify-between">
+              <span className="text-[12px] text-neutral-500">Week rate</span>
+              <span className={`text-[13px] font-bold font-mono ${weekRate >= 80 ? 'text-success' : 'text-warning'}`}>
+                {weekRate}%
+              </span>
+            </div>
+            <p className="text-[10px] text-neutral-400 mt-1">* Late days counted as 0.5 days present</p>
           </div>
         </div>
       </div>
@@ -238,15 +246,13 @@ export default function StudentDashboard() {
           <div className="divide-y divide-neutral-100">
             {LECTURES.map((l, i) => (
               <div key={i} className="flex items-center gap-4 px-5 py-4 hover:bg-neutral-50/80 transition-colors">
-                {/* Play indicator */}
-                <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
+                <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
                   l.watched ? 'bg-success-bg' : l.progress > 0 ? 'bg-warning-bg' : 'bg-ink-50'
                 }`}>
                   <PlayCircle size={16} className={
                     l.watched ? 'text-success' : l.progress > 0 ? 'text-warning' : 'text-ink-400'
                   } />
                 </div>
-                {/* Info */}
                 <div className="flex-1 min-w-0">
                   <span className="block text-[13px] font-medium text-neutral-900 truncate">{l.title}</span>
                   <div className="flex items-center gap-2 mt-1">
@@ -254,18 +260,16 @@ export default function StudentDashboard() {
                     <span className="text-neutral-200">·</span>
                     <span className="text-[11px] font-mono text-neutral-400">{l.duration}</span>
                   </div>
-                  {/* Progress bar (only when in-progress) */}
                   {!l.watched && l.progress > 0 && (
-                    <div className="mt-2 h-1 bg-neutral-100 rounded-full overflow-hidden w-28">
+                    <div className="mt-2 h-1 bg-neutral-100 rounded-full overflow-hidden w-full max-w-[7rem]">
                       <div className="h-full bg-warning rounded-full" style={{ width: `${l.progress}%` }} />
                     </div>
                   )}
                 </div>
-                {/* Status badge */}
                 <span className={`text-[11px] font-semibold shrink-0 px-2.5 py-1 rounded-lg ${
-                  l.watched     ? 'bg-success-bg text-success' :
-                  l.progress > 0 ? 'bg-warning-bg text-warning' :
-                  'bg-neutral-100 text-neutral-500'
+                  l.watched      ? 'bg-success-bg text-success'  :
+                  l.progress > 0 ? 'bg-warning-bg text-warning'  :
+                                   'bg-neutral-100 text-neutral-500'
                 }`}>
                   {l.watched ? 'Watched' : l.progress > 0 ? `${l.progress}%` : 'New'}
                 </span>
@@ -283,12 +287,10 @@ export default function StudentDashboard() {
           <div className="divide-y divide-neutral-100">
             {GUIDES.map((g, i) => (
               <div key={i} className="flex items-center gap-4 px-5 py-4 hover:bg-neutral-50/80 transition-colors">
-                {/* File icon */}
                 <div className="w-9 h-9 rounded-xl bg-ink-50 border border-ink-100 flex flex-col items-center justify-center shrink-0 gap-0.5">
                   <span className="text-[8px] font-bold text-ink-500 leading-none">PDF</span>
                   <div className="w-4 h-[1px] bg-ink-200" />
                 </div>
-                {/* Info */}
                 <div className="flex-1 min-w-0">
                   <span className="block text-[13px] font-medium text-neutral-900 truncate">{g.title}</span>
                   <div className="flex items-center gap-2 mt-1">
@@ -314,26 +316,27 @@ export default function StudentDashboard() {
         <div className="divide-y divide-neutral-100">
           {ASSIGNMENTS.map((a, i) => (
             <div key={i} className="flex items-center gap-4 px-6 py-3.5 hover:bg-neutral-50/70 transition-colors">
-              {/* Subject dot */}
               <div className={`w-2 h-2 rounded-full shrink-0 ${SUBJ_COLOR[a.subject]?.split(' ')[0] ?? 'bg-neutral-300'}`} />
-              {/* Title + subject */}
               <div className="flex-1 min-w-0">
                 <span className="block text-[13px] font-medium text-neutral-900 truncate">{a.title}</span>
                 <span className="text-[11px] text-neutral-400">{a.subject}</span>
               </div>
-              {/* Due date */}
               <span className="text-[12px] font-mono text-neutral-400 shrink-0 hidden sm:block">{a.due}</span>
-              {/* Status */}
               <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold shrink-0 ${ASSIGN_PILL[a.status] ?? ''}`}>
                 {a.status}
               </span>
-              {/* Action */}
-              {a.status !== 'Submitted'
-                ? <button className="text-[12px] font-semibold text-white bg-ink-700 hover:bg-ink-800 px-3.5 py-1.5 rounded-xl transition-colors shrink-0">
-                    Submit
-                  </button>
-                : <span className="w-[76px] shrink-0" />
-              }
+              {/* Action button varies by status */}
+              {a.status === 'Submitted' && <span className="w-[76px] shrink-0" />}
+              {a.status === 'Pending' && (
+                <button className="text-[12px] font-semibold text-white bg-ink-700 hover:bg-ink-800 px-3.5 py-1.5 rounded-xl transition-colors shrink-0">
+                  Submit
+                </button>
+              )}
+              {a.status === 'Not Started' && (
+                <button className="text-[12px] font-medium text-ink-600 bg-ink-50 hover:bg-ink-100 border border-ink-100 px-3.5 py-1.5 rounded-xl transition-colors shrink-0">
+                  Begin
+                </button>
+              )}
             </div>
           ))}
         </div>
