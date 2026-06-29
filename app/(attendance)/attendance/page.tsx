@@ -167,104 +167,137 @@ export default function AttendanceDashboard() {
           </div>
         </div>
 
-        {/* Chart */}
-        <div className="grid grid-cols-5 gap-2 sm:gap-3 mb-5">
+        {/* Chart — rate labels row */}
+        <div className="grid grid-cols-5 gap-2 sm:gap-4 mb-2">
           {WEEK.map(d => {
-            const rate       = Math.round((d.present / d.total) * 100)
-            const presentPct = (d.present / d.total) * 100
-            const latePct    = (d.late    / d.total) * 100
-            const isHovered  = hoveredDay === d.day
-            const st         = rateStyle(rate)
-
+            const rate = Math.round((d.present / d.total) * 100)
+            const st   = rateStyle(rate)
             return (
-              <div
-                key={d.day}
-                className="flex flex-col items-center gap-0"
-                onMouseEnter={() => setHoveredDay(d.day)}
-                onMouseLeave={() => setHoveredDay(null)}
-              >
-                {/* Rate label */}
-                <span className={`text-[11px] font-bold font-mono tabular-nums mb-2 transition-colors ${st.badge}`}>
-                  {rate}%
-                </span>
+              <div key={d.day} className="flex justify-center">
+                <span className={`text-[11.5px] font-bold font-mono tabular-nums ${st.badge}`}>{rate}%</span>
+              </div>
+            )
+          })}
+        </div>
 
-                {/* Bar container */}
+        {/* Chart — bar area */}
+        <div className="relative mb-2" style={{ height: BAR_H }}>
+
+          {/* Horizontal gridlines */}
+          {[25, 50, 75].map(pct => (
+            <div
+              key={pct}
+              className="absolute left-0 right-0 border-t border-neutral-100 pointer-events-none"
+              style={{ bottom: `${pct}%` }}
+            />
+          ))}
+
+          {/* 90% target line */}
+          <div
+            className="absolute left-0 right-0 z-10 pointer-events-none"
+            style={{ bottom: '90%' }}
+          >
+            <div className="w-full border-t border-dashed border-neutral-300" />
+            <span className="absolute right-0 top-0 -translate-y-full text-[8.5px] font-mono text-neutral-300 pb-0.5">90%</span>
+          </div>
+
+          {/* Bars */}
+          <div className="grid grid-cols-5 gap-2 sm:gap-4 h-full">
+            {WEEK.map(d => {
+              const presentPct = (d.present / d.total) * 100
+              const latePct    = (d.late    / d.total) * 100
+              const rate       = Math.round((d.present / d.total) * 100)
+              const isHovered  = hoveredDay === d.day
+              const st         = rateStyle(rate)
+
+              return (
                 <div
-                  className={`relative w-full rounded-xl overflow-visible transition-all duration-200 ${
-                    d.isToday
-                      ? 'ring-2 ring-ink-400 ring-offset-2 shadow-md'
-                      : isHovered
-                        ? 'ring-1 ring-neutral-300 ring-offset-1 shadow-sm'
-                        : ''
-                  }`}
-                  style={{ height: BAR_H }}
+                  key={d.day}
+                  className="relative h-full flex items-end justify-center"
+                  onMouseEnter={() => setHoveredDay(d.day)}
+                  onMouseLeave={() => setHoveredDay(null)}
                 >
-                  {/* Background track */}
-                  <div className={`absolute inset-0 rounded-xl ${d.isToday ? 'bg-ink-50' : 'bg-neutral-100'}`} />
-
-                  {/* 90% reference line */}
+                  {/* Bar track + fill — centered, narrower than column */}
                   <div
-                    className="absolute left-0 right-0 z-10 pointer-events-none"
-                    style={{ bottom: '90%' }}
+                    className={`relative h-full transition-all duration-150 ${
+                      d.isToday || isHovered ? 'w-[62%]' : 'w-[54%]'
+                    }`}
                   >
-                    <div className="w-full border-t border-dashed border-neutral-300/80" />
+                    {/* Track (full-height guide) */}
+                    <div
+                      className={`absolute inset-0 rounded-t-xl rounded-b-md transition-colors ${
+                        d.isToday ? 'bg-ink-50' : 'bg-neutral-100'
+                      }`}
+                    />
+
+                    {/* Late strip — sits on top of present, gets rounded cap */}
+                    {latePct > 0 && (
+                      <div
+                        className={`absolute left-0 right-0 rounded-t-xl bg-warning transition-all duration-700 ${
+                          d.isToday ? 'opacity-90' : 'opacity-55'
+                        }`}
+                        style={{ bottom: `${presentPct}%`, height: `${latePct}%` }}
+                      />
+                    )}
+
+                    {/* Present fill — fills from bottom */}
+                    <div
+                      className={`absolute bottom-0 left-0 right-0 rounded-b-md ${st.bar} transition-all duration-700 ${
+                        latePct === 0 ? 'rounded-t-xl' : ''
+                      } ${d.isToday ? '' : 'opacity-70'}`}
+                      style={{ height: `${presentPct}%` }}
+                    />
+
+                    {/* Today indicator ring */}
+                    {d.isToday && (
+                      <div className="absolute inset-0 rounded-t-xl rounded-b-md ring-2 ring-ink-400 ring-offset-0 pointer-events-none" />
+                    )}
                   </div>
 
-                  {/* Late bar — sits immediately on top of present */}
-                  {latePct > 0 && (
-                    <div
-                      className={`absolute left-0 right-0 bg-warning transition-all duration-500 rounded-sm ${d.isToday ? 'opacity-80' : 'opacity-55'}`}
-                      style={{ bottom: `${presentPct}%`, height: `${latePct}%` }}
-                    />
-                  )}
-
-                  {/* Present bar — fills from bottom */}
-                  <div
-                    className={`absolute bottom-0 left-0 right-0 rounded-b-xl transition-all duration-500 ${st.bar} ${d.isToday ? '' : 'opacity-75'}`}
-                    style={{ height: `${presentPct}%` }}
-                  />
-
-                  {/* Hover tooltip */}
+                  {/* Tooltip */}
                   {isHovered && (
-                    <div className="absolute left-1/2 -translate-x-1/2 z-30 pointer-events-none" style={{ bottom: `calc(100% + 10px)` }}>
+                    <div
+                      className="absolute left-1/2 -translate-x-1/2 z-30 pointer-events-none"
+                      style={{ bottom: 'calc(100% + 8px)' }}
+                    >
                       <div className="bg-neutral-900 text-white rounded-xl px-3 py-2 shadow-xl whitespace-nowrap">
-                        <p className="text-[10px] font-semibold text-neutral-400 mb-1.5 tracking-wide uppercase">{d.day} · {d.date}</p>
-                        <div className="flex items-center gap-3 text-[11px] font-mono">
-                          <span className="flex items-center gap-1 text-success">
-                            <span className="w-1.5 h-1.5 rounded-sm bg-success inline-block" />
-                            {d.present}
+                        <p className="text-[9.5px] font-semibold text-neutral-400 mb-1.5 tracking-widest uppercase">{d.day} · {d.date}</p>
+                        <div className="flex items-center gap-2.5 text-[11px] font-mono">
+                          <span className="flex items-center gap-1 text-success font-semibold">
+                            <span className="w-1.5 h-1.5 rounded-sm bg-success inline-block" />{d.present}
                           </span>
-                          <span className="flex items-center gap-1 text-warning">
-                            <span className="w-1.5 h-1.5 rounded-sm bg-warning inline-block" />
-                            {d.late}
+                          <span className="flex items-center gap-1 text-warning font-semibold">
+                            <span className="w-1.5 h-1.5 rounded-sm bg-warning inline-block" />{d.late}
                           </span>
-                          <span className="flex items-center gap-1 text-danger/80">
-                            <span className="w-1.5 h-1.5 rounded-sm bg-danger/60 inline-block" />
-                            {d.absent}
+                          <span className="flex items-center gap-1 text-danger/80 font-semibold">
+                            <span className="w-1.5 h-1.5 rounded-sm bg-danger/60 inline-block" />{d.absent}
                           </span>
                         </div>
-                        {/* Arrow */}
                         <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-l-[5px] border-r-[5px] border-t-[6px] border-l-transparent border-r-transparent border-t-neutral-900" />
                       </div>
                     </div>
                   )}
                 </div>
+              )
+            })}
+          </div>
+        </div>
 
-                {/* Day label + count */}
-                <div className="text-center mt-2.5 space-y-0.5">
-                  <span className={`block text-[12px] font-medium leading-none ${d.isToday ? 'text-ink-700 font-bold' : 'text-neutral-500'}`}>
-                    {d.day}
-                  </span>
-                  <span className="block text-[10px] font-mono text-neutral-400 tabular-nums leading-none">
-                    {d.present}<span className="text-neutral-300">/{d.total}</span>
-                  </span>
-                  {d.isToday && (
-                    <span className="block text-[9px] font-bold text-ink-500 uppercase tracking-widest leading-none pt-0.5">Today</span>
-                  )}
-                </div>
-              </div>
-            )
-          })}
+        {/* Chart — day labels row */}
+        <div className="grid grid-cols-5 gap-2 sm:gap-4 mb-5">
+          {WEEK.map(d => (
+            <div key={d.day} className="text-center space-y-0.5 pt-1.5">
+              <span className={`block text-[12px] font-medium leading-none ${d.isToday ? 'text-ink-700 font-bold' : 'text-neutral-500'}`}>
+                {d.day}
+              </span>
+              <span className="block text-[10px] font-mono text-neutral-400 tabular-nums leading-none">
+                {d.present}<span className="text-neutral-300">/{d.total}</span>
+              </span>
+              {d.isToday && (
+                <span className="block text-[9px] font-bold text-ink-500 uppercase tracking-widest leading-none pt-0.5">Today</span>
+              )}
+            </div>
+          ))}
         </div>
 
         {/* Footer — legend + insights */}
