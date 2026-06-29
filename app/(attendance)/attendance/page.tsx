@@ -1,8 +1,9 @@
 'use client'
 
 import Link from 'next/link'
+import { useState } from 'react'
 import StatCard from '@/components/dashboard/StatCard'
-import { UserCheck, UserX, Clock, Percent, MessageSquare } from 'lucide-react'
+import { UserCheck, UserX, Clock, Percent, MessageSquare, TrendingUp } from 'lucide-react'
 
 const CLASS_STATS: Record<string, Record<string, { present: number; absent: number; late: number; total: number }>> = {
   '9':  {
@@ -32,12 +33,14 @@ const CLASS_STATS: Record<string, Record<string, { present: number; absent: numb
 }
 
 const WEEK = [
-  { day: 'Mon', present: 174, total: 448, isToday: false },
-  { day: 'Tue', present: 400, total: 448, isToday: false },
-  { day: 'Wed', present: 391, total: 448, isToday: false },
-  { day: 'Thu', present: 413, total: 448, isToday: false },
-  { day: 'Fri', present: 382, total: 448, isToday: true  },
+  { day: 'Mon', date: '23 Jun', present: 174, absent: 256, late: 18, total: 448, isToday: false },
+  { day: 'Tue', date: '24 Jun', present: 400, absent:  36, late: 12, total: 448, isToday: false },
+  { day: 'Wed', date: '25 Jun', present: 391, absent:  42, late: 15, total: 448, isToday: false },
+  { day: 'Thu', date: '26 Jun', present: 413, absent:  22, late: 13, total: 448, isToday: false },
+  { day: 'Fri', date: '27 Jun', present: 382, absent:  48, late: 18, total: 448, isToday: true  },
 ]
+
+const LAST_WEEK_AVG = 76
 
 const ALL_CLASSES   = Object.values(CLASS_STATS).flatMap(g => Object.values(g))
 const TOTAL_PRESENT = ALL_CLASSES.reduce((a, c) => a + c.present, 0)
@@ -60,8 +63,15 @@ function rateStyle(rate: number): { badge: string; bar: string } {
   return             { badge: 'text-danger',  bar: 'bg-danger'  }
 }
 
+const BAR_H = 148
+
 export default function AttendanceDashboard() {
-  const weekAvg = Math.round(WEEK.reduce((a, d) => a + (d.present / d.total) * 100, 0) / WEEK.length)
+  const [hoveredDay, setHoveredDay] = useState<string | null>(null)
+
+  const weekAvg  = Math.round(WEEK.reduce((a, d) => a + (d.present / d.total) * 100, 0) / WEEK.length)
+  const weekDelta = weekAvg - LAST_WEEK_AVG
+  const bestDay   = WEEK.reduce((a, d) => (d.present / d.total) > (a.present / a.total) ? d : a)
+  const worstDay  = WEEK.reduce((a, d) => (d.present / d.total) < (a.present / a.total) ? d : a)
 
   return (
     <>
@@ -81,6 +91,7 @@ export default function AttendanceDashboard() {
         {STATS.map(s => <StatCard key={s.label} {...s} />)}
       </div>
 
+      {/* ── Class / Section grid ─────────────────────────────────────────── */}
       <div className="bg-white rounded-2xl border border-neutral-200 shadow-1 overflow-hidden">
         <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-100 gap-3">
           <div>
@@ -133,33 +144,159 @@ export default function AttendanceDashboard() {
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl border border-neutral-200 shadow-1 p-5">
-        <div className="flex items-center justify-between mb-5">
-          <h2 className="text-[14px] font-semibold text-neutral-900">This Week</h2>
-          <div className="text-right">
-            <p className="text-[11px] text-neutral-400">Week average</p>
-            <p className="text-[18px] font-bold text-neutral-900 font-mono">{weekAvg}%</p>
+      {/* ── This Week ────────────────────────────────────────────────────── */}
+      <div className="bg-white rounded-2xl border border-neutral-200 shadow-1 p-5 sm:p-6">
+
+        {/* Header */}
+        <div className="flex items-start justify-between mb-6 gap-4">
+          <div>
+            <h2 className="text-[14px] font-semibold text-neutral-900">This Week</h2>
+            <p className="text-[11.5px] text-neutral-400 mt-0.5">23 – 27 Jun 2026</p>
+          </div>
+          <div className="flex items-end gap-3 shrink-0">
+            {/* Trend chip */}
+            <div className={`hidden sm:flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-semibold ${weekDelta >= 0 ? 'bg-success-bg text-success' : 'bg-danger-bg text-danger'}`}>
+              <TrendingUp size={11} />
+              {weekDelta >= 0 ? '+' : ''}{weekDelta}% vs last wk
+            </div>
+            {/* Big avg */}
+            <div className="text-right">
+              <p className="text-[10.5px] text-neutral-400 mb-0.5">Week average</p>
+              <p className="text-[26px] font-bold text-neutral-900 font-mono leading-none tabular-nums">{weekAvg}%</p>
+            </div>
           </div>
         </div>
-        <div className="grid grid-cols-5 gap-3">
+
+        {/* Chart */}
+        <div className="grid grid-cols-5 gap-2 sm:gap-3 mb-5">
           {WEEK.map(d => {
-            const pct = Math.round((d.present / d.total) * 100)
+            const rate       = Math.round((d.present / d.total) * 100)
+            const presentPct = (d.present / d.total) * 100
+            const latePct    = (d.late    / d.total) * 100
+            const isHovered  = hoveredDay === d.day
+            const st         = rateStyle(rate)
+
             return (
-              <div key={d.day} className="flex flex-col items-center gap-2">
-                <span className={`text-[11px] font-semibold font-mono tabular-nums ${pct >= 90 ? 'text-success' : 'text-warning'}`}>{pct}%</span>
-                <div className={`w-full rounded-lg overflow-hidden ${d.isToday ? 'bg-ink-50' : 'bg-neutral-100'}`} style={{ height: 80 }}>
+              <div
+                key={d.day}
+                className="flex flex-col items-center gap-0"
+                onMouseEnter={() => setHoveredDay(d.day)}
+                onMouseLeave={() => setHoveredDay(null)}
+              >
+                {/* Rate label */}
+                <span className={`text-[11px] font-bold font-mono tabular-nums mb-2 transition-colors ${st.badge}`}>
+                  {rate}%
+                </span>
+
+                {/* Bar container */}
+                <div
+                  className={`relative w-full rounded-xl overflow-visible transition-all duration-200 ${
+                    d.isToday
+                      ? 'ring-2 ring-ink-400 ring-offset-2 shadow-md'
+                      : isHovered
+                        ? 'ring-1 ring-neutral-300 ring-offset-1 shadow-sm'
+                        : ''
+                  }`}
+                  style={{ height: BAR_H }}
+                >
+                  {/* Background track */}
+                  <div className={`absolute inset-0 rounded-xl ${d.isToday ? 'bg-ink-50' : 'bg-neutral-100'}`} />
+
+                  {/* 90% reference line */}
                   <div
-                    className={`w-full rounded-lg transition-all ${pct >= 90 ? 'bg-success' : 'bg-warning'} ${d.isToday ? '' : 'opacity-50'}`}
-                    style={{ height: `${pct}%`, marginTop: `${100 - pct}%` }}
+                    className="absolute left-0 right-0 z-10 pointer-events-none"
+                    style={{ bottom: '90%' }}
+                  >
+                    <div className="w-full border-t border-dashed border-neutral-300/80" />
+                  </div>
+
+                  {/* Late bar — sits immediately on top of present */}
+                  {latePct > 0 && (
+                    <div
+                      className={`absolute left-0 right-0 bg-warning transition-all duration-500 rounded-sm ${d.isToday ? 'opacity-80' : 'opacity-55'}`}
+                      style={{ bottom: `${presentPct}%`, height: `${latePct}%` }}
+                    />
+                  )}
+
+                  {/* Present bar — fills from bottom */}
+                  <div
+                    className={`absolute bottom-0 left-0 right-0 rounded-b-xl transition-all duration-500 ${st.bar} ${d.isToday ? '' : 'opacity-75'}`}
+                    style={{ height: `${presentPct}%` }}
                   />
+
+                  {/* Hover tooltip */}
+                  {isHovered && (
+                    <div className="absolute left-1/2 -translate-x-1/2 z-30 pointer-events-none" style={{ bottom: `calc(100% + 10px)` }}>
+                      <div className="bg-neutral-900 text-white rounded-xl px-3 py-2 shadow-xl whitespace-nowrap">
+                        <p className="text-[10px] font-semibold text-neutral-400 mb-1.5 tracking-wide uppercase">{d.day} · {d.date}</p>
+                        <div className="flex items-center gap-3 text-[11px] font-mono">
+                          <span className="flex items-center gap-1 text-success">
+                            <span className="w-1.5 h-1.5 rounded-sm bg-success inline-block" />
+                            {d.present}
+                          </span>
+                          <span className="flex items-center gap-1 text-warning">
+                            <span className="w-1.5 h-1.5 rounded-sm bg-warning inline-block" />
+                            {d.late}
+                          </span>
+                          <span className="flex items-center gap-1 text-danger/80">
+                            <span className="w-1.5 h-1.5 rounded-sm bg-danger/60 inline-block" />
+                            {d.absent}
+                          </span>
+                        </div>
+                        {/* Arrow */}
+                        <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-l-[5px] border-r-[5px] border-t-[6px] border-l-transparent border-r-transparent border-t-neutral-900" />
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <div className="text-center">
-                  <span className={`text-[12px] font-medium ${d.isToday ? 'text-ink-700 font-bold' : 'text-neutral-500'}`}>{d.day}</span>
-                  {d.isToday && <span className="block text-[9px] text-ink-400 mt-0.5">today</span>}
+
+                {/* Day label + count */}
+                <div className="text-center mt-2.5 space-y-0.5">
+                  <span className={`block text-[12px] font-medium leading-none ${d.isToday ? 'text-ink-700 font-bold' : 'text-neutral-500'}`}>
+                    {d.day}
+                  </span>
+                  <span className="block text-[10px] font-mono text-neutral-400 tabular-nums leading-none">
+                    {d.present}<span className="text-neutral-300">/{d.total}</span>
+                  </span>
+                  {d.isToday && (
+                    <span className="block text-[9px] font-bold text-ink-500 uppercase tracking-widest leading-none pt-0.5">Today</span>
+                  )}
                 </div>
               </div>
             )
           })}
+        </div>
+
+        {/* Footer — legend + insights */}
+        <div className="flex items-center justify-between pt-4 border-t border-neutral-100 flex-wrap gap-y-2 gap-x-4">
+          {/* Legend */}
+          <div className="flex items-center gap-4 flex-wrap">
+            <div className="flex items-center gap-1.5">
+              <div className="w-2.5 h-2.5 rounded-[3px] bg-success" />
+              <span className="text-[11px] text-neutral-500">Present</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-2.5 h-2.5 rounded-[3px] bg-warning opacity-80" />
+              <span className="text-[11px] text-neutral-500">Late</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-2.5 h-2.5 rounded-[3px] bg-neutral-200" />
+              <span className="text-[11px] text-neutral-500">Absent</span>
+            </div>
+            <div className="hidden sm:flex items-center gap-1.5">
+              <div className="w-5 h-px border-t border-dashed border-neutral-400" />
+              <span className="text-[11px] text-neutral-400">90% target</span>
+            </div>
+          </div>
+
+          {/* Best / Worst */}
+          <div className="flex items-center gap-2.5 text-[11px]">
+            <span className="text-neutral-400">Best:</span>
+            <span className="font-semibold font-mono text-success">{bestDay.day} {Math.round((bestDay.present / bestDay.total) * 100)}%</span>
+            <span className="text-neutral-200">·</span>
+            <span className="text-neutral-400">Low:</span>
+            <span className="font-semibold font-mono text-danger">{worstDay.day} {Math.round((worstDay.present / worstDay.total) * 100)}%</span>
+          </div>
         </div>
       </div>
     </>
