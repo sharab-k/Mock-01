@@ -69,9 +69,9 @@ export default function ProgrammesSection() {
               <div className="w-5 h-5 rounded-md bg-ink-100 flex items-center justify-center">
                 <div className="w-2 h-2 rounded-sm bg-ink-600" />
               </div>
-              <span className="text-ink-600 text-[13px] font-semibold">Programmes</span>
+              <span className="text-ink-600 text-[14px] font-semibold">Programmes</span>
             </div>
-            <h2 className="font-serif font-semibold text-[32px] sm:text-[38px] leading-[1.15] text-neutral-950">
+            <h2 className="font-serif font-semibold text-[36px] sm:text-[44px] leading-[1.12] text-neutral-950">
               Explore our{' '}
               <span className="text-ink-500">academic</span>
               {' '}programmes
@@ -79,7 +79,7 @@ export default function ProgrammesSection() {
           </div>
           <a
             href="#enquiry"
-            className="shrink-0 inline-flex items-center gap-1.5 text-[13px] text-ink-600 font-semibold no-underline hover:text-ink-800 transition-colors"
+            className="shrink-0 inline-flex items-center gap-1.5 text-[14px] text-ink-600 font-semibold no-underline hover:text-ink-800 transition-colors"
           >
             Enquire about a programme
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
@@ -116,8 +116,8 @@ export default function ProgrammesSection() {
                   {p.grade}
                 </div>
 
-                <h3 className="text-[17px] font-semibold text-neutral-950 mb-2">{p.title}</h3>
-                <p className="text-[13px] text-neutral-500 leading-relaxed mb-5">{p.description}</p>
+                <h3 className="text-[19px] font-semibold text-neutral-950 mb-2">{p.title}</h3>
+                <p className="text-[14.5px] text-neutral-500 leading-relaxed mb-5">{p.description}</p>
 
                 <div className="flex flex-wrap gap-1.5 mb-6">
                   {p.subjects.map((s) => (
@@ -129,7 +129,7 @@ export default function ProgrammesSection() {
 
                 <a
                   href="#enquiry"
-                  className="inline-flex items-center gap-1 text-[12px] font-semibold no-underline transition-colors"
+                  className="inline-flex items-center gap-1 text-[13px] font-semibold no-underline transition-colors"
                   style={{ color: p.accentColor }}
                 >
                   Enquire about this programme

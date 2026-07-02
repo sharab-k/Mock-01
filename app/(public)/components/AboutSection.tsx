@@ -57,21 +57,21 @@ export default function AboutSection() {
               <div className="w-5 h-5 rounded-md bg-ink-100 flex items-center justify-center">
                 <div className="w-2 h-2 rounded-sm bg-ink-600" />
               </div>
-              <span className="text-ink-600 text-[13px] font-semibold">About JE Academy</span>
+              <span className="text-ink-600 text-[14px] font-semibold">About JE Academy</span>
             </div>
 
-            <h2 className="font-serif font-semibold text-[32px] sm:text-[38px] leading-[1.15] text-neutral-950 mb-5">
+            <h2 className="font-serif font-semibold text-[36px] sm:text-[44px] leading-[1.12] text-neutral-950 mb-6">
               Welcome to our{' '}
               <span className="text-ink-500">learning</span>
               {' '}community
             </h2>
 
-            <p className="text-[15px] text-neutral-600 leading-relaxed mb-7">
+            <p className="text-[17px] text-neutral-600 leading-relaxed mb-8">
               Every attendance mark, every grade, every notice reaches parents the moment it&apos;s
               entered — so the relationship between home and classroom never depends on a phone call.
             </p>
 
-            <div className="space-y-4 mb-8">
+            <div className="space-y-4 mb-9">
               {[
                 'Real-time WhatsApp & SMS alerts for attendance and grades',
                 'One parent login covers all siblings under a single account',
@@ -83,7 +83,7 @@ export default function AboutSection() {
                       <polyline points="20 6 9 17 4 12" />
                     </svg>
                   </div>
-                  <span className="text-[13.5px] text-neutral-700">{text}</span>
+                  <span className="text-[15px] text-neutral-700">{text}</span>
                 </div>
               ))}
             </div>
@@ -94,10 +94,10 @@ export default function AboutSection() {
                 JE
               </div>
               <div>
-                <p className="text-[13px] text-neutral-600 italic leading-relaxed m-0">
+                <p className="text-[14px] text-neutral-600 italic leading-relaxed m-0">
                   &ldquo;[Principal&rsquo;s welcome note — pending copy from JE Academy]&rdquo;
                 </p>
-                <span className="block text-[11px] text-neutral-400 mt-1.5 font-medium">
+                <span className="block text-[12px] text-neutral-400 mt-1.5 font-medium">
                   Principal, JE Academy
                 </span>
               </div>

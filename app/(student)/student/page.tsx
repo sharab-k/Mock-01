@@ -1,4 +1,5 @@
 import StatCard from '@/components/dashboard/StatCard'
+import SyllabusPieChart from '@/components/dashboard/SyllabusPieChart'
 import { CalendarCheck, BookOpen, PlayCircle, ClipboardList, CheckCircle2, Clock3, XCircle } from 'lucide-react'
 
 // ── Data ──────────────────────────────────────────────────────────────────────
@@ -233,6 +234,9 @@ export default function StudentDashboard() {
           </div>
         </div>
       </div>
+
+      {/* ── Syllabus coverage ───────────────────────────────────────────── */}
+      <SyllabusPieChart />
 
       {/* ── Lectures + Study Guides ─────────────────────────────────────── */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">

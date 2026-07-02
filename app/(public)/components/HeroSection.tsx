@@ -118,24 +118,24 @@ export default function HeroSection() {
               <div className="w-5 h-5 rounded-md bg-ink-100 flex items-center justify-center">
                 <div className="w-2 h-2 rounded-sm bg-ink-600" />
               </div>
-              <span className="text-ink-600 text-[13px] font-semibold">Admissions open · 2026–27</span>
+              <span className="text-ink-600 text-[14px] font-semibold">Admissions open · 2026–27</span>
             </div>
 
-            <h1 className="font-serif font-semibold text-[50px] sm:text-[60px] lg:text-[52px] xl:text-[62px] leading-[1.06] text-neutral-950 mb-6">
+            <h1 className="font-serif font-semibold text-[56px] sm:text-[66px] lg:text-[58px] xl:text-[70px] leading-[1.04] text-neutral-950 mb-7">
               Where every<br />
               student is{' '}
               <span className="text-ink-500">known</span>
             </h1>
 
-            <p className="text-[15.5px] text-neutral-600 leading-relaxed max-w-[480px] mb-9">
+            <p className="text-[17px] text-neutral-600 leading-relaxed max-w-[500px] mb-10">
               A structured academy for Primary through Intermediate — real-time attendance, results,
               and progress shared directly with parents the moment they happen.
             </p>
 
-            <div className="flex gap-3 flex-wrap mb-11">
+            <div className="flex gap-3 flex-wrap mb-12">
               <a
                 href="#enquiry"
-                className="inline-flex items-center gap-2 text-[14px] font-semibold rounded-xl px-6 py-3.5 bg-ink-700 text-white no-underline hover:bg-ink-800 transition-colors shadow-sm"
+                className="inline-flex items-center gap-2 text-[15.5px] font-semibold rounded-xl px-7 py-4 bg-ink-700 text-white no-underline hover:bg-ink-800 transition-colors shadow-sm"
               >
                 Enquire about admission
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
@@ -144,7 +144,7 @@ export default function HeroSection() {
               </a>
               <a
                 href="#programmes"
-                className="inline-flex items-center text-[14px] font-semibold rounded-xl px-6 py-3.5 border border-neutral-300 bg-white/70 text-neutral-800 no-underline hover:bg-white hover:border-neutral-400 transition-colors"
+                className="inline-flex items-center text-[15.5px] font-semibold rounded-xl px-7 py-4 border border-neutral-300 bg-white/70 text-neutral-800 no-underline hover:bg-white hover:border-neutral-400 transition-colors"
               >
                 View programmes
               </a>
@@ -158,8 +158,8 @@ export default function HeroSection() {
               ].map((s, i) => (
                 <div key={s.label} className="flex items-center gap-8">
                   <div>
-                    <div className="font-serif text-[32px] font-semibold text-neutral-950 leading-none">{s.value}</div>
-                    <div className="text-[12px] text-neutral-500 mt-1 font-medium">{s.label}</div>
+                    <div className="font-serif text-[36px] font-semibold text-neutral-950 leading-none">{s.value}</div>
+                    <div className="text-[13.5px] text-neutral-500 mt-1.5 font-medium">{s.label}</div>
                   </div>
                   {i < 2 && <div className="w-px h-10 bg-neutral-200 hidden sm:block" />}
                 </div>
