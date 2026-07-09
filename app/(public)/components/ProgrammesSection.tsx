@@ -1,4 +1,7 @@
+'use client'
+
 import Image from 'next/image'
+import { useLandingPage } from '../LandingPageContext'
 
 type Programme = {
   grade: string
@@ -55,6 +58,8 @@ const PROGRAMMES: Programme[] = [
 ]
 
 export default function ProgrammesSection() {
+  const { setSelectedProgramme } = useLandingPage()
+
   return (
     <section
       className="bg-white py-20 sm:py-28"
@@ -129,6 +134,7 @@ export default function ProgrammesSection() {
 
                 <a
                   href="#enquiry"
+                  onClick={() => setSelectedProgramme(p.title)}
                   className="inline-flex items-center gap-1 text-[13px] font-semibold no-underline transition-colors"
                   style={{ color: p.accentColor }}
                 >

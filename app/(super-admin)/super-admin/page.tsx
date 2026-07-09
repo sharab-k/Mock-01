@@ -14,7 +14,9 @@ const STATS = [
   { label: 'Flagged Events',    value: '1',   icon: <AlertOctagon size={22} />, iconBg: 'bg-danger-bg',  iconColor: 'text-danger',  sub: 'Review required',                        href: '/super-admin/audit'      },
 ]
 
-const ADMIN_PROFILES = [
+type AdminProfile = { name: string; role: string; email: string; lastLogin: string; status: 'Active' | 'Inactive' }
+
+const INITIAL_ADMIN_PROFILES: AdminProfile[] = [
   { name: 'Ms. Asma Tahir',    role: 'Admissions Admin', email: 'a.tahir@jeacademy.edu.pk',   lastLogin: '24 Jun 2026, 08:14', status: 'Active'   },
   { name: 'Mr. Junaid Karim',  role: 'Attendance Admin', email: 'j.karim@jeacademy.edu.pk',   lastLogin: '24 Jun 2026, 08:01', status: 'Active'   },
   { name: 'Ms. Rida Farooq',   role: 'Marks Admin',      email: 'r.farooq@jeacademy.edu.pk',  lastLogin: '23 Jun 2026, 14:32', status: 'Active'   },
@@ -51,6 +53,8 @@ export default function SuperAdminDashboard() {
   const [showPromoteModal, setShowPromoteModal] = useState(false)
   const [promoteFrom,      setPromoteFrom]      = useState('Grade 9')
   const [promoted,         setPromoted]          = useState(false)
+  const [admins,           setAdmins]            = useState<AdminProfile[]>(INITIAL_ADMIN_PROFILES)
+  const [confirmTarget,    setConfirmTarget]     = useState<AdminProfile | null>(null)
 
   const total       = GRADE_COUNTS.reduce((a, g) => a + g.count, 0)
   const selectedGrade = GRADE_COUNTS.find(g => g.label === promoteFrom)
@@ -62,6 +66,12 @@ export default function SuperAdminDashboard() {
       setPromoted(false)
       setShowPromoteModal(false)
     }, 1800)
+  }
+
+  const applyToggle = () => {
+    if (!confirmTarget) return
+    setAdmins(prev => prev.map(a => a.email === confirmTarget.email ? { ...a, status: a.status === 'Active' ? 'Inactive' : 'Active' } : a))
+    setConfirmTarget(null)
   }
 
   return (
@@ -121,7 +131,7 @@ export default function SuperAdminDashboard() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-100">
-                {ADMIN_PROFILES.map((a) => (
+                {admins.map((a) => (
                   <tr key={a.email} className={`hover:bg-neutral-50 transition-colors ${a.status === 'Inactive' ? 'opacity-60' : ''}`}>
                     <td className="px-5 py-3.5">
                       <div className="flex items-center gap-3">
@@ -150,8 +160,8 @@ export default function SuperAdminDashboard() {
                     </td>
                     <td className="px-3 py-3.5">
                       {a.status === 'Active'
-                        ? <button className="text-[11.5px] text-ink-600 hover:text-ink-800 font-medium transition-colors">Edit ↗</button>
-                        : <button className="text-[11.5px] text-success hover:text-success/80 font-semibold transition-colors">Reactivate</button>
+                        ? <a href="/super-admin/staff" className="text-[11.5px] text-ink-600 hover:text-ink-800 font-medium transition-colors no-underline">Edit ↗</a>
+                        : <button onClick={() => setConfirmTarget(a)} className="text-[11.5px] text-success hover:text-success/80 font-semibold transition-colors">Reactivate</button>
                       }
                     </td>
                   </tr>
@@ -335,6 +345,34 @@ export default function SuperAdminDashboard() {
                 >
                   {promoted ? '✓ Promoted' : `Promote ${selectedGrade?.count ?? 0} Students`}
                 </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {confirmTarget && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4">
+          <div className="fixed inset-0 bg-neutral-900/50 backdrop-blur-sm" onClick={() => setConfirmTarget(null)} />
+          <div className="relative w-full sm:max-w-sm bg-white rounded-3xl shadow-2xl z-10 overflow-hidden">
+            <div className="flex items-center justify-between px-6 py-5 border-b border-neutral-100">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-success-bg flex items-center justify-center">
+                  <UserCog size={18} className="text-success" />
+                </div>
+                <h3 className="text-[15px] font-bold text-neutral-900">Reactivate account?</h3>
+              </div>
+              <button onClick={() => setConfirmTarget(null)} className="w-8 h-8 rounded-full flex items-center justify-center text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition-colors">
+                <X size={16} />
+              </button>
+            </div>
+            <div className="px-6 py-5">
+              <p className="text-[13px] text-neutral-600 leading-relaxed mb-5">
+                {confirmTarget.name} will regain portal access with their existing credentials.
+              </p>
+              <div className="flex items-center gap-3">
+                <button onClick={() => setConfirmTarget(null)} className="flex-1 py-3 text-[13px] font-medium text-neutral-600 bg-neutral-100 hover:bg-neutral-200 rounded-xl transition-colors">Cancel</button>
+                <button onClick={applyToggle} className="flex-1 py-3 text-[13px] font-semibold rounded-xl text-white bg-success hover:bg-success/90 transition-colors">Reactivate</button>
               </div>
             </div>
           </div>

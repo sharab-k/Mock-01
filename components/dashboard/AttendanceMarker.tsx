@@ -86,7 +86,11 @@ function initRecord(students: Student[]): Record<string, Status> {
   return Object.fromEntries(students.map(s => [s.roll, 'present' as Status]))
 }
 
-export default function AttendanceMarker() {
+type Props = {
+  onSubmitted?: (summary: { present: number; absent: number; late: number }) => void
+}
+
+export default function AttendanceMarker({ onSubmitted }: Props) {
   const [activeClassId, setActiveClassId] = useState(CLASSES[0].id)
   const [records, setRecords] = useState<Record<string, Record<string, Status>>>(
     Object.fromEntries(CLASSES.map(c => [c.id, initRecord(c.students)]))
@@ -121,6 +125,7 @@ export default function AttendanceMarker() {
   function handleSubmit() {
     // TODO: POST to /api/attendance with classRecord when Supabase is configured
     setSubmitted(prev => ({ ...prev, [activeClassId]: true }))
+    onSubmitted?.(counts)
   }
 
   const isSubmitted = !!submitted[activeClassId]

@@ -1,9 +1,29 @@
+'use client'
+
 import Image from 'next/image'
+import { useState, type FormEvent } from 'react'
 
 const QUICK_LINKS = ['About', 'Programmes', 'Faculty', 'Notices']
 const PORTAL_LINKS = ['Parent login', 'Student login', 'Staff login']
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
 export default function Footer() {
+  const [email, setEmail] = useState('')
+  const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle')
+
+  function handleSubscribe(e: FormEvent) {
+    e.preventDefault()
+    if (!EMAIL_RE.test(email)) {
+      setStatus('error')
+      return
+    }
+    // TODO: POST to a newsletter subscription endpoint once one exists
+    setStatus('success')
+    setEmail('')
+    setTimeout(() => setStatus('idle'), 3500)
+  }
+
   return (
     <footer className="bg-neutral-950 text-neutral-400">
       <div className="max-w-7xl mx-auto px-5 sm:px-8 pt-14 pb-6">
@@ -113,19 +133,35 @@ export default function Footer() {
             <p className="text-[13px] text-neutral-500 leading-relaxed mb-4">
               Subscribe to receive notices, exam schedules and academy announcements.
             </p>
-            <div className="flex gap-2">
-              <input
-                type="email"
-                placeholder="Email address"
-                className="flex-1 px-3.5 py-2.5 bg-neutral-800 border border-neutral-700 rounded-xl text-[13px] text-neutral-200 placeholder-neutral-500 focus:outline-none focus:border-ink-500 transition-colors"
-              />
-              <button
-                type="button"
-                className="px-4 py-2.5 bg-ink-700 hover:bg-ink-600 text-white rounded-xl text-[13px] font-semibold transition-colors shrink-0"
-              >
-                Subscribe
-              </button>
-            </div>
+            {status === 'success' ? (
+              <p className="text-[13px] text-success flex items-center gap-2">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12" /></svg>
+                Subscribed! Watch your inbox.
+              </p>
+            ) : (
+              <form onSubmit={handleSubscribe}>
+                <div className="flex gap-2">
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => { setEmail(e.target.value); if (status === 'error') setStatus('idle') }}
+                    placeholder="Email address"
+                    className={`flex-1 px-3.5 py-2.5 bg-neutral-800 border rounded-xl text-[13px] text-neutral-200 placeholder-neutral-500 focus:outline-none transition-colors ${
+                      status === 'error' ? 'border-danger focus:border-danger' : 'border-neutral-700 focus:border-ink-500'
+                    }`}
+                  />
+                  <button
+                    type="submit"
+                    className="px-4 py-2.5 bg-ink-700 hover:bg-ink-600 text-white rounded-xl text-[13px] font-semibold transition-colors shrink-0"
+                  >
+                    Subscribe
+                  </button>
+                </div>
+                {status === 'error' && (
+                  <p className="text-[11.5px] text-danger mt-1.5">Enter a valid email address.</p>
+                )}
+              </form>
+            )}
           </div>
         </div>
 

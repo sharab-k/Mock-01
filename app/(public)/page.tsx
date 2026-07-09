@@ -10,22 +10,25 @@ import TestimonialsSection from './components/TestimonialsSection'
 import VisitSection from './components/VisitSection'
 import EnquirySection from './components/EnquirySection'
 import Footer from './components/Footer'
+import { LandingPageProvider } from './LandingPageContext'
 
 export default function LandingPage() {
   return (
-    <main>
-      <TopBar />
-      <Navbar />
-      <HeroSection />
-      <AboutSection />
-      <ProgrammesSection />
-      <FeaturesSection />
-      <FacultySection />
-      <NoticesSection />
-      <TestimonialsSection />
-      <VisitSection />
-      <EnquirySection />
-      <Footer />
-    </main>
+    <LandingPageProvider>
+      <main>
+        <TopBar />
+        <Navbar />
+        <HeroSection />
+        <AboutSection />
+        <ProgrammesSection />
+        <FeaturesSection />
+        <FacultySection />
+        <NoticesSection />
+        <TestimonialsSection />
+        <VisitSection />
+        <EnquirySection />
+        <Footer />
+      </main>
+    </LandingPageProvider>
   )
 }

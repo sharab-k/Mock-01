@@ -10,9 +10,9 @@ export default function VisitSection() {
               <div className="w-5 h-5 rounded-md bg-ink-100 flex items-center justify-center">
                 <div className="w-2 h-2 rounded-sm bg-ink-600" />
               </div>
-              <span className="text-ink-600 text-[13px] font-semibold">Location</span>
+              <span className="text-ink-600 text-[14px] font-semibold">Location</span>
             </div>
-            <h2 className="font-serif font-semibold text-[32px] sm:text-[38px] leading-[1.15] text-neutral-950 mb-7">
+            <h2 className="font-serif font-semibold text-[36px] sm:text-[44px] leading-[1.12] text-neutral-950 mb-7">
               Come <span className="text-ink-500">visit</span> us
             </h2>
 

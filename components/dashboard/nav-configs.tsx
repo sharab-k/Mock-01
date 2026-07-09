@@ -1,8 +1,8 @@
 import {
   LayoutDashboard, Users, UserPlus, Inbox,
   CalendarCheck, BookOpen, Megaphone, Settings2, UserCog,
-  ClipboardList, BarChart2, PenLine, PlayCircle, Heart,
-  GraduationCap, UsersRound, School,
+  ClipboardList, BarChart2, PenLine, PlayCircle,
+  GraduationCap, UsersRound,
 } from 'lucide-react'
 import type { NavSection } from './types'
 
@@ -91,25 +91,6 @@ export const NAV_CONFIGS: Record<string, NavSection[]> = {
     },
   ],
 
-  teacher: [
-    {
-      items: [{ label: 'Dashboard', href: '/teacher', icon: LayoutDashboard }],
-    },
-    {
-      title: 'My Classes',
-      items: [
-        { label: 'Timetable',   href: '/teacher/timetable',  icon: School        },
-        { label: 'My Students', href: '/teacher/students',   icon: Users         },
-        { label: 'Attendance',  href: '/teacher/attendance', icon: CalendarCheck },
-        { label: 'Marks',       href: '/teacher/marks',      icon: BookOpen      },
-      ],
-    },
-    {
-      title: 'School',
-      items: [{ label: 'Notices', href: '/teacher/notices', icon: Megaphone }],
-    },
-  ],
-
   student: [
     {
       items: [{ label: 'Dashboard', href: '/student', icon: LayoutDashboard }],
@@ -131,18 +112,6 @@ export const NAV_CONFIGS: Record<string, NavSection[]> = {
   parent: [
     {
       items: [{ label: 'Dashboard', href: '/parent', icon: LayoutDashboard }],
-    },
-    {
-      title: 'My Children',
-      items: [
-        { label: 'Overview',   href: '/parent/children',   icon: Heart         },
-        { label: 'Attendance', href: '/parent/attendance', icon: CalendarCheck },
-        { label: 'Marks',      href: '/parent/marks',      icon: BookOpen      },
-      ],
-    },
-    {
-      title: 'School',
-      items: [{ label: 'Notices', href: '/parent/notices', icon: Megaphone }],
     },
   ],
 }

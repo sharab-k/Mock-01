@@ -151,7 +151,6 @@ export default async function LoginPage({ searchParams }: Props) {
                   { label: 'Admissions',   href: '/admissions',  color: '#A26D53' },
                   { label: 'Attendance',   href: '/attendance',  color: '#487A63' },
                   { label: 'Marks',        href: '/marks',       color: '#7E587E' },
-                  { label: 'Teacher',      href: '/teacher',     color: '#4A7B9D' },
                   { label: 'Student',      href: '/student',     color: '#547B96' },
                   { label: 'Parent',       href: '/parent',      color: '#988671' },
                 ].map((r) => (

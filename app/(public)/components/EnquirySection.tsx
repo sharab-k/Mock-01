@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
+import { useLandingPage } from '../LandingPageContext'
 
 const PROGRAMMES = ['Primary Years', 'Middle School', 'Matriculation', 'Intermediate']
 
@@ -12,6 +13,12 @@ const TRUST_POINTS = [
 
 export default function EnquirySection() {
   const [status, setStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle')
+  const { selectedProgramme } = useLandingPage()
+  const [programInterest, setProgramInterest] = useState(PROGRAMMES[0])
+
+  useEffect(() => {
+    if (selectedProgramme) setProgramInterest(selectedProgramme)
+  }, [selectedProgramme])
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -53,7 +60,7 @@ export default function EnquirySection() {
               <div className="w-5 h-5 rounded-md bg-ink-700 flex items-center justify-center">
                 <div className="w-2 h-2 rounded-sm bg-ink-400" />
               </div>
-              <span className="text-ink-400 text-[13px] font-semibold">Admissions</span>
+              <span className="text-ink-400 text-[14px] font-semibold">Admissions</span>
             </div>
             <h2 className="font-serif font-semibold text-[36px] sm:text-[44px] leading-[1.1] text-white mb-5">
               Start an{' '}
@@ -128,6 +135,8 @@ export default function EnquirySection() {
                   <select
                     name="program_interest"
                     required
+                    value={programInterest}
+                    onChange={(e) => setProgramInterest(e.target.value)}
                     className="w-full px-3.5 py-2.5 border border-neutral-200 rounded-xl text-[13px] text-neutral-900 bg-neutral-50 focus:outline-none focus:border-ink-400 focus:ring-2 focus:ring-ink-400/10 focus:bg-white transition-all"
                   >
                     {PROGRAMMES.map((p) => (

@@ -1,6 +1,9 @@
+'use client'
+
+import { useState } from 'react'
 import StatCard from '@/components/dashboard/StatCard'
 import SyllabusPieChart from '@/components/dashboard/SyllabusPieChart'
-import { CalendarCheck, BookOpen, PlayCircle, ClipboardList, CheckCircle2, Clock3, XCircle } from 'lucide-react'
+import { CalendarCheck, BookOpen, PlayCircle, ClipboardList, CheckCircle2, Clock3, XCircle, X, UploadCloud, FileCheck2 } from 'lucide-react'
 
 // ── Data ──────────────────────────────────────────────────────────────────────
 const STATS = [
@@ -40,7 +43,10 @@ const GUIDES = [
   { subject: 'English',     title: 'Essay Writing Guide',      date: '12 Jan 2026' },
 ]
 
-const ASSIGNMENTS = [
+type AssignStatus = 'Submitted' | 'Pending' | 'Not Started'
+type Assignment = { subject: string; title: string; due: string; status: AssignStatus }
+
+const INITIAL_ASSIGNMENTS: Assignment[] = [
   { subject: 'Mathematics', title: 'Chapter 5 – Practice Set',  due: '28 Jan 2026', status: 'Submitted'   },
   { subject: 'Physics',     title: 'Lab Report – Motion Exp.',  due: '30 Jan 2026', status: 'Pending'     },
   { subject: 'English',     title: 'Descriptive Essay Draft',   due: '2 Feb 2026',  status: 'Pending'     },
@@ -87,6 +93,17 @@ export default function StudentDashboard() {
   const presentCount = ATTENDANCE_WEEK.filter(d => d.status === 'Present').length
   const lateCount    = ATTENDANCE_WEEK.filter(d => d.status === 'Late').length
   const weekRate     = Math.round(((presentCount + lateCount * 0.5) / ATTENDANCE_WEEK.length) * 100)
+
+  const [assignments,  setAssignments]  = useState<Assignment[]>(INITIAL_ASSIGNMENTS)
+  const [submitTarget, setSubmitTarget] = useState<Assignment | null>(null)
+  const [fileName,     setFileName]     = useState('')
+
+  const confirmSubmit = () => {
+    if (!submitTarget) return
+    setAssignments(prev => prev.map(a => a.title === submitTarget.title ? { ...a, status: 'Submitted' } : a))
+    setSubmitTarget(null)
+    setFileName('')
+  }
 
   return (
     <>
@@ -318,7 +335,7 @@ export default function StudentDashboard() {
           <a href="/student/assignments" className="text-[12px] text-ink-600 hover:text-ink-800 no-underline font-medium">View all →</a>
         </div>
         <div className="divide-y divide-neutral-100">
-          {ASSIGNMENTS.map((a, i) => (
+          {assignments.map((a, i) => (
             <div key={i} className="flex items-center gap-4 px-6 py-3.5 hover:bg-neutral-50/70 transition-colors">
               <div className={`w-2 h-2 rounded-full shrink-0 ${SUBJ_COLOR[a.subject]?.split(' ')[0] ?? 'bg-neutral-300'}`} />
               <div className="flex-1 min-w-0">
@@ -332,12 +349,18 @@ export default function StudentDashboard() {
               {/* Action button varies by status */}
               {a.status === 'Submitted' && <span className="w-[76px] shrink-0" />}
               {a.status === 'Pending' && (
-                <button className="text-[12px] font-semibold text-white bg-ink-700 hover:bg-ink-800 px-3.5 py-1.5 rounded-xl transition-colors shrink-0">
+                <button
+                  onClick={() => { setFileName(''); setSubmitTarget(a) }}
+                  className="text-[12px] font-semibold text-white bg-ink-700 hover:bg-ink-800 px-3.5 py-1.5 rounded-xl transition-colors shrink-0"
+                >
                   Submit
                 </button>
               )}
               {a.status === 'Not Started' && (
-                <button className="text-[12px] font-medium text-ink-600 bg-ink-50 hover:bg-ink-100 border border-ink-100 px-3.5 py-1.5 rounded-xl transition-colors shrink-0">
+                <button
+                  onClick={() => { setFileName(''); setSubmitTarget(a) }}
+                  className="text-[12px] font-medium text-ink-600 bg-ink-50 hover:bg-ink-100 border border-ink-100 px-3.5 py-1.5 rounded-xl transition-colors shrink-0"
+                >
                   Begin
                 </button>
               )}
@@ -345,6 +368,49 @@ export default function StudentDashboard() {
           ))}
         </div>
       </div>
+
+      {submitTarget && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4">
+          <div className="fixed inset-0 bg-neutral-900/50 backdrop-blur-sm" onClick={() => setSubmitTarget(null)} />
+          <div className="relative w-full sm:max-w-sm bg-white rounded-3xl shadow-2xl z-10 overflow-hidden">
+            <div className="flex items-center justify-between px-6 py-5 border-b border-neutral-100">
+              <h3 className="text-[15px] font-bold text-neutral-900">Submit Assignment</h3>
+              <button onClick={() => setSubmitTarget(null)} className="w-8 h-8 rounded-full flex items-center justify-center text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition-colors">
+                <X size={16} />
+              </button>
+            </div>
+            <div className="px-6 py-5 space-y-4">
+              <p className="text-[13px] text-neutral-600">{submitTarget.title} · <span className="text-neutral-400">{submitTarget.subject}</span></p>
+              <label
+                className={`flex flex-col items-center justify-center gap-2 border-2 border-dashed rounded-2xl py-8 px-4 cursor-pointer transition-colors ${
+                  fileName ? 'border-success/40 bg-success-bg/40' : 'border-neutral-200 hover:border-ink-300 hover:bg-ink-50/30'
+                }`}
+              >
+                <input
+                  type="file"
+                  className="sr-only"
+                  onChange={(e) => setFileName(e.target.files?.[0]?.name ?? '')}
+                />
+                {fileName ? (
+                  <>
+                    <FileCheck2 size={22} className="text-success" />
+                    <span className="text-[12.5px] font-medium text-neutral-800 text-center break-all px-2">{fileName}</span>
+                    <span className="text-[11px] text-ink-600 font-medium">Click to change file</span>
+                  </>
+                ) : (
+                  <>
+                    <UploadCloud size={22} className="text-neutral-400" />
+                    <span className="text-[12.5px] text-neutral-500">Click to choose a file</span>
+                  </>
+                )}
+              </label>
+              <button onClick={confirmSubmit} disabled={!fileName} className="w-full flex items-center justify-center gap-2 py-3 text-[13px] font-semibold rounded-xl bg-ink-700 text-white hover:bg-ink-800 transition-colors disabled:opacity-50">
+                <CheckCircle2 size={14} /> Submit
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   )
 }

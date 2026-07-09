@@ -30,14 +30,14 @@ export default function FacultySection() {
             <div className="w-5 h-5 rounded-md bg-ink-700 flex items-center justify-center">
               <div className="w-2 h-2 rounded-sm bg-ink-400" />
             </div>
-            <span className="text-ink-400 text-[13px] font-semibold">Faculty</span>
+            <span className="text-ink-400 text-[14px] font-semibold">Faculty</span>
           </div>
-          <h2 className="font-serif font-semibold text-[32px] sm:text-[38px] leading-[1.15] text-white">
+          <h2 className="font-serif font-semibold text-[36px] sm:text-[44px] leading-[1.12] text-white">
             Meet our{' '}
             <span className="text-ink-400">expert</span>
             {' '}instructors
           </h2>
-          <p className="text-[14px] text-ink-300 mt-4 max-w-[480px] mx-auto leading-relaxed">
+          <p className="text-[15px] text-ink-300 mt-4 max-w-[480px] mx-auto leading-relaxed">
             Experienced educators who combine subject mastery with a genuine commitment to each
             student&apos;s progress.
           </p>
