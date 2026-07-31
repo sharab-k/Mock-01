@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react'
 import Link from 'next/link'
 import StatCard from '@/components/dashboard/StatCard'
 import { ArrowLeft, PenLine, BookOpen, CheckCircle, Users, Upload, X } from 'lucide-react'
+import { letterGrade } from '@/lib/marks/letter-grade'
 
 // ── Types & constants ─────────────────────────────────────────────────────────
 const VALID_GRADES   = ['9', '10', '11', '12']
@@ -29,19 +30,15 @@ const SCORE_BAR = (score: number, max: number) => {
   return pct >= 80 ? 'bg-success' : pct >= 65 ? 'bg-ink-400' : pct >= 50 ? 'bg-warning' : 'bg-danger'
 }
 
-// ── Mock data (TODO: replace with Supabase query filtered by grade + section) ─
-const ALL_MARKS = [
-  { student: 'Ahmed Ali',    roll: 'JE-2026-001', grade: '10', section: 'A', subject: 'Mathematics', exam: 'Monthly',     score: 87, max: 100, grade_val: 'A'  },
-  { student: 'Sara Khan',    roll: 'JE-2026-002', grade: '9',  section: 'A', subject: 'English',     exam: 'Monthly',     score: 91, max: 100, grade_val: 'A+' },
-  { student: 'Bilal Raza',   roll: 'JE-2026-003', grade: '12', section: 'A', subject: 'Physics',     exam: 'Half-Yearly', score: 74, max: 100, grade_val: 'B'  },
-  { student: 'Fatima Noor',  roll: 'JE-2026-004', grade: '11', section: 'B', subject: 'Chemistry',   exam: 'Half-Yearly', score: 68, max: 100, grade_val: 'B-' },
-  { student: 'Hina Baig',    roll: 'JE-2026-018', grade: '9',  section: 'B', subject: 'Mathematics', exam: 'Monthly',     score: 55, max: 100, grade_val: 'C+' },
-  { student: 'Kamran Malik', roll: 'JE-2026-031', grade: '12', section: 'B', subject: 'Biology',     exam: 'Monthly',     score: 79, max: 100, grade_val: 'B+' },
-  { student: 'Sana Mir',     roll: 'JE-2026-044', grade: '12', section: 'A', subject: 'Urdu',        exam: 'Monthly',     score: 88, max: 100, grade_val: 'A'  },
-  { student: 'Dawood Ilyas', roll: 'JE-2026-057', grade: '11', section: 'A', subject: 'Physics',     exam: 'Monthly',     score: 63, max: 100, grade_val: 'C+' },
-  { student: 'Tariq Ansari', roll: 'JE-2026-071', grade: '11', section: 'B', subject: 'Mathematics', exam: 'Half-Yearly', score: 80, max: 100, grade_val: 'A-' },
-  { student: 'Amna Farooq',  roll: 'JE-2026-079', grade: '10', section: 'C', subject: 'Biology',     exam: 'Monthly',     score: 74, max: 100, grade_val: 'B'  },
-]
+export type ClassMark = {
+  id: string
+  student: string
+  roll: string
+  subject: string
+  exam: string
+  score: number
+  max: number
+}
 
 const ALL_EXAM_TYPES = ['All Exams', 'Monthly', 'Half-Yearly', 'Final']
 
@@ -51,15 +48,11 @@ type Props = {
   /** Route prefix for this dashboard's own links — lets Super Admin render the
    *  identical class-detail view within its own shell. */
   basePath?: string
+  marks: ClassMark[]
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
-export default function MarksClassDetailContent({ grade, section, basePath = '/marks' }: Props) {
-  const classMarks = useMemo(
-    () => ALL_MARKS.filter(m => m.grade === grade && m.section === section),
-    [grade, section]
-  )
-
+export default function MarksClassDetailContent({ grade, section, basePath = '/marks', marks: classMarks }: Props) {
   const ALL_SUBJECTS_FOR_CLASS = useMemo(
     () => ['All Subjects', ...Array.from(new Set(classMarks.map(m => m.subject))).sort()],
     [classMarks]
@@ -207,7 +200,7 @@ export default function MarksClassDetailContent({ grade, section, basePath = '/m
               </thead>
               <tbody className="divide-y divide-neutral-100">
                 {filtered.map(m => (
-                  <tr key={`${m.roll}-${m.subject}-${m.exam}`} className="hover:bg-neutral-50 transition-colors">
+                  <tr key={m.id} className="hover:bg-neutral-50 transition-colors">
                     <td className="px-5 py-3.5">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-full bg-ink-100 text-ink-700 flex items-center justify-center font-mono text-[10px] font-bold shrink-0">
@@ -233,7 +226,7 @@ export default function MarksClassDetailContent({ grade, section, basePath = '/m
                         </div>
                       </div>
                     </td>
-                    <td className={`px-3 py-3.5 font-mono text-[13px] ${GRADE_COLOR(m.grade_val)}`}>{m.grade_val}</td>
+                    <td className={`px-3 py-3.5 font-mono text-[13px] ${GRADE_COLOR(letterGrade(m.score, m.max))}`}>{letterGrade(m.score, m.max)}</td>
                   </tr>
                 ))}
               </tbody>

@@ -11,8 +11,11 @@ import VisitSection from './components/VisitSection'
 import EnquirySection from './components/EnquirySection'
 import Footer from './components/Footer'
 import { LandingPageProvider } from './LandingPageContext'
+import { fetchVisibleNotices } from '@/lib/notices/fetch'
 
-export default function LandingPage() {
+export default async function LandingPage() {
+  const notices = await fetchVisibleNotices()
+
   return (
     <LandingPageProvider>
       <main>
@@ -23,7 +26,7 @@ export default function LandingPage() {
         <ProgrammesSection />
         <FeaturesSection />
         <FacultySection />
-        <NoticesSection />
+        <NoticesSection notices={notices} />
         <TestimonialsSection />
         <VisitSection />
         <EnquirySection />

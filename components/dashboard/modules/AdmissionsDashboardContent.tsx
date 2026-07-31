@@ -9,35 +9,6 @@ import {
 } from 'lucide-react'
 
 // ── Data ──────────────────────────────────────────────────────────────────────
-const PIPELINE_BASE = [
-  { name: 'Zara Hussain',  roll: 'JE-2026-047', grade: '9',  section: 'B', credentialSent: true,  date: '24 Jun 2026' },
-  { name: 'Ahmed Ali',     roll: 'JE-2026-001', grade: '10', section: 'A', credentialSent: true,  date: '15 Jan 2026' },
-  { name: 'Sara Khan',     roll: 'JE-2026-002', grade: '9',  section: 'A', credentialSent: true,  date: '14 Jan 2026' },
-  { name: 'Bilal Raza',    roll: 'JE-2026-003', grade: '12', section: 'A', credentialSent: true,  date: '12 Jan 2026' },
-  { name: 'Fatima Noor',   roll: 'JE-2026-004', grade: '11', section: 'B', credentialSent: true,  date: '10 Jan 2026' },
-  { name: 'Usman Sheikh',  roll: 'JE-2026-005', grade: '10', section: 'B', credentialSent: false, date: '8 Jan 2026'  },
-  { name: 'Hina Baig',     roll: 'JE-2026-018', grade: '9',  section: 'C', credentialSent: true,  date: '6 Jan 2026'  },
-  { name: 'Kamran Malik',  roll: 'JE-2026-031', grade: '12', section: 'B', credentialSent: true,  date: '4 Jan 2026'  },
-  { name: 'Dawood Ilyas',  roll: 'JE-2026-057', grade: '11', section: 'A', credentialSent: true,  date: '2 Jan 2026'  },
-]
-
-const ENQUIRIES = [
-  { parent: 'Rashid Iqbal',   phone: '+92 300 1234567', grade: '9',  msg: 'Looking to enroll my son in Grade 9 Sciences. He passed his 8th grade with distinction.', date: '24 Jun', status: 'Unread'         },
-  { parent: 'Aisha Siddiqui', phone: '+92 321 7654321', grade: '10', msg: 'My son is transferring from DPS. He completed Grade 9 and will be joining Grade 10.',         date: '23 Jun', status: 'Contacted'       },
-  { parent: 'Tariq Mehmood',  phone: '+92 333 1112223', grade: '11', msg: 'Enquiring about F.Sc sciences for Grade 11. Does the academy offer Phy, Chem, Bio together?', date: '22 Jun', status: 'Unread'         },
-  { parent: 'Maria Ahmed',    phone: '+92 311 9998887', grade: '12', msg: 'Would like to visit campus for Grade 12 admission. Please advise on available timings.',      date: '21 Jun', status: 'Awaiting Visit' },
-  { parent: 'Khalid Farooq',  phone: '+92 345 6667778', grade: '9',  msg: 'We have two children looking to join Grade 9 and Grade 10. Enquiring about sibling policy.',  date: '20 Jun', status: 'Contacted'      },
-]
-
-// Total enrolled students per class-section (TODO: replace with Supabase query)
-const CLASS_GRID: Record<string, Record<string, number>> = {
-  '9':  { A: 30, B: 28, C: 32, D: 26 },
-  '10': { A: 31, B: 27, C: 29, D: 33 },
-  '11': { A: 28, B: 30, C: 26, D: 29 },
-  '12': { A: 24, B: 27, C: 25, D: 23 },
-}
-const TOTAL_ENROLLED = Object.values(CLASS_GRID).reduce((a, g) => a + Object.values(g).reduce((b, n) => b + n, 0), 0)
-
 const INITIALS = (name: string) => name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
 
 const STATUS_STYLE: Record<string, string> = {
@@ -46,19 +17,37 @@ const STATUS_STYLE: Record<string, string> = {
   'Awaiting Visit':'bg-warning-bg text-warning',
 }
 
-// ── Aggregate stats (full dataset) ───────────────────────────────────────────
-const newReg    = PIPELINE_BASE.filter(s => s.date.includes('24 Jun') || s.date.includes('23 Jun')).length
-const pendingEnq = ENQUIRIES.filter(e => e.status === 'Unread' || e.status === 'Awaiting Visit').length
-const parentIds  = PIPELINE_BASE.filter(s => s.credentialSent).length
+export type DashboardEnquiry = {
+  parent: string
+  phone: string
+  grade: string
+  msg: string
+  date: string
+  status: string
+}
 
 type Props = {
   /** Route prefix for this dashboard's own links — lets Super Admin render the
    *  identical dashboard within its own shell instead of a simplified duplicate. */
   basePath?: string
+  classGrid: Record<string, Record<string, number>>
+  totalEnrolled: number
+  newRegistrations: number
+  pendingEnquiries: number
+  parentIdsIssued: number
+  enquiries: DashboardEnquiry[]
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
-export default function AdmissionsDashboardContent({ basePath = '/admissions' }: Props) {
+export default function AdmissionsDashboardContent({
+  basePath = '/admissions',
+  classGrid,
+  totalEnrolled,
+  newRegistrations,
+  pendingEnquiries,
+  parentIdsIssued,
+  enquiries,
+}: Props) {
   const [copiedPhone,  setCopiedPhone]  = useState<string | null>(null)
   const [expandedEnq,  setExpandedEnq]  = useState<number | null>(null)
   const [showPromote,  setShowPromote]  = useState(false)
@@ -75,13 +64,13 @@ export default function AdmissionsDashboardContent({ basePath = '/admissions' }:
   }
 
   const promoteTo    = promoteFrom === '9' ? '10' : promoteFrom === '10' ? '11' : promoteFrom === '11' ? '12' : 'Graduated'
-  const promoteCount = PIPELINE_BASE.filter(s => s.grade === promoteFrom).length
+  const promoteCount = Object.values(classGrid[promoteFrom] ?? {}).reduce((a, n) => a + n, 0)
 
   const STATS = [
-    { label: 'Students Enrolled', value: String(TOTAL_ENROLLED), icon: <Users size={22} />,    iconBg: 'bg-ink-100',    iconColor: 'text-ink-600', sub: 'Across grades 9–12'              },
-    { label: 'New Registrations', value: String(newReg),         icon: <UserPlus size={22} />, iconBg: 'bg-success-bg', iconColor: 'text-success', sub: 'This week', subUp: newReg > 0     },
-    { label: 'Pending Enquiries', value: String(pendingEnq),     icon: <Inbox size={22} />,    iconBg: 'bg-danger-bg',  iconColor: 'text-danger',  sub: 'Need follow-up'                   },
-    { label: 'Parent IDs Issued', value: String(parentIds),      icon: <KeyRound size={22} />, iconBg: 'bg-warning-bg', iconColor: 'text-warning', sub: 'Auto-dispatched on enrolment'     },
+    { label: 'Students Enrolled', value: String(totalEnrolled),     icon: <Users size={22} />,    iconBg: 'bg-ink-100',    iconColor: 'text-ink-600', sub: 'Across grades 9–12'                          },
+    { label: 'New Registrations', value: String(newRegistrations),  icon: <UserPlus size={22} />, iconBg: 'bg-success-bg', iconColor: 'text-success', sub: 'This week', subUp: newRegistrations > 0      },
+    { label: 'Pending Enquiries', value: String(pendingEnquiries),  icon: <Inbox size={22} />,    iconBg: 'bg-danger-bg',  iconColor: 'text-danger',  sub: 'Need follow-up'                               },
+    { label: 'Parent IDs Issued', value: String(parentIdsIssued),   icon: <KeyRound size={22} />, iconBg: 'bg-warning-bg', iconColor: 'text-warning', sub: 'Auto-dispatched on enrolment'                 },
   ]
 
   return (
@@ -117,7 +106,7 @@ export default function AdmissionsDashboardContent({ basePath = '/admissions' }:
             <h2 className="text-[14px] font-semibold text-neutral-900">Enrolment by Class</h2>
             <p className="text-[11.5px] text-neutral-400 mt-0.5 hidden sm:block">Click a class to open its full registration pipeline</p>
           </div>
-          <span className="text-[12px] font-mono text-neutral-400 shrink-0">{TOTAL_ENROLLED} total</span>
+          <span className="text-[12px] font-mono text-neutral-400 shrink-0">{totalEnrolled} total</span>
         </div>
 
         <div className="p-5 space-y-5">
@@ -128,14 +117,14 @@ export default function AdmissionsDashboardContent({ basePath = '/admissions' }:
                 <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Grade {grade}</span>
                 <div className="flex-1 h-px bg-neutral-100" />
                 <span className="text-[10px] font-mono text-neutral-400">
-                  {Object.values(CLASS_GRID[grade]).reduce((a, n) => a + n, 0)} students
+                  {Object.values(classGrid[grade]).reduce((a, n) => a + n, 0)} students
                 </span>
               </div>
 
               {/* 4 section cards — each is a Link to the detail page */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {(['A', 'B', 'C', 'D'] as const).map(section => {
-                  const count = CLASS_GRID[grade][section]
+                  const count = classGrid[grade][section]
                   return (
                     <Link
                       key={section}
@@ -175,7 +164,7 @@ export default function AdmissionsDashboardContent({ basePath = '/admissions' }:
           <Link href={`${basePath}/enquiries`} className="text-[12px] text-ink-600 hover:text-ink-800 no-underline font-medium shrink-0">View all →</Link>
         </div>
         <div className="divide-y divide-neutral-100">
-          {ENQUIRIES.map((e, i) => (
+          {enquiries.map((e, i) => (
             <div key={i}>
               <div className="flex items-start gap-3 px-5 py-4 hover:bg-neutral-50 transition-colors cursor-pointer select-none" onClick={() => setExpandedEnq(expandedEnq === i ? null : i)}>
                 <div className="w-8 h-8 rounded-full bg-neutral-100 text-neutral-600 flex items-center justify-center font-mono text-[10px] font-bold shrink-0 mt-0.5">

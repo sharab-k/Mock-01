@@ -1,13 +1,17 @@
-'use client'
-
-import { use } from 'react'
 import MarksClassDetailContent from '@/components/dashboard/modules/MarksClassDetailContent'
+import { fetchClassMarks } from '@/lib/marks/class-detail'
 
-export default function ClassMarksPage({
+const VALID_GRADES = ['9', '10', '11', '12']
+const VALID_SECTIONS = ['A', 'B', 'C', 'D']
+
+export default async function ClassMarksPage({
   params,
 }: {
   params: Promise<{ grade: string; section: string }>
 }) {
-  const { grade, section } = use(params)
-  return <MarksClassDetailContent grade={grade} section={section} basePath="/marks" />
+  const { grade, section } = await params
+  const isValid = VALID_GRADES.includes(grade) && VALID_SECTIONS.includes(section)
+  const marks = isValid ? await fetchClassMarks(grade, section) : []
+
+  return <MarksClassDetailContent grade={grade} section={section} basePath="/marks" marks={marks} />
 }

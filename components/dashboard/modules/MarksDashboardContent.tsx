@@ -4,65 +4,8 @@ import Link from 'next/link'
 import { useState } from 'react'
 import StatCard from '@/components/dashboard/StatCard'
 import { PenLine, BookOpen, CheckCircle, Users, Upload, X } from 'lucide-react'
-
-// ── Per-class marks stats (TODO: replace with Supabase aggregate query) ───────
-const CLASS_MARKS: Record<string, Record<string, { avg: number; entries: number; graded: number; total: number }>> = {
-  '9':  {
-    A: { avg: 78, entries: 28, graded: 28, total: 30 },
-    B: { avg: 65, entries: 24, graded: 24, total: 28 },
-    C: { avg: 82, entries: 30, graded: 30, total: 32 },
-    D: { avg: 71, entries: 20, graded: 20, total: 26 },
-  },
-  '10': {
-    A: { avg: 85, entries: 31, graded: 31, total: 31 },
-    B: { avg: 60, entries: 22, graded: 22, total: 27 },
-    C: { avg: 74, entries: 27, graded: 27, total: 29 },
-    D: { avg: 88, entries: 33, graded: 33, total: 33 },
-  },
-  '11': {
-    A: { avg: 58, entries: 20, graded: 20, total: 28 },
-    B: { avg: 79, entries: 28, graded: 28, total: 30 },
-    C: { avg: 67, entries: 24, graded: 24, total: 26 },
-    D: { avg: 72, entries: 27, graded: 27, total: 29 },
-  },
-  '12': {
-    A: { avg: 81, entries: 24, graded: 24, total: 24 },
-    B: { avg: 76, entries: 25, graded: 25, total: 27 },
-    C: { avg: 63, entries: 22, graded: 22, total: 25 },
-    D: { avg: 55, entries: 18, graded: 18, total: 23 },
-  },
-}
-
-const TIERS = [
-  { tier: 'Distinction', range: '80% and above', count: 58, color: 'bg-success', textColor: 'text-success', bgColor: 'bg-success-bg' },
-  { tier: 'Merit',       range: '65% – 79%',     count: 49, color: 'bg-ink-500', textColor: 'text-ink-600', bgColor: 'bg-ink-50'     },
-  { tier: 'Pass',        range: '50% – 64%',     count: 35, color: 'bg-warning', textColor: 'text-warning', bgColor: 'bg-warning-bg' },
-  { tier: 'Below Pass',  range: 'Below 50%',     count: 0,  color: 'bg-danger',  textColor: 'text-danger',  bgColor: 'bg-danger-bg'  },
-]
-
-const SUBJECTS = [
-  { name: 'Mathematics', entries: 42, avg: 74 },
-  { name: 'English',     entries: 38, avg: 81 },
-  { name: 'Physics',     entries: 35, avg: 70 },
-  { name: 'Chemistry',   entries: 31, avg: 68 },
-  { name: 'Biology',     entries: 28, avg: 76 },
-  { name: 'Urdu',        entries: 45, avg: 83 },
-]
-
-// ── Derived global totals ─────────────────────────────────────────────────────
-const ALL_CLASSES   = Object.values(CLASS_MARKS).flatMap(g => Object.values(g))
-const TOTAL_ENTRIES = ALL_CLASSES.reduce((a, c) => a + c.entries, 0)
-const TOTAL_GRADED  = ALL_CLASSES.reduce((a, c) => a + c.graded,  0)
-const TOTAL_ENROLL  = ALL_CLASSES.reduce((a, c) => a + c.total,   0)
-const TOTAL_PENDING = TOTAL_ENROLL - TOTAL_GRADED
-const TOTAL_TIERED  = TIERS.reduce((a, t) => a + t.count, 0)
-
-const STATS = [
-  { label: 'Entries This Week', value: String(TOTAL_ENTRIES), icon: <PenLine size={22} />,     iconBg: 'bg-ink-100',    iconColor: 'text-ink-600', sub: 'across all classes'                       },
-  { label: 'Subjects Covered',  value: '6',                   icon: <BookOpen size={22} />,    iconBg: 'bg-warning-bg', iconColor: 'text-warning', sub: 'of 8 this term'                           },
-  { label: 'Students Graded',   value: String(TOTAL_GRADED),  icon: <CheckCircle size={22} />, iconBg: 'bg-success-bg', iconColor: 'text-success', sub: `${Math.round((TOTAL_GRADED/TOTAL_ENROLL)*100)}% of ${TOTAL_ENROLL}`, subUp: true },
-  { label: 'Pending Entry',     value: String(TOTAL_PENDING), icon: <Users size={22} />,       iconBg: 'bg-danger-bg',  iconColor: 'text-danger',  sub: `${Math.round((TOTAL_PENDING/TOTAL_ENROLL)*100)}% remaining` },
-]
+import { TIER_ORDER, TIER_RANGE, TIER_STYLE, type Tier } from '@/lib/marks/tier'
+import type { ClassMarksStat, SubjectStat } from '@/lib/marks/dashboard-data'
 
 function avgStyle(avg: number): { badge: string; bar: string } {
   if (avg >= 80) return { badge: 'text-success',  bar: 'bg-success'  }
@@ -75,11 +18,38 @@ type Props = {
   /** Route prefix for this dashboard's own links — lets Super Admin render the
    *  identical dashboard within its own shell instead of a simplified duplicate. */
   basePath?: string
+  classStats: Record<string, Record<string, ClassMarksStat>>
+  totalEnrolled: number
+  entriesThisWeek: number
+  subjectsCovered: number
+  studentsGraded: number
+  pendingEntry: number
+  tierCounts: Record<Tier, number>
+  totalTiered: number
+  subjects: SubjectStat[]
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
-export default function MarksDashboardContent({ basePath = '/marks' }: Props) {
+export default function MarksDashboardContent({
+  basePath = '/marks',
+  classStats,
+  totalEnrolled,
+  entriesThisWeek,
+  subjectsCovered,
+  studentsGraded,
+  pendingEntry,
+  tierCounts,
+  totalTiered,
+  subjects,
+}: Props) {
   const [showBulkHint, setShowBulkHint] = useState(false)
+
+  const STATS = [
+    { label: 'Entries This Week', value: String(entriesThisWeek), icon: <PenLine size={22} />,     iconBg: 'bg-ink-100',    iconColor: 'text-ink-600', sub: 'across all classes'                       },
+    { label: 'Subjects Covered',  value: String(subjectsCovered), icon: <BookOpen size={22} />,    iconBg: 'bg-warning-bg', iconColor: 'text-warning', sub: 'this term'                                },
+    { label: 'Students Graded',   value: String(studentsGraded),  icon: <CheckCircle size={22} />, iconBg: 'bg-success-bg', iconColor: 'text-success', sub: totalEnrolled > 0 ? `${Math.round((studentsGraded/totalEnrolled)*100)}% of ${totalEnrolled}` : 'No students enrolled', subUp: true },
+    { label: 'Pending Entry',     value: String(pendingEntry),    icon: <Users size={22} />,       iconBg: 'bg-danger-bg',  iconColor: 'text-danger',  sub: totalEnrolled > 0 ? `${Math.round((pendingEntry/totalEnrolled)*100)}% remaining` : 'No students enrolled' },
+  ]
 
   return (
     <>
@@ -123,7 +93,7 @@ export default function MarksDashboardContent({ basePath = '/marks' }: Props) {
             <h2 className="text-[14px] font-semibold text-neutral-900">Class Score Overview</h2>
             <p className="text-[11.5px] text-neutral-400 mt-0.5 hidden sm:block">Click a class to view, enter, and filter marks by subject</p>
           </div>
-          <span className="text-[12px] font-mono text-neutral-400 shrink-0">{TOTAL_ENROLL} students</span>
+          <span className="text-[12px] font-mono text-neutral-400 shrink-0">{totalEnrolled} students</span>
         </div>
 
         <div className="p-5 space-y-5">
@@ -133,15 +103,15 @@ export default function MarksDashboardContent({ basePath = '/marks' }: Props) {
                 <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Grade {grade}</span>
                 <div className="flex-1 h-px bg-neutral-100" />
                 <span className="text-[10px] font-mono text-neutral-400">
-                  {Object.values(CLASS_MARKS[grade]).reduce((a, c) => a + c.total, 0)} students
+                  {Object.values(classStats[grade]).reduce((a, c) => a + c.total, 0)} students
                 </span>
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {(['A', 'B', 'C', 'D'] as const).map(section => {
-                  const c   = CLASS_MARKS[grade][section]
+                  const c   = classStats[grade][section]
                   const st  = avgStyle(c.avg)
-                  const pct = Math.round((c.graded / c.total) * 100)
+                  const pct = c.total > 0 ? Math.round((c.graded / c.total) * 100) : 0
                   return (
                     <Link
                       key={section}
@@ -183,41 +153,48 @@ export default function MarksDashboardContent({ basePath = '/marks' }: Props) {
         <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-100 gap-3">
           <div>
             <h2 className="text-[14px] font-semibold text-neutral-900">Student Tier Evaluation</h2>
-            <p className="text-[11.5px] text-neutral-400 mt-0.5">Current term · {TOTAL_TIERED} students evaluated</p>
+            <p className="text-[11.5px] text-neutral-400 mt-0.5">Current term · {totalTiered} students evaluated</p>
           </div>
           <Link href={`${basePath}/reports`} className="text-[12px] text-ink-600 hover:text-ink-800 no-underline font-medium shrink-0">Full report →</Link>
         </div>
         <div className="grid grid-cols-2 xl:grid-cols-4 divide-y xl:divide-y-0 xl:divide-x divide-neutral-100">
-          {TIERS.map(t => (
-            <div key={t.tier} className={`p-5 ${t.count === 0 ? 'opacity-50' : ''}`}>
-              <div className={`inline-flex items-center px-2.5 py-1 rounded-xl text-[11px] font-semibold mb-3 ${t.bgColor} ${t.textColor}`}>{t.tier}</div>
-              {t.count === 0 ? (
-                <>
-                  <div className="text-[22px] font-bold text-neutral-300 leading-none mb-1">—</div>
-                  <div className="text-[11.5px] text-neutral-300 mb-3">{t.range}</div>
-                  <div className="h-1.5 bg-neutral-100 rounded-full" />
-                  <p className="text-[10.5px] text-neutral-400 mt-2">No students yet</p>
-                </>
-              ) : (
-                <>
-                  <div className="text-[28px] font-bold text-neutral-900 leading-none mb-1">{t.count}</div>
-                  <div className="text-[11.5px] text-neutral-400 mb-3">{t.range}</div>
-                  <div className="h-1.5 bg-neutral-100 rounded-full overflow-hidden">
-                    <div className={`h-full rounded-full ${t.color}`} style={{ width: `${(t.count / TOTAL_TIERED) * 100}%` }} />
-                  </div>
-                  <p className="text-[10.5px] text-neutral-400 mt-1.5">{Math.round((t.count / TOTAL_TIERED) * 100)}% of total</p>
-                </>
-              )}
-            </div>
-          ))}
+          {TIER_ORDER.map(tier => {
+            const count = tierCounts[tier]
+            const style = TIER_STYLE[tier]
+            return (
+              <div key={tier} className={`p-5 ${count === 0 ? 'opacity-50' : ''}`}>
+                <div className={`inline-flex items-center px-2.5 py-1 rounded-xl text-[11px] font-semibold mb-3 ${style.bgColor} ${style.textColor}`}>{tier}</div>
+                {count === 0 ? (
+                  <>
+                    <div className="text-[22px] font-bold text-neutral-300 leading-none mb-1">—</div>
+                    <div className="text-[11.5px] text-neutral-300 mb-3">{TIER_RANGE[tier]}</div>
+                    <div className="h-1.5 bg-neutral-100 rounded-full" />
+                    <p className="text-[10.5px] text-neutral-400 mt-2">No students yet</p>
+                  </>
+                ) : (
+                  <>
+                    <div className="text-[28px] font-bold text-neutral-900 leading-none mb-1">{count}</div>
+                    <div className="text-[11.5px] text-neutral-400 mb-3">{TIER_RANGE[tier]}</div>
+                    <div className="h-1.5 bg-neutral-100 rounded-full overflow-hidden">
+                      <div className={`h-full rounded-full ${style.barColor}`} style={{ width: `${(count / totalTiered) * 100}%` }} />
+                    </div>
+                    <p className="text-[10.5px] text-neutral-400 mt-1.5">{Math.round((count / totalTiered) * 100)}% of total</p>
+                  </>
+                )}
+              </div>
+            )
+          })}
         </div>
       </div>
 
       {/* Subject averages */}
       <div className="bg-white rounded-2xl border border-neutral-200 shadow-1 p-5">
         <h2 className="text-[14px] font-semibold text-neutral-900 mb-5">Subject Averages</h2>
+        {subjects.length === 0 ? (
+          <p className="text-[13px] text-neutral-400 py-4 text-center">No marks entered yet this term.</p>
+        ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-x-8 gap-y-4">
-          {SUBJECTS.map(s => (
+          {subjects.map(s => (
             <div key={s.name}>
               <div className="flex items-center justify-between mb-1.5">
                 <span className="text-[12px] text-neutral-700">{s.name}</span>
@@ -230,6 +207,7 @@ export default function MarksDashboardContent({ basePath = '/marks' }: Props) {
             </div>
           ))}
         </div>
+        )}
       </div>
     </>
   )

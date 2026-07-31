@@ -3,26 +3,38 @@
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, Search } from 'lucide-react'
-import { STUDENTS, GRADES, INITIALS } from '@/lib/mock/students'
+import { GRADES } from '@/lib/students/constants'
+
+const INITIALS = (name: string) => name.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase()
+
+export type RosterRow = {
+  id: string
+  full_name: string
+  roll_number: string
+  grade: string
+  section: string
+  attendancePct: number | null
+}
 
 type Props = {
   /** Route prefix for this dashboard's own links — lets Super Admin render the
    *  identical roster view within its own shell. */
   basePath?: string
+  students: RosterRow[]
 }
 
-export default function AttendanceRosterContent({ basePath = '/attendance' }: Props) {
+export default function AttendanceRosterContent({ basePath = '/attendance', students }: Props) {
   const [query, setQuery] = useState('')
   const [gradeFilter, setGradeFilter] = useState('All Grades')
 
   const filtered = useMemo(() => {
-    return STUDENTS.filter((s) => {
+    return students.filter((s) => {
       const q = query.trim().toLowerCase()
       const matchesQuery = !q || s.full_name.toLowerCase().includes(q) || s.roll_number.toLowerCase().includes(q)
       const matchesGrade = gradeFilter === 'All Grades' || s.grade === gradeFilter
       return matchesQuery && matchesGrade
-    }).sort((a, b) => a.attendance_pct - b.attendance_pct)
-  }, [query, gradeFilter])
+    }).sort((a, b) => (a.attendancePct ?? -1) - (b.attendancePct ?? -1))
+  }, [students, query, gradeFilter])
 
   return (
     <>
@@ -69,12 +81,16 @@ export default function AttendanceRosterContent({ basePath = '/attendance' }: Pr
                   </td>
                   <td className="px-3 py-3.5 font-mono text-[12px] text-neutral-700">{s.grade}{s.section}</td>
                   <td className="px-3 py-3.5">
-                    <div className="flex items-center gap-2.5 max-w-[160px]">
-                      <div className="flex-1 h-1.5 bg-neutral-100 rounded-full overflow-hidden">
-                        <div className={`h-full rounded-full ${s.attendance_pct >= 90 ? 'bg-success' : s.attendance_pct >= 80 ? 'bg-warning' : 'bg-danger'}`} style={{ width: `${s.attendance_pct}%` }} />
+                    {s.attendancePct === null ? (
+                      <span className="text-[11.5px] text-neutral-400 italic">No data yet</span>
+                    ) : (
+                      <div className="flex items-center gap-2.5 max-w-[160px]">
+                        <div className="flex-1 h-1.5 bg-neutral-100 rounded-full overflow-hidden">
+                          <div className={`h-full rounded-full ${s.attendancePct >= 90 ? 'bg-success' : s.attendancePct >= 80 ? 'bg-warning' : 'bg-danger'}`} style={{ width: `${s.attendancePct}%` }} />
+                        </div>
+                        <span className={`text-[12px] font-mono font-semibold shrink-0 ${s.attendancePct >= 90 ? 'text-success' : s.attendancePct >= 80 ? 'text-warning' : 'text-danger'}`}>{s.attendancePct}%</span>
                       </div>
-                      <span className={`text-[12px] font-mono font-semibold shrink-0 ${s.attendance_pct >= 90 ? 'text-success' : s.attendance_pct >= 80 ? 'text-warning' : 'text-danger'}`}>{s.attendance_pct}%</span>
-                    </div>
+                    )}
                   </td>
                 </tr>
               ))}

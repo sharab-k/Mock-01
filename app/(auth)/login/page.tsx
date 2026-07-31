@@ -9,6 +9,7 @@ type Props = {
 const ERROR_MESSAGES: Record<string, string> = {
   invalid_credentials:       'Incorrect email or password. Please try again.',
   no_role:                   'Your account has not been assigned a role. Contact your administrator.',
+  account_inactive:          'This account has been deactivated. Contact your Super Admin to restore access.',
   supabase_not_configured:   'Supabase is not configured yet. Use the dev portal links below to preview the dashboards.',
 }
 

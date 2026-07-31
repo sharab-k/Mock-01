@@ -11,6 +11,11 @@ const ROLE_PERMISSIONS = [
 ]
 
 export default function SuperAdminSettingsPage() {
+  const twilioConfigured = Boolean(
+    process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN &&
+    (process.env.TWILIO_WHATSAPP_FROM || process.env.TWILIO_SMS_FROM),
+  )
+
   return (
     <>
       <div>
@@ -62,10 +67,17 @@ export default function SuperAdminSettingsPage() {
             <p className="text-[13.5px] font-medium text-neutral-800">Twilio — WhatsApp Business API + SMS</p>
             <p className="text-[12px] text-neutral-500 mt-0.5">Attendance and grade alerts route through one vendor, SMS as failover</p>
           </div>
-          <span className="inline-flex items-center gap-1.5 text-[11.5px] font-semibold text-warning bg-warning-bg px-3 py-1.5 rounded-full border border-warning/20 shrink-0">
-            <span className="w-1.5 h-1.5 rounded-full bg-warning inline-block" />
-            Pending configuration
-          </span>
+          {twilioConfigured ? (
+            <span className="inline-flex items-center gap-1.5 text-[11.5px] font-semibold text-success bg-success-bg px-3 py-1.5 rounded-full border border-success/20 shrink-0">
+              <span className="w-1.5 h-1.5 rounded-full bg-success inline-block" />
+              Configured
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1.5 text-[11.5px] font-semibold text-warning bg-warning-bg px-3 py-1.5 rounded-full border border-warning/20 shrink-0">
+              <span className="w-1.5 h-1.5 rounded-full bg-warning inline-block" />
+              Pending configuration
+            </span>
+          )}
         </div>
       </div>
 

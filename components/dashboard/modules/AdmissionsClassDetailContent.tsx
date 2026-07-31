@@ -7,21 +7,19 @@ import {
   ArrowLeft, Users, KeyRound, FileText, UserPlus,
   Pencil, Trash2, CheckCircle2, X,
 } from 'lucide-react'
+import { updateStudentAction, deleteStudentAction } from '@/lib/actions/students'
 
-// ── Mock data (TODO: replace with Supabase query filtered by grade + section) ─
-const ALL_STUDENTS = [
-  { name: 'Sara Khan',     roll: 'JE-2026-002', grade: '9',  section: 'A', parentName: 'Yasmin Khan'   as string | null, credentialSent: true,  pdfReady: true,  date: '14 Jan 2026' },
-  { name: 'Zara Hussain',  roll: 'JE-2026-047', grade: '9',  section: 'B', parentName: 'Kamil Hussain' as string | null, credentialSent: true,  pdfReady: true,  date: '24 Jun 2026' },
-  { name: 'Hina Baig',     roll: 'JE-2026-018', grade: '9',  section: 'C', parentName: 'Tariq Baig'    as string | null, credentialSent: true,  pdfReady: true,  date: '6 Jan 2026'  },
-  { name: 'Ahmed Ali',     roll: 'JE-2026-001', grade: '10', section: 'A', parentName: 'Ali Hassan'    as string | null, credentialSent: true,  pdfReady: true,  date: '15 Jan 2026' },
-  { name: 'Usman Sheikh',  roll: 'JE-2026-005', grade: '10', section: 'B', parentName: null,                             credentialSent: false, pdfReady: false, date: '8 Jan 2026'  },
-  { name: 'Dawood Ilyas',  roll: 'JE-2026-057', grade: '11', section: 'A', parentName: 'Ilyas Qureshi' as string | null, credentialSent: true,  pdfReady: false, date: '2 Jan 2026'  },
-  { name: 'Fatima Noor',   roll: 'JE-2026-004', grade: '11', section: 'B', parentName: 'Noor Ahmed'    as string | null, credentialSent: true,  pdfReady: false, date: '10 Jan 2026' },
-  { name: 'Bilal Raza',    roll: 'JE-2026-003', grade: '12', section: 'A', parentName: 'Rashid Raza'   as string | null, credentialSent: true,  pdfReady: true,  date: '12 Jan 2026' },
-  { name: 'Kamran Malik',  roll: 'JE-2026-031', grade: '12', section: 'B', parentName: 'Saleem Malik'  as string | null, credentialSent: true,  pdfReady: true,  date: '4 Jan 2026'  },
-]
-
-type Student = typeof ALL_STUDENTS[number]
+export type ClassDetailStudent = {
+  id: string
+  name: string
+  roll: string
+  grade: string
+  section: string
+  parentName: string | null
+  credentialSent: boolean
+  pdfReady: boolean
+  date: string
+}
 
 const INITIALS = (name: string) => name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
 
@@ -34,15 +32,52 @@ type Props = {
   /** Route prefix for this dashboard's own links — lets Super Admin render the
    *  identical class-detail view within its own shell. */
   basePath?: string
+  students: ClassDetailStudent[]
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
-export default function AdmissionsClassDetailContent({ grade, section, basePath = '/admissions' }: Props) {
-  const [students,      setStudents]      = useState<Student[]>(() =>
-    ALL_STUDENTS.filter(s => s.grade === grade && s.section === section)
-  )
-  const [editStudent,   setEditStudent]   = useState<Student | null>(null)
+export default function AdmissionsClassDetailContent({ grade, section, basePath = '/admissions', students: initialStudents }: Props) {
+  const [students,      setStudents]      = useState<ClassDetailStudent[]>(initialStudents)
+  const [editStudent,   setEditStudent]   = useState<ClassDetailStudent | null>(null)
+  const [editName,      setEditName]      = useState('')
+  const [editGrade,     setEditGrade]     = useState('9')
+  const [editSection,   setEditSection]   = useState('A')
+  const [saving,        setSaving]        = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
+
+  const openEdit = (s: ClassDetailStudent) => {
+    setEditStudent(s)
+    setEditName(s.name)
+    setEditGrade(s.grade)
+    setEditSection(s.section)
+  }
+
+  const saveEdit = async () => {
+    if (!editStudent) return
+    setSaving(true)
+    const outcome = await updateStudentAction({
+      id: editStudent.id,
+      fullName: editName,
+      grade: editGrade as '9' | '10' | '11' | '12',
+      section: editSection as 'A' | 'B' | 'C' | 'D',
+    })
+    setSaving(false)
+    if (!outcome.ok) return
+
+    if (editGrade !== grade || editSection !== section) {
+      // Moved out of this class-section view — drop it from the current roster.
+      setStudents(prev => prev.filter(p => p.id !== editStudent.id))
+    } else {
+      setStudents(prev => prev.map(p => p.id === editStudent.id ? { ...p, name: editName, grade: editGrade, section: editSection } : p))
+    }
+    setEditStudent(null)
+  }
+
+  const handleDelete = async (id: string) => {
+    setDeleteConfirm(null)
+    const outcome = await deleteStudentAction({ id })
+    if (outcome.ok) setStudents(prev => prev.filter(p => p.id !== id))
+  }
 
   // Handle invalid route params gracefully
   const isValid = VALID_GRADES.includes(grade) && VALID_SECTIONS.includes(section)
@@ -139,7 +174,7 @@ export default function AdmissionsClassDetailContent({ grade, section, basePath 
               </thead>
               <tbody className="divide-y divide-neutral-100">
                 {students.map(s => (
-                  <tr key={s.roll} className="hover:bg-neutral-50 transition-colors">
+                  <tr key={s.id} className="hover:bg-neutral-50 transition-colors">
                     <td className="px-5 py-3.5">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-full bg-ink-100 text-ink-700 flex items-center justify-center font-mono text-[10px] font-bold shrink-0">
@@ -171,24 +206,24 @@ export default function AdmissionsClassDetailContent({ grade, section, basePath 
                     <td className="px-3 py-3.5">
                       <div className="flex items-center gap-1.5">
                         <button
-                          onClick={() => setEditStudent(s)}
+                          onClick={() => openEdit(s)}
                           className="p-1.5 rounded-lg text-neutral-400 hover:text-ink-600 hover:bg-ink-50 transition-colors"
                           title="Edit student record"
                         >
                           <Pencil size={13} />
                         </button>
-                        {deleteConfirm === s.roll ? (
+                        {deleteConfirm === s.id ? (
                           <div className="flex items-center gap-1">
                             <button onClick={() => setDeleteConfirm(null)} className="text-[11px] text-neutral-500 hover:text-neutral-700 font-medium">No</button>
                             <button
-                              onClick={() => { setStudents(prev => prev.filter(p => p.roll !== s.roll)); setDeleteConfirm(null) }}
+                              onClick={() => handleDelete(s.id)}
                               className="text-[11px] font-semibold text-white bg-danger hover:bg-danger/90 px-2 py-0.5 rounded-lg transition-colors"
                             >
                               Yes
                             </button>
                           </div>
                         ) : (
-                          <button onClick={() => setDeleteConfirm(s.roll)} className="p-1.5 rounded-lg text-neutral-300 hover:text-danger hover:bg-danger-bg transition-colors" title="Delete record">
+                          <button onClick={() => setDeleteConfirm(s.id)} className="p-1.5 rounded-lg text-neutral-300 hover:text-danger hover:bg-danger-bg transition-colors" title="Delete record">
                             <Trash2 size={13} />
                           </button>
                         )}
@@ -225,7 +260,7 @@ export default function AdmissionsClassDetailContent({ grade, section, basePath 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[12px] font-semibold text-neutral-700 mb-1.5">Full Name</label>
-                  <input defaultValue={editStudent.name} className="w-full text-[13px] border border-neutral-200 rounded-xl px-4 py-3 text-neutral-800 focus:outline-none focus:ring-2 focus:ring-ink-200" />
+                  <input value={editName} onChange={e => setEditName(e.target.value)} className="w-full text-[13px] border border-neutral-200 rounded-xl px-4 py-3 text-neutral-800 focus:outline-none focus:ring-2 focus:ring-ink-200" />
                 </div>
                 <div>
                   <label className="block text-[12px] font-semibold text-neutral-700 mb-1.5">Roll Number</label>
@@ -233,24 +268,24 @@ export default function AdmissionsClassDetailContent({ grade, section, basePath 
                 </div>
                 <div>
                   <label className="block text-[12px] font-semibold text-neutral-700 mb-1.5">Grade</label>
-                  <select defaultValue={editStudent.grade} className="w-full text-[13px] border border-neutral-200 rounded-xl px-4 py-3 text-neutral-800 bg-white focus:outline-none focus:ring-2 focus:ring-ink-200 cursor-pointer">
+                  <select value={editGrade} onChange={e => setEditGrade(e.target.value)} className="w-full text-[13px] border border-neutral-200 rounded-xl px-4 py-3 text-neutral-800 bg-white focus:outline-none focus:ring-2 focus:ring-ink-200 cursor-pointer">
                     {['9', '10', '11', '12'].map(g => <option key={g} value={g}>Grade {g}</option>)}
                   </select>
                 </div>
                 <div>
                   <label className="block text-[12px] font-semibold text-neutral-700 mb-1.5">Section</label>
-                  <select defaultValue={editStudent.section} className="w-full text-[13px] border border-neutral-200 rounded-xl px-4 py-3 text-neutral-800 bg-white focus:outline-none focus:ring-2 focus:ring-ink-200 cursor-pointer">
+                  <select value={editSection} onChange={e => setEditSection(e.target.value)} className="w-full text-[13px] border border-neutral-200 rounded-xl px-4 py-3 text-neutral-800 bg-white focus:outline-none focus:ring-2 focus:ring-ink-200 cursor-pointer">
                     {['A', 'B', 'C', 'D'].map(s => <option key={s} value={s}>Section {s}</option>)}
                   </select>
                 </div>
                 <div className="sm:col-span-2">
                   <label className="block text-[12px] font-semibold text-neutral-700 mb-1.5">Parent / Guardian Name</label>
-                  <input defaultValue={editStudent.parentName ?? ''} placeholder="Not assigned" className="w-full text-[13px] border border-neutral-200 rounded-xl px-4 py-3 text-neutral-800 focus:outline-none focus:ring-2 focus:ring-ink-200" />
+                  <input defaultValue={editStudent.parentName ?? 'Not assigned'} className="w-full text-[13px] border border-neutral-200 rounded-xl px-4 py-3 text-neutral-500 bg-neutral-50 focus:outline-none cursor-not-allowed" readOnly />
                 </div>
               </div>
               <div className="flex items-center gap-3 pt-1">
                 <button onClick={() => setEditStudent(null)} className="flex-1 py-3 text-[13px] font-medium text-neutral-600 bg-neutral-100 hover:bg-neutral-200 rounded-xl transition-colors">Cancel</button>
-                <button onClick={() => setEditStudent(null)} className="flex-1 py-3 text-[13px] font-semibold text-white bg-ink-700 hover:bg-ink-800 rounded-xl transition-colors">Save Changes</button>
+                <button onClick={saveEdit} disabled={saving} className="flex-1 py-3 text-[13px] font-semibold text-white bg-ink-700 hover:bg-ink-800 rounded-xl transition-colors disabled:opacity-60">{saving ? 'Saving…' : 'Save Changes'}</button>
               </div>
             </div>
           </div>

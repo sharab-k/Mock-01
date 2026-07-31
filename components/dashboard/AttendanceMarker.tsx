@@ -2,55 +2,22 @@
 
 import { useState } from 'react'
 import { CheckCircle2, XCircle, Clock3, ChevronDown, Send, RotateCcw } from 'lucide-react'
+import { submitClassAttendanceAction } from '@/lib/actions/attendance'
 
 type Status = 'present' | 'absent' | 'late'
 
-type Student = {
+export type MarkerStudent = {
   name: string
   roll: string
+  id: string
   initials: string
 }
 
-type ClassData = {
+export type MarkerClass = {
   id: string
   label: string
-  time: string
-  room: string
-  students: Student[]
+  students: MarkerStudent[]
 }
-
-const CLASSES: ClassData[] = [
-  {
-    id: 'viii-a',
-    label: 'Class VIII-A',
-    time: '10:30 – 11:15',
-    room: 'R-203',
-    students: [
-      { name: 'Fatima Noor',    roll: 'JE-2026-004', initials: 'FN' },
-      { name: 'Ali Baig',       roll: 'JE-2026-009', initials: 'AB' },
-      { name: 'Zara Hussain',   roll: 'JE-2026-015', initials: 'ZH' },
-      { name: 'Omar Farhan',    roll: 'JE-2026-021', initials: 'OF' },
-      { name: 'Nadia Sheikh',   roll: 'JE-2026-027', initials: 'NS' },
-      { name: 'Kamil Raza',     roll: 'JE-2026-033', initials: 'KR' },
-      { name: 'Sadia Malik',    roll: 'JE-2026-039', initials: 'SM' },
-      { name: 'Irfan Qureshi',  roll: 'JE-2026-045', initials: 'IQ' },
-    ],
-  },
-  {
-    id: 'x-b',
-    label: 'Class X-B',
-    time: '12:00 – 12:45',
-    room: 'R-101',
-    students: [
-      { name: 'Usman Sheikh',   roll: 'JE-2026-005', initials: 'US' },
-      { name: 'Layla Ahmed',    roll: 'JE-2026-011', initials: 'LA' },
-      { name: 'Hamza Tariq',    roll: 'JE-2026-017', initials: 'HT' },
-      { name: 'Amina Farooq',   roll: 'JE-2026-023', initials: 'AF' },
-      { name: 'Dawood Mir',     roll: 'JE-2026-029', initials: 'DM' },
-      { name: 'Rida Iqbal',     roll: 'JE-2026-035', initials: 'RI' },
-    ],
-  },
-]
 
 const STATUS_CONFIG: Record<Status, {
   label: string
@@ -82,24 +49,35 @@ const STATUS_CONFIG: Record<Status, {
   },
 }
 
-function initRecord(students: Student[]): Record<string, Status> {
+function initRecord(students: MarkerStudent[]): Record<string, Status> {
   return Object.fromEntries(students.map(s => [s.roll, 'present' as Status]))
 }
 
 type Props = {
-  onSubmitted?: (summary: { present: number; absent: number; late: number }) => void
+  classes: MarkerClass[]
+  onSubmitted?: (summary: { present: number; absent: number; late: number; notified: number }) => void
 }
 
-export default function AttendanceMarker({ onSubmitted }: Props) {
-  const [activeClassId, setActiveClassId] = useState(CLASSES[0].id)
+export default function AttendanceMarker({ classes, onSubmitted }: Props) {
+  const [activeClassId, setActiveClassId] = useState(classes[0]?.id ?? '')
   const [records, setRecords] = useState<Record<string, Record<string, Status>>>(
-    Object.fromEntries(CLASSES.map(c => [c.id, initRecord(c.students)]))
+    Object.fromEntries(classes.map(c => [c.id, initRecord(c.students)]))
   )
   const [submitted, setSubmitted] = useState<Record<string, boolean>>({})
+  const [submitting, setSubmitting] = useState(false)
   const [dropdownOpen, setDropdownOpen] = useState(false)
 
-  const activeClass = CLASSES.find(c => c.id === activeClassId)!
-  const classRecord = records[activeClassId]
+  if (classes.length === 0) {
+    return (
+      <div className="bg-white rounded-2xl border border-neutral-200 shadow-1 p-10 text-center">
+        <p className="text-[14px] font-semibold text-neutral-600">No classes with enrolled students yet</p>
+        <p className="text-[12.5px] text-neutral-400 mt-1">Enrol students in Admissions before marking attendance.</p>
+      </div>
+    )
+  }
+
+  const activeClass = classes.find(c => c.id === activeClassId) ?? classes[0]
+  const classRecord = records[activeClass.id] ?? {}
 
   const counts = {
     present: Object.values(classRecord).filter(s => s === 'present').length,
@@ -110,25 +88,31 @@ export default function AttendanceMarker({ onSubmitted }: Props) {
   function setStatus(roll: string, status: Status) {
     setRecords(prev => ({
       ...prev,
-      [activeClassId]: { ...prev[activeClassId], [roll]: status },
+      [activeClass.id]: { ...prev[activeClass.id], [roll]: status },
     }))
-    // clear submitted state if they edit after submitting
-    setSubmitted(prev => ({ ...prev, [activeClassId]: false }))
+    setSubmitted(prev => ({ ...prev, [activeClass.id]: false }))
   }
 
   function markAll(status: Status) {
     const all = Object.fromEntries(activeClass.students.map(s => [s.roll, status]))
-    setRecords(prev => ({ ...prev, [activeClassId]: all }))
-    setSubmitted(prev => ({ ...prev, [activeClassId]: false }))
+    setRecords(prev => ({ ...prev, [activeClass.id]: all }))
+    setSubmitted(prev => ({ ...prev, [activeClass.id]: false }))
   }
 
-  function handleSubmit() {
-    // TODO: POST to /api/attendance with classRecord when Supabase is configured
-    setSubmitted(prev => ({ ...prev, [activeClassId]: true }))
-    onSubmitted?.(counts)
+  async function handleSubmit() {
+    setSubmitting(true)
+    const outcome = await submitClassAttendanceAction({
+      classLabel: activeClass.label,
+      records: activeClass.students.map(s => ({ studentId: s.id, studentName: s.name, status: classRecord[s.roll] })),
+    })
+    setSubmitting(false)
+
+    if (!outcome.ok) return
+    setSubmitted(prev => ({ ...prev, [activeClass.id]: true }))
+    onSubmitted?.({ ...counts, notified: outcome.notifiedCount })
   }
 
-  const isSubmitted = !!submitted[activeClassId]
+  const isSubmitted = !!submitted[activeClass.id]
 
   return (
     <div className="bg-white rounded-2xl border border-neutral-200 shadow-1 overflow-hidden">
@@ -137,7 +121,7 @@ export default function AttendanceMarker({ onSubmitted }: Props) {
       <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-100">
         <div>
           <h2 className="text-[14px] font-semibold text-neutral-900">Mark Attendance</h2>
-          <p className="text-[12px] text-neutral-500 mt-0.5">Today — 24 Jun 2026</p>
+          <p className="text-[12px] text-neutral-500 mt-0.5">Today</p>
         </div>
 
         {/* Class selector */}
@@ -147,26 +131,26 @@ export default function AttendanceMarker({ onSubmitted }: Props) {
             className="flex items-center gap-2 px-3.5 py-2 rounded-xl border border-neutral-200 bg-neutral-50 hover:bg-neutral-100 transition-colors text-[13px] font-medium text-neutral-800"
           >
             <span>{activeClass.label}</span>
-            <span className="text-[11px] text-neutral-400 font-mono">{activeClass.time}</span>
+            <span className="text-[11px] text-neutral-400 font-mono">{activeClass.students.length} students</span>
             <ChevronDown size={13} className="text-neutral-400 ml-1" />
           </button>
           {dropdownOpen && (
             <>
               <div className="fixed inset-0 z-10" onClick={() => setDropdownOpen(false)} />
               <div className="absolute right-0 top-full mt-1.5 w-56 bg-white rounded-xl border border-neutral-200 shadow-3 z-20 overflow-hidden py-1">
-                {CLASSES.map(c => (
+                {classes.map(c => (
                   <button
                     key={c.id}
                     onClick={() => { setActiveClassId(c.id); setDropdownOpen(false) }}
                     className={[
                       'w-full flex items-center justify-between px-4 py-2.5 text-left transition-colors text-[13px]',
-                      c.id === activeClassId
+                      c.id === activeClass.id
                         ? 'bg-ink-50 text-ink-800 font-semibold'
                         : 'text-neutral-700 hover:bg-neutral-50',
                     ].join(' ')}
                   >
                     <span>{c.label}</span>
-                    <span className="text-[11px] text-neutral-400 font-mono">{c.time}</span>
+                    <span className="text-[11px] text-neutral-400 font-mono">{c.students.length}</span>
                   </button>
                 ))}
               </div>
@@ -209,7 +193,7 @@ export default function AttendanceMarker({ onSubmitted }: Props) {
             All Present
           </button>
           <button
-            onClick={() => { markAll('present'); setSubmitted(prev => ({ ...prev, [activeClassId]: false })) }}
+            onClick={() => markAll('present')}
             className="text-[11.5px] font-medium text-neutral-500 hover:text-neutral-700 hover:bg-neutral-100 px-2.5 py-1.5 rounded-lg transition-colors"
             aria-label="Reset"
           >
@@ -290,10 +274,11 @@ export default function AttendanceMarker({ onSubmitted }: Props) {
         ) : (
           <button
             onClick={handleSubmit}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-ink-700 text-white text-[13px] font-semibold hover:bg-ink-800 transition-colors"
+            disabled={submitting}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-ink-700 text-white text-[13px] font-semibold hover:bg-ink-800 transition-colors disabled:opacity-60"
           >
             <Send size={13} />
-            Submit Attendance
+            {submitting ? 'Submitting…' : 'Submit Attendance'}
           </button>
         )}
       </div>

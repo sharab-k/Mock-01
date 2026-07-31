@@ -1,15 +1,7 @@
 import DashboardShell from '@/components/dashboard/DashboardShell'
-import type { UserInfo } from '@/components/dashboard/types'
+import { requireRole } from '@/lib/auth/require-role'
 
-const MOCK_USER: UserInfo = {
-  name:      'Marks Admin',
-  email:     'marks@jeacademy.edu.pk',
-  role:      'marks_admin',
-  roleLabel: 'Marks',
-  roleColor: '#7E587E',
-  initials:  'MA',
-}
-
-export default function MarksLayout({ children }: { children: React.ReactNode }) {
-  return <DashboardShell user={MOCK_USER}>{children}</DashboardShell>
+export default async function MarksLayout({ children }: { children: React.ReactNode }) {
+  const user = await requireRole('marks_admin')
+  return <DashboardShell user={user}>{children}</DashboardShell>
 }

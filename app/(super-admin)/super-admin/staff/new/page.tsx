@@ -2,27 +2,49 @@
 
 import { useState, type FormEvent } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { ArrowLeft, CheckCircle2, UserCog } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, UserCog, KeyRound, Copy, Check } from 'lucide-react'
+import { createStaffAction } from '@/lib/actions/staff'
+import { STAFF_ROLE_LABEL, type StaffRole } from '@/lib/staff/roles'
 
-const ROLES = ['Admissions Admin', 'Attendance Admin', 'Marks Admin']
+const ROLES: { value: StaffRole; label: string }[] = [
+  { value: 'admissions_admin', label: STAFF_ROLE_LABEL.admissions_admin },
+  { value: 'attendance_admin', label: STAFF_ROLE_LABEL.attendance_admin },
+  { value: 'marks_admin', label: STAFF_ROLE_LABEL.marks_admin },
+]
 
 export default function NewStaffPage() {
-  const router = useRouter()
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
-  const [role, setRole] = useState(ROLES[0])
-  const [status, setStatus] = useState<'idle' | 'submitting' | 'success'>('idle')
+  const [role, setRole] = useState<StaffRole>(ROLES[0].value)
+  const [status, setStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle')
+  const [error, setError] = useState('')
+  const [tempPassword, setTempPassword] = useState('')
+  const [copied, setCopied] = useState(false)
 
-  function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     setStatus('submitting')
-    // TODO: replace with a Supabase insert into `profiles` (role = admin sub-type)
-    setTimeout(() => {
-      setStatus('success')
-      setTimeout(() => router.push('/super-admin/staff'), 1600)
-    }, 900)
+    setError('')
+
+    const outcome = await createStaffAction({ fullName: name, email, phone, role })
+
+    if (!outcome.ok) {
+      setError(outcome.error)
+      setStatus('error')
+      return
+    }
+
+    setTempPassword(outcome.tempPassword)
+    setStatus('success')
+  }
+
+  const copyCredentials = async () => {
+    try {
+      await navigator.clipboard.writeText(`Email: ${email}\nTemporary password: ${tempPassword}`)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1500)
+    } catch { /* clipboard blocked */ }
   }
 
   return (
@@ -37,14 +59,32 @@ export default function NewStaffPage() {
 
       <div className="max-w-lg bg-white rounded-2xl border border-neutral-200 shadow-1 p-7">
         {status === 'success' ? (
-          <div className="flex flex-col items-center text-center py-8 gap-4">
+          <div className="flex flex-col items-center text-center gap-5 py-4">
             <div className="w-14 h-14 rounded-full bg-success-bg flex items-center justify-center">
               <CheckCircle2 size={26} className="text-success" />
             </div>
             <div>
               <p className="text-[15px] font-semibold text-neutral-900">Administrator created</p>
-              <p className="text-[13px] text-neutral-500 mt-1">{name} has been added as {role}. Redirecting…</p>
+              <p className="text-[13px] text-neutral-500 mt-1">{name} has been added as {STAFF_ROLE_LABEL[role]}.</p>
             </div>
+
+            <div className="w-full bg-ink-50 border border-ink-100 rounded-2xl p-5 text-left">
+              <div className="flex items-center gap-2 mb-3">
+                <KeyRound size={14} className="text-ink-600" />
+                <p className="text-[12.5px] font-semibold text-ink-700">Login credentials — issued once</p>
+              </div>
+              <div className="space-y-2 font-mono text-[12.5px] text-neutral-800">
+                <div className="flex justify-between"><span className="text-neutral-400">Email</span><span>{email}</span></div>
+                <div className="flex justify-between"><span className="text-neutral-400">Temp password</span><span>{tempPassword}</span></div>
+              </div>
+              <button onClick={copyCredentials} className="mt-4 w-full flex items-center justify-center gap-2 text-[12.5px] font-semibold text-ink-700 bg-white border border-ink-200 py-2.5 rounded-xl hover:bg-ink-100/50 transition-colors">
+                {copied ? <><Check size={13} className="text-success" /> Copied</> : <><Copy size={13} /> Copy credentials</>}
+              </button>
+            </div>
+
+            <Link href="/super-admin/staff" className="text-[12.5px] font-medium text-ink-600 hover:text-ink-800 no-underline">
+              Back to Staff Accounts →
+            </Link>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-5">
@@ -52,8 +92,14 @@ export default function NewStaffPage() {
               <div className="w-10 h-10 rounded-xl bg-ink-100 flex items-center justify-center shrink-0">
                 <UserCog size={18} className="text-ink-600" />
               </div>
-              <p className="text-[13px] text-neutral-500">New sub-administrator will receive login credentials by email.</p>
+              <p className="text-[13px] text-neutral-500">A temporary password is generated and shown once — share it securely.</p>
             </div>
+
+            {error && (
+              <div className="bg-danger-bg border border-danger/20 rounded-xl p-3.5">
+                <p className="text-[12.5px] text-danger leading-relaxed">{error}</p>
+              </div>
+            )}
 
             <div>
               <label className="block text-[12px] font-semibold text-neutral-700 mb-1.5">Full name</label>
@@ -72,8 +118,8 @@ export default function NewStaffPage() {
 
             <div>
               <label className="block text-[12px] font-semibold text-neutral-700 mb-1.5">Role</label>
-              <select value={role} onChange={(e) => setRole(e.target.value)} className="w-full px-3.5 py-2.5 border border-neutral-200 rounded-xl text-[13px] bg-white focus:outline-none focus:ring-1 focus:ring-ink-300 cursor-pointer">
-                {ROLES.map((r) => <option key={r}>{r}</option>)}
+              <select value={role} onChange={(e) => setRole(e.target.value as StaffRole)} className="w-full px-3.5 py-2.5 border border-neutral-200 rounded-xl text-[13px] bg-white focus:outline-none focus:ring-1 focus:ring-ink-300 cursor-pointer">
+                {ROLES.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
               </select>
             </div>
 

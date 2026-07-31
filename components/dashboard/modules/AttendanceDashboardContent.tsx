@@ -5,57 +5,8 @@ import { useState } from 'react'
 import StatCard from '@/components/dashboard/StatCard'
 import { UserCheck, UserX, Clock, Percent, MessageSquare, TrendingUp } from 'lucide-react'
 
-const CLASS_STATS: Record<string, Record<string, { present: number; absent: number; late: number; total: number }>> = {
-  '9':  {
-    A: { present: 27, absent: 2, late: 1, total: 30 },
-    B: { present: 22, absent: 5, late: 1, total: 28 },
-    C: { present: 29, absent: 2, late: 1, total: 32 },
-    D: { present: 24, absent: 2, late: 0, total: 26 },
-  },
-  '10': {
-    A: { present: 29, absent: 1, late: 1, total: 31 },
-    B: { present: 21, absent: 5, late: 1, total: 27 },
-    C: { present: 27, absent: 1, late: 1, total: 29 },
-    D: { present: 31, absent: 1, late: 1, total: 33 },
-  },
-  '11': {
-    A: { present: 22, absent: 5, late: 1, total: 28 },
-    B: { present: 28, absent: 1, late: 1, total: 30 },
-    C: { present: 24, absent: 1, late: 1, total: 26 },
-    D: { present: 27, absent: 1, late: 1, total: 29 },
-  },
-  '12': {
-    A: { present: 20, absent: 3, late: 1, total: 24 },
-    B: { present: 22, absent: 4, late: 1, total: 27 },
-    C: { present: 23, absent: 1, late: 1, total: 25 },
-    D: { present: 21, absent: 1, late: 1, total: 23 },
-  },
-}
-
-const WEEK = [
-  { day: 'Mon', date: '23 Jun', present: 174, absent: 256, late: 18, total: 448, isToday: false },
-  { day: 'Tue', date: '24 Jun', present: 400, absent:  36, late: 12, total: 448, isToday: false },
-  { day: 'Wed', date: '25 Jun', present: 391, absent:  42, late: 15, total: 448, isToday: false },
-  { day: 'Thu', date: '26 Jun', present: 413, absent:  22, late: 13, total: 448, isToday: false },
-  { day: 'Fri', date: '27 Jun', present: 382, absent:  48, late: 18, total: 448, isToday: true  },
-]
-
-const LAST_WEEK_AVG = 76
-
-const ALL_CLASSES   = Object.values(CLASS_STATS).flatMap(g => Object.values(g))
-const TOTAL_PRESENT = ALL_CLASSES.reduce((a, c) => a + c.present, 0)
-const TOTAL_ABSENT  = ALL_CLASSES.reduce((a, c) => a + c.absent,  0)
-const TOTAL_LATE    = ALL_CLASSES.reduce((a, c) => a + c.late,    0)
-const TOTAL_ALL     = ALL_CLASSES.reduce((a, c) => a + c.total,   0)
-const GLOBAL_RATE   = Math.round((TOTAL_PRESENT / TOTAL_ALL) * 100)
-const ALERTS_PENDING = 3
-
-const STATS = [
-  { label: 'Present Today',   value: String(TOTAL_PRESENT), icon: <UserCheck size={22} />, iconBg: 'bg-success-bg', iconColor: 'text-success', sub: `of ${TOTAL_ALL} enrolled`, subUp: true },
-  { label: 'Absent Today',    value: String(TOTAL_ABSENT),  icon: <UserX size={22} />,     iconBg: 'bg-danger-bg',  iconColor: 'text-danger',  sub: `${ALERTS_PENDING} alerts pending` },
-  { label: 'Late Arrivals',   value: String(TOTAL_LATE),    icon: <Clock size={22} />,     iconBg: 'bg-warning-bg', iconColor: 'text-warning', sub: 'After 8:30 AM' },
-  { label: 'Attendance Rate', value: `${GLOBAL_RATE}%`,     icon: <Percent size={22} />,   iconBg: 'bg-ink-100',    iconColor: 'text-ink-600', sub: '↑ 1.2% vs last week', subUp: true },
-]
+export type ClassAttendanceStat = { present: number; absent: number; late: number; total: number }
+export type DayAttendanceStat = { day: string; date: string; present: number; absent: number; late: number; total: number; isToday: boolean }
 
 function rateStyle(rate: number): { badge: string; bar: string } {
   if (rate >= 90) return { badge: 'text-success', bar: 'bg-success' }
@@ -63,30 +14,53 @@ function rateStyle(rate: number): { badge: string; bar: string } {
   return             { badge: 'text-danger',  bar: 'bg-danger'  }
 }
 
+function rate(c: { present: number; total: number }): number {
+  return c.total > 0 ? Math.round((c.present / c.total) * 100) : 0
+}
+
 type Props = {
   /** Route prefix for this dashboard's own links — lets Super Admin render the
    *  identical dashboard within its own shell instead of a simplified duplicate. */
   basePath?: string
+  todayLabel: string
+  classStats: Record<string, Record<string, ClassAttendanceStat>>
+  week: DayAttendanceStat[]
+  lastWeekAvg: number
+  failedAlertsToday: number
 }
 
-export default function AttendanceDashboardContent({ basePath = '/attendance' }: Props) {
+export default function AttendanceDashboardContent({ basePath = '/attendance', todayLabel, classStats, week, lastWeekAvg, failedAlertsToday }: Props) {
   const [hoveredDay, setHoveredDay] = useState<string | null>(null)
 
-  const weekAvg  = Math.round(WEEK.reduce((a, d) => a + (d.present / d.total) * 100, 0) / WEEK.length)
-  const weekDelta = weekAvg - LAST_WEEK_AVG
-  const bestDay   = WEEK.reduce((a, d) => (d.present / d.total) > (a.present / a.total) ? d : a)
-  const worstDay  = WEEK.reduce((a, d) => (d.present / d.total) < (a.present / a.total) ? d : a)
+  const allClasses  = Object.values(classStats).flatMap(g => Object.values(g))
+  const totalPresent = allClasses.reduce((a, c) => a + c.present, 0)
+  const totalAbsent  = allClasses.reduce((a, c) => a + c.absent, 0)
+  const totalLate    = allClasses.reduce((a, c) => a + c.late, 0)
+  const totalAll     = allClasses.reduce((a, c) => a + c.total, 0)
+  const globalRate   = rate({ present: totalPresent, total: totalAll })
+
+  const STATS = [
+    { label: 'Present Today',   value: String(totalPresent), icon: <UserCheck size={22} />, iconBg: 'bg-success-bg', iconColor: 'text-success', sub: `of ${totalAll} enrolled`, subUp: true },
+    { label: 'Absent Today',    value: String(totalAbsent),  icon: <UserX size={22} />,     iconBg: 'bg-danger-bg',  iconColor: 'text-danger',  sub: failedAlertsToday > 0 ? `${failedAlertsToday} alert${failedAlertsToday > 1 ? 's' : ''} failed` : 'Alerts sent' },
+    { label: 'Late Arrivals',   value: String(totalLate),    icon: <Clock size={22} />,     iconBg: 'bg-warning-bg', iconColor: 'text-warning', sub: 'After 8:30 AM' },
+    { label: 'Attendance Rate', value: `${globalRate}%`,     icon: <Percent size={22} />,   iconBg: 'bg-ink-100',    iconColor: 'text-ink-600', sub: 'Marked so far today' },
+  ]
+
+  const weekAvg  = week.length > 0 ? Math.round(week.reduce((a, d) => a + rate(d), 0) / week.length) : 0
+  const weekDelta = weekAvg - lastWeekAvg
+  const bestDay   = week.reduce((a, d) => rate(d) > rate(a) ? d : a, week[0])
+  const worstDay  = week.reduce((a, d) => rate(d) < rate(a) ? d : a, week[0])
 
   return (
     <>
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
           <h1 className="text-[20px] font-bold text-neutral-900">Attendance Dashboard</h1>
-          <p className="text-[13px] text-neutral-500 mt-0.5">Select a class to mark and view today&apos;s roster — 24 Jun 2026</p>
+          <p className="text-[13px] text-neutral-500 mt-0.5">Select a class to mark and view today&apos;s roster — {todayLabel}</p>
         </div>
-        {ALERTS_PENDING > 0 && (
+        {failedAlertsToday > 0 && (
           <div className="flex items-center gap-2 px-3.5 py-2 bg-danger-bg border border-danger/20 rounded-xl text-[12.5px] font-medium text-danger">
-            <MessageSquare size={13} />{ALERTS_PENDING} alert{ALERTS_PENDING > 1 ? 's' : ''} pending
+            <MessageSquare size={13} />{failedAlertsToday} alert{failedAlertsToday > 1 ? 's' : ''} failed
           </div>
         )}
       </div>
@@ -102,7 +76,7 @@ export default function AttendanceDashboardContent({ basePath = '/attendance' }:
             <h2 className="text-[14px] font-semibold text-neutral-900">Today&apos;s Class Overview</h2>
             <p className="text-[11.5px] text-neutral-400 mt-0.5 hidden sm:block">Click a class to mark attendance and view the full roster</p>
           </div>
-          <span className="text-[12px] font-mono text-neutral-400 shrink-0">{TOTAL_ALL} students</span>
+          <span className="text-[12px] font-mono text-neutral-400 shrink-0">{totalAll} students</span>
         </div>
         <div className="p-5 space-y-5">
           {(['9', '10', '11', '12'] as const).map(grade => (
@@ -111,29 +85,29 @@ export default function AttendanceDashboardContent({ basePath = '/attendance' }:
                 <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Grade {grade}</span>
                 <div className="flex-1 h-px bg-neutral-100" />
                 <span className="text-[10px] font-mono text-neutral-400">
-                  {Object.values(CLASS_STATS[grade]).reduce((a, c) => a + c.total, 0)} students
+                  {Object.values(classStats[grade]).reduce((a, c) => a + c.total, 0)} students
                 </span>
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {(['A', 'B', 'C', 'D'] as const).map(section => {
-                  const c    = CLASS_STATS[grade][section]
-                  const rate = Math.round((c.present / c.total) * 100)
-                  const st   = rateStyle(rate)
+                  const c   = classStats[grade][section]
+                  const pct = rate(c)
+                  const st  = rateStyle(pct)
                   return (
                     <Link
                       key={section}
                       href={`${basePath}/${grade}/${section}`}
                       className="group relative flex flex-col items-center justify-center rounded-2xl border border-neutral-200 bg-white no-underline py-6 px-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md hover:border-ink-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink-400 focus-visible:ring-offset-2"
-                      aria-label={`Grade ${grade} Section ${section} — ${rate}% present`}
+                      aria-label={`Grade ${grade} Section ${section} — ${pct}% present`}
                     >
                       <div className="absolute bottom-0 left-0 right-0 h-[3px] rounded-b-2xl overflow-hidden bg-neutral-100">
-                        <div className={`h-full transition-all duration-300 ${st.bar}`} style={{ width: `${rate}%` }} />
+                        <div className={`h-full transition-all duration-300 ${st.bar}`} style={{ width: `${pct}%` }} />
                       </div>
                       <span className="font-mono leading-none select-none">
                         <span className="text-[26px] font-bold text-ink-700">{grade}</span>
                         <span className="text-[20px] font-semibold text-ink-400">{section}</span>
                       </span>
-                      <span className={`text-[13px] font-bold mt-1.5 tabular-nums font-mono ${st.badge}`}>{rate}%</span>
+                      <span className={`text-[13px] font-bold mt-1.5 tabular-nums font-mono ${st.badge}`}>{pct}%</span>
                       {c.absent > 0
                         ? <span className="text-[10.5px] font-medium mt-0.5 text-danger tabular-nums">{c.absent} absent</span>
                         : <span className="text-[10.5px] font-medium mt-0.5 text-neutral-300">All present</span>
@@ -155,7 +129,7 @@ export default function AttendanceDashboardContent({ basePath = '/attendance' }:
         <div className="flex items-start justify-between mb-6 gap-4">
           <div>
             <h2 className="text-[14px] font-semibold text-neutral-900">This Week</h2>
-            <p className="text-[11.5px] text-neutral-400 mt-0.5">23 – 27 Jun 2026</p>
+            <p className="text-[11.5px] text-neutral-400 mt-0.5">{week[0]?.date} – {week[week.length - 1]?.date}</p>
           </div>
           <div className="flex items-end gap-3 shrink-0">
             {/* Trend chip */}
@@ -193,12 +167,12 @@ export default function AttendanceDashboardContent({ basePath = '/attendance' }:
 
           {/* Rows */}
           <div className="space-y-1.5">
-            {WEEK.map(d => {
-              const rate       = Math.round((d.present / d.total) * 100)
-              const presentPct = (d.present / d.total) * 100
-              const latePct    = (d.late    / d.total) * 100
+            {week.map(d => {
+              const pct        = rate(d)
+              const presentPct = d.total > 0 ? (d.present / d.total) * 100 : 0
+              const latePct    = d.total > 0 ? (d.late    / d.total) * 100 : 0
               const isHovered  = hoveredDay === d.day
-              const st         = rateStyle(rate)
+              const st         = rateStyle(pct)
 
               return (
                 <div
@@ -295,7 +269,7 @@ export default function AttendanceDashboardContent({ basePath = '/attendance' }:
 
                   {/* Rate + absent count */}
                   <div className="w-[52px] shrink-0 text-right">
-                    <span className={`text-[12.5px] font-bold font-mono tabular-nums leading-none ${st.badge}`}>{rate}%</span>
+                    <span className={`text-[12.5px] font-bold font-mono tabular-nums leading-none ${st.badge}`}>{pct}%</span>
                     <span className={`block text-[10px] font-mono tabular-nums mt-0.5 ${d.absent > 0 ? 'text-danger/60' : 'text-success/70'}`}>
                       {d.absent > 0 ? `${d.absent}↓` : '✓'}
                     </span>
@@ -331,10 +305,10 @@ export default function AttendanceDashboardContent({ basePath = '/attendance' }:
           {/* Best / Worst */}
           <div className="flex items-center gap-2.5 text-[11px]">
             <span className="text-neutral-400">Best:</span>
-            <span className="font-semibold font-mono text-success">{bestDay.day} {Math.round((bestDay.present / bestDay.total) * 100)}%</span>
+            <span className="font-semibold font-mono text-success">{bestDay.day} {rate(bestDay)}%</span>
             <span className="text-neutral-200">·</span>
             <span className="text-neutral-400">Low:</span>
-            <span className="font-semibold font-mono text-danger">{worstDay.day} {Math.round((worstDay.present / worstDay.total) * 100)}%</span>
+            <span className="font-semibold font-mono text-danger">{worstDay.day} {rate(worstDay)}%</span>
           </div>
         </div>
       </div>

@@ -2,16 +2,11 @@
 
 import { useState, type FormEvent } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, CheckCircle2, KeyRound, Copy, Check, UserPlus } from 'lucide-react'
-import { GRADES, SECTIONS } from '@/lib/mock/students'
+import { ArrowLeft, CheckCircle2, KeyRound, Copy, Check, UserPlus, AlertCircle, Users } from 'lucide-react'
+import { GRADES, SECTIONS } from '@/lib/students/constants'
+import { enrolStudentAction, type EnrolStudentResult } from '@/lib/actions/enrol-student'
 
 const PROGRAMS = ['Primary Years', 'Middle School', 'Matriculation', 'Intermediate']
-
-function genCredential(name: string) {
-  const slug = name.trim().toLowerCase().replace(/\s+/g, '.')
-  const roll = `JE-2026-${Math.floor(100 + Math.random() * 800)}`
-  return { username: `${slug}.parent@jeacademy.edu.pk`, roll, tempPassword: `Je${Math.floor(1000 + Math.random() * 9000)}!` }
-}
 
 type Props = {
   /** Route prefix for this dashboard's own links — lets Super Admin render the
@@ -27,24 +22,43 @@ export default function AdmissionsNewStudentContent({ basePath = '/admissions' }
   const [isLate, setIsLate] = useState(false)
   const [parentName, setParentName] = useState('')
   const [parentPhone, setParentPhone] = useState('')
-  const [status, setStatus] = useState<'idle' | 'submitting' | 'success'>('idle')
-  const [credential, setCredential] = useState<{ username: string; roll: string; tempPassword: string } | null>(null)
+  const [status, setStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle')
+  const [result, setResult] = useState<Extract<EnrolStudentResult, { ok: true }> | null>(null)
+  const [error, setError] = useState('')
   const [copied, setCopied] = useState(false)
 
-  function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     setStatus('submitting')
-    // TODO: replace with a Supabase insert into `students` + auto-provisioned `profiles` row for the parent
-    setTimeout(() => {
-      setCredential(genCredential(parentName))
-      setStatus('success')
-    }, 900)
+    setError('')
+
+    const outcome = await enrolStudentAction({
+      studentName,
+      grade,
+      section,
+      program,
+      isLate,
+      parentName,
+      parentPhone,
+    })
+
+    if (!outcome.ok) {
+      setError(outcome.error)
+      setStatus('error')
+      return
+    }
+
+    setResult(outcome)
+    setStatus('success')
   }
 
   const copyCredentials = async () => {
-    if (!credential) return
+    if (!result) return
+    const text = result.parentAccountType === 'new'
+      ? `Roll: ${result.rollNumber}\nUsername: ${result.username}\nTemporary password: ${result.tempPassword}`
+      : `Roll: ${result.rollNumber}\nLinked to existing parent account: ${result.username}`
     try {
-      await navigator.clipboard.writeText(`Roll: ${credential.roll}\nUsername: ${credential.username}\nTemporary password: ${credential.tempPassword}`)
+      await navigator.clipboard.writeText(text)
       setCopied(true)
       setTimeout(() => setCopied(false), 1500)
     } catch { /* clipboard blocked */ }
@@ -61,7 +75,7 @@ export default function AdmissionsNewStudentContent({ basePath = '/admissions' }
       </div>
 
       <div className="max-w-xl bg-white rounded-2xl border border-neutral-200 shadow-1 p-7">
-        {status === 'success' && credential ? (
+        {status === 'success' && result ? (
           <div className="flex flex-col items-center text-center gap-5 py-4">
             <div className="w-14 h-14 rounded-full bg-success-bg flex items-center justify-center">
               <CheckCircle2 size={26} className="text-success" />
@@ -71,25 +85,41 @@ export default function AdmissionsNewStudentContent({ basePath = '/admissions' }
               <p className="text-[13px] text-neutral-500 mt-1">Grade {grade}-{section} · {program}{isLate ? ' · Late enrollment (watch-time tracking enabled)' : ''}</p>
             </div>
 
-            <div className="w-full bg-ink-50 border border-ink-100 rounded-2xl p-5 text-left">
-              <div className="flex items-center gap-2 mb-3">
-                <KeyRound size={14} className="text-ink-600" />
-                <p className="text-[12.5px] font-semibold text-ink-700">Parent credentials — auto-issued</p>
+            {result.parentAccountType === 'new' ? (
+              <div className="w-full bg-ink-50 border border-ink-100 rounded-2xl p-5 text-left">
+                <div className="flex items-center gap-2 mb-3">
+                  <KeyRound size={14} className="text-ink-600" />
+                  <p className="text-[12.5px] font-semibold text-ink-700">Parent credentials — auto-issued</p>
+                </div>
+                <div className="space-y-2 font-mono text-[12.5px] text-neutral-800">
+                  <div className="flex justify-between"><span className="text-neutral-400">Roll number</span><span>{result.rollNumber}</span></div>
+                  <div className="flex justify-between"><span className="text-neutral-400">Username</span><span>{result.username}</span></div>
+                  <div className="flex justify-between"><span className="text-neutral-400">Temp password</span><span>{result.tempPassword}</span></div>
+                </div>
+                <button onClick={copyCredentials} className="mt-4 w-full flex items-center justify-center gap-2 text-[12.5px] font-semibold text-ink-700 bg-white border border-ink-200 py-2.5 rounded-xl hover:bg-ink-100/50 transition-colors">
+                  {copied ? <><Check size={13} className="text-success" /> Copied</> : <><Copy size={13} /> Copy credentials</>}
+                </button>
               </div>
-              <div className="space-y-2 font-mono text-[12.5px] text-neutral-800">
-                <div className="flex justify-between"><span className="text-neutral-400">Roll number</span><span>{credential.roll}</span></div>
-                <div className="flex justify-between"><span className="text-neutral-400">Username</span><span>{credential.username}</span></div>
-                <div className="flex justify-between"><span className="text-neutral-400">Temp password</span><span>{credential.tempPassword}</span></div>
+            ) : (
+              <div className="w-full bg-warning-bg border border-warning/20 rounded-2xl p-5 text-left">
+                <div className="flex items-center gap-2 mb-3">
+                  <Users size={14} className="text-warning" />
+                  <p className="text-[12.5px] font-semibold text-warning">Linked to an existing parent account</p>
+                </div>
+                <p className="text-[12.5px] text-neutral-700 leading-relaxed mb-3">
+                  This phone number already has a parent account — {studentName} was added as a sibling under it. No new credentials were issued; the existing login still works.
+                </p>
+                <div className="space-y-2 font-mono text-[12.5px] text-neutral-800 pt-3 border-t border-warning/20">
+                  <div className="flex justify-between"><span className="text-neutral-400">Roll number</span><span>{result.rollNumber}</span></div>
+                  <div className="flex justify-between"><span className="text-neutral-400">Parent username</span><span>{result.username}</span></div>
+                </div>
               </div>
-              <button onClick={copyCredentials} className="mt-4 w-full flex items-center justify-center gap-2 text-[12.5px] font-semibold text-ink-700 bg-white border border-ink-200 py-2.5 rounded-xl hover:bg-ink-100/50 transition-colors">
-                {copied ? <><Check size={13} className="text-success" /> Copied</> : <><Copy size={13} /> Copy credentials</>}
-              </button>
-            </div>
+            )}
 
             <div className="flex items-center gap-3 w-full pt-1">
               <Link href={`${basePath}/students`} className="flex-1 py-3 text-[13px] font-medium text-neutral-600 bg-neutral-100 hover:bg-neutral-200 rounded-xl transition-colors no-underline text-center">View Directory</Link>
               <button
-                onClick={() => { setStatus('idle'); setCredential(null); setStudentName(''); setParentName(''); setParentPhone(''); setIsLate(false) }}
+                onClick={() => { setStatus('idle'); setResult(null); setStudentName(''); setParentName(''); setParentPhone(''); setIsLate(false) }}
                 className="flex-1 py-3 text-[13px] font-semibold rounded-xl bg-ink-700 text-white hover:bg-ink-800 transition-colors"
               >
                 Enrol Another
@@ -104,6 +134,13 @@ export default function AdmissionsNewStudentContent({ basePath = '/admissions' }
               </div>
               <p className="text-[12.5px] font-semibold text-neutral-400 uppercase tracking-wider">Student Information</p>
             </div>
+
+            {status === 'error' && (
+              <div className="flex items-start gap-2.5 bg-danger-bg border border-danger/20 rounded-xl p-3.5">
+                <AlertCircle size={14} className="text-danger mt-0.5 shrink-0" />
+                <p className="text-[12.5px] text-danger leading-relaxed">{error}</p>
+              </div>
+            )}
 
             <div>
               <label className="block text-[12px] font-semibold text-neutral-700 mb-1.5">Student full name</label>

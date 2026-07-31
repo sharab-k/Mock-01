@@ -1,60 +1,26 @@
 'use client'
 
 import { useState } from 'react'
+import type { Notice, NoticeCategory } from '@/lib/notices/types'
 
-type Notice = {
-  day: string
-  month: string
-  category: string
-  title: string
-  desc: string
-  time: string
-  location: string
-  fullDesc: string
+const CATEGORY_COLORS: Record<NoticeCategory, { bg: string; text: string }> = {
+  Academic: { bg: 'rgba(61,113,87,0.1)', text: '#3D7157' },
+  Event: { bg: 'rgba(73,95,141,0.1)', text: '#495F8D' },
+  Holiday: { bg: 'rgba(169,124,45,0.1)', text: '#A97C2D' },
+  Admissions: { bg: 'rgba(151,63,53,0.1)', text: '#973F35' },
 }
 
-const NOTICES: Notice[] = [
-  {
-    day: '12',
-    month: 'Aug',
-    category: 'Parent–Teacher',
-    title: 'Mid-Term Parent-Teacher Meeting',
-    desc: 'An opportunity for parents to meet subject teachers and discuss mid-term academic progress.',
-    time: '9:00 AM – 1:00 PM',
-    location: 'Main Hall',
-    fullDesc: 'An opportunity for parents to meet subject teachers and discuss mid-term academic progress. Slots are allocated in 10-minute intervals by grade — parents of Grade 9–10 students are scheduled for the morning session, and Grade 11–12 in the afternoon. Report cards will be available for collection.',
-  },
-  {
-    day: '28',
-    month: 'Aug',
-    category: 'Examinations',
-    title: 'Half-Yearly Examination Schedule Released',
-    desc: 'The full timetable for the half-yearly examinations is now available for all programmes.',
-    time: 'Published 9:00 AM',
-    location: 'Student & Parent Portal',
-    fullDesc: 'The full timetable for the half-yearly examinations is now available for all programmes, Grades 6 through 12. Papers begin the first week of September. Students should confirm their subject combination and seating details through their portal login.',
-  },
-  {
-    day: '05',
-    month: 'Sep',
-    category: 'Admissions',
-    title: 'Annual Admissions Open Day',
-    desc: 'Prospective families are invited to tour the campus and meet the admissions team.',
-    time: '10:00 AM – 3:00 PM',
-    location: 'JE Academy Campus',
-    fullDesc: 'Prospective families are invited to tour the campus, meet the admissions team, and sit in on a sample class. Programme counsellors will be on hand for Primary Years through Intermediate. No prior booking required — walk-ins welcome.',
-  },
-]
-
-const CATEGORY_COLORS: Record<string, { bg: string; text: string }> = {
-  'Parent–Teacher': { bg: 'rgba(73,95,141,0.1)', text: '#495F8D' },
-  'Examinations': { bg: 'rgba(169,124,45,0.1)', text: '#A97C2D' },
-  'Admissions': { bg: 'rgba(61,113,87,0.1)', text: '#3D7157' },
+function dateParts(iso: string): { day: string; month: string } {
+  const d = new Date(iso)
+  return {
+    day: d.toLocaleDateString('en-GB', { day: '2-digit' }),
+    month: d.toLocaleDateString('en-GB', { month: 'short' }),
+  }
 }
 
-export default function NoticesSection() {
+export default function NoticesSection({ notices }: { notices: Notice[] }) {
   const [active, setActive] = useState<Notice | null>(null)
-  const activeColors = active ? (CATEGORY_COLORS[active.category] ?? { bg: 'rgba(73,95,141,0.1)', text: '#495F8D' }) : null
+  const activeColors = active ? CATEGORY_COLORS[active.category] : null
 
   return (
     <section className="bg-white py-20 sm:py-28" id="notices">
@@ -86,13 +52,16 @@ export default function NoticesSection() {
           </a>
         </div>
 
-        {/* Notice cards — EduFit event-card style, split 2-col */}
+        {notices.length === 0 ? (
+          <p className="text-[14px] text-neutral-400 text-center py-10">No notices published yet — check back soon.</p>
+        ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-          {NOTICES.map((n) => {
-            const colors = CATEGORY_COLORS[n.category] ?? { bg: 'rgba(73,95,141,0.1)', text: '#495F8D' }
+          {notices.map((n) => {
+            const colors = CATEGORY_COLORS[n.category]
+            const { day, month } = dateParts(n.published_at)
             return (
               <button
-                key={n.title}
+                key={n.id}
                 onClick={() => setActive(n)}
                 className="group text-left rounded-2xl border border-neutral-200 bg-neutral-50 overflow-hidden hover:bg-white hover:shadow-2 hover:border-neutral-300 transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink-400 focus-visible:ring-offset-2"
               >
@@ -102,8 +71,8 @@ export default function NoticesSection() {
                     className="w-14 h-14 rounded-xl flex flex-col items-center justify-center shrink-0"
                     style={{ background: colors.bg }}
                   >
-                    <span className="font-serif text-[22px] font-semibold leading-none" style={{ color: colors.text }}>{n.day}</span>
-                    <span className="font-mono text-[9px] uppercase tracking-wider mt-0.5" style={{ color: colors.text }}>{n.month}</span>
+                    <span className="font-serif text-[22px] font-semibold leading-none" style={{ color: colors.text }}>{day}</span>
+                    <span className="font-mono text-[9px] uppercase tracking-wider mt-0.5" style={{ color: colors.text }}>{month}</span>
                   </div>
                   <div>
                     <span
@@ -117,7 +86,7 @@ export default function NoticesSection() {
                 </div>
 
                 <div className="px-6 pb-5 border-t border-neutral-100">
-                  <p className="text-[13px] text-neutral-600 leading-relaxed mt-3 mb-4">{n.desc}</p>
+                  <p className="text-[13px] text-neutral-600 leading-relaxed mt-3 mb-4 line-clamp-2">{n.body}</p>
                   <span className="inline-flex items-center gap-1 text-[12px] font-semibold text-ink-600 group-hover:text-ink-800 transition-colors">
                     View details
                     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
@@ -129,6 +98,7 @@ export default function NoticesSection() {
             )
           })}
         </div>
+        )}
       </div>
 
       {/* Detail modal */}
@@ -138,8 +108,8 @@ export default function NoticesSection() {
           <div className="relative w-full sm:max-w-lg bg-white rounded-3xl shadow-2xl z-10 overflow-hidden">
             <div className="px-7 pt-7 pb-5 border-b border-neutral-100 flex items-start gap-4">
               <div className="w-14 h-14 rounded-xl flex flex-col items-center justify-center shrink-0" style={{ background: activeColors.bg }}>
-                <span className="font-serif text-[22px] font-semibold leading-none" style={{ color: activeColors.text }}>{active.day}</span>
-                <span className="font-mono text-[9px] uppercase tracking-wider mt-0.5" style={{ color: activeColors.text }}>{active.month}</span>
+                <span className="font-serif text-[22px] font-semibold leading-none" style={{ color: activeColors.text }}>{dateParts(active.published_at).day}</span>
+                <span className="font-mono text-[9px] uppercase tracking-wider mt-0.5" style={{ color: activeColors.text }}>{dateParts(active.published_at).month}</span>
               </div>
               <div className="flex-1 min-w-0">
                 <span className="inline-flex text-[10.5px] px-2.5 py-0.5 rounded-full font-semibold mb-2" style={{ background: activeColors.bg, color: activeColors.text }}>
@@ -152,17 +122,8 @@ export default function NoticesSection() {
               </button>
             </div>
             <div className="px-7 py-6 space-y-5">
-              <div className="flex items-center gap-6 text-[13px] text-neutral-600">
-                <span className="flex items-center gap-2">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-neutral-400" aria-hidden="true"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
-                  {active.time}
-                </span>
-                <span className="flex items-center gap-2">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-neutral-400" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" /></svg>
-                  {active.location}
-                </span>
-              </div>
-              <p className="text-[13.5px] text-neutral-600 leading-relaxed">{active.fullDesc}</p>
+              <p className="text-[11px] font-mono text-neutral-400">Published {active.published_at}</p>
+              <p className="text-[13.5px] text-neutral-600 leading-relaxed">{active.body}</p>
               <a href="/login" className="inline-flex items-center gap-2 text-[13px] font-semibold rounded-xl px-5 py-2.5 bg-ink-700 text-white no-underline hover:bg-ink-800 transition-colors">
                 Log in for more details
               </a>

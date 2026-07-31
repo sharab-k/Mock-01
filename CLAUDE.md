@@ -33,7 +33,7 @@ on-demand PDF progress reports.
 | Language | TypeScript (strict) | No `any`, no `@ts-ignore` |
 | Database | Supabase (PostgreSQL) | RLS on every table — this is the real access boundary, see §4 |
 | Auth | Supabase Auth | **No public sign-up route.** See §4 |
-| Deployment | Fly.io | Rolling deploys |
+| Deployment | Vercel | Preview deploys per PR, production on merge |
 | Styling | Tailwind CSS + shadcn/ui | Tokens in §6 — extend Tailwind, don't invent new colors |
 | Validation | Zod | Every Server Action / Route Handler |
 | Testing | Vitest | Alongside implementation, not after |
@@ -74,8 +74,17 @@ secrets, branch + PR always). Two more, specific to this project:
 | `admissions_admin` | `super_admin` | Create/delete student records → **auto-issues parent credentials** on create | Owns the enquiry inbox too |
 | `attendance_admin` | `super_admin` | Daily roster, single-click check-in → **triggers absence alerts** | One class roster view at a time |
 | `marks_admin` | `super_admin` | Bulk mark entry, tier evaluation, edit history | Edits are logged, never silently overwritten |
-| `student` | `admissions_admin` (on enrollment) | View own lectures, assignments, submit work | Token-validated session |
 | `parent` | System-generated when `admissions_admin` creates a student | Read-only: attendance, marks, progress trends, for **all linked children** | Multi-sibling via join table, §5 |
+
+**No separate `student` login exists.** One credential pair is issued per family (to the parent) on
+enrollment, per the SOW — there is no second "student" account created alongside it. The `(student)`
+route group's content (lectures, assignments, watch-time — scoped to one child) is reached **through
+the parent's session** by selecting a child, not via its own role/login. `(parent)` stays the
+multi-sibling entry point. This means `profiles.role` only ever takes 5 values in practice
+(`super_admin`, `admissions_admin`, `attendance_admin`, `marks_admin`, `parent`) — the `student` value
+in the `user_role` enum exists for future-proofing (e.g. if late-stage requirements demand a real
+student-only login) but nothing in the current build path ever creates a profile with it. Confirmed
+with the user in the Phase 2 backend session — see `BACKEND-IMPLEMENTATION-PLAN.md` Phase 5/6.
 
 ### Route groups
 ```
@@ -115,6 +124,12 @@ it all in one migration. Standard conventions from the global skill apply (`uuid
 | `video_lectures` | `id`, `title`, `subject`, `duration_seconds`, `storage_path` | |
 | `video_watch_sessions` | `id`, `student_id`, `lecture_id`, `watched_seconds`, `completed bool` | Server-accumulated, never trust a client-reported total — §7 |
 | `notification_log` | `id`, `channel enum (whatsapp/sms)`, `recipient`, `payload`, `status`, `sent_at` | Audit trail for the automated pipeline |
+| `audit_log` | `id`, `actor_id (→profiles)`, `action`, `created_at` | Super Admin's "master raw log audit" (SOW). Deliberately minimal — no separate `detail` column (`action` holds one full human-readable string, e.g. "Edited marks — Ahmed Ali · Mathematics · Monthly") and no stored `flagged` column ("flagged" is derived at query/render time from a keyword match against `action`, not set per call site) |
+
+**Explicitly out of scope:** `assignments` / `assignment_submissions` tables. The student portal's
+assignment screens (`/student/assignments`) stay UI-only / local-state — not backed by real
+persistence, and not scheduled in any phase of `BACKEND-IMPLEMENTATION-PLAN.md`. Don't propose these
+tables without the client raising it first.
 
 ```bash
 npx supabase gen types typescript --project-id $SUPABASE_PROJECT_ID > types/supabase.ts
@@ -308,12 +323,27 @@ npm run dev   # http://localhost:3000
 ```bash
 npm run typecheck && npm run lint && npm run test && npm run build
 npx supabase db push      # migrations before code, always
-fly deploy
-fly logs --tail
+vercel env pull .env.local   # sync secrets locally if needed
+vercel deploy --prod
 ```
 
-Suggest two Fly apps — `je-academy-staging` and `je-academy` — never push straight to the production
-app. Same rolling-deploy, secrets-via-flyctl rules as the global skill.
+Two Vercel projects/environments — Preview (every PR gets its own preview deploy automatically) and
+Production (only `main` deploys to prod) — never push straight to production without a reviewed PR.
+Secrets (`SUPABASE_SERVICE_ROLE_KEY`, `TWILIO_*`) are set via the Vercel dashboard's Environment
+Variables UI, scoped per environment, never committed. Check build logs and runtime logs in the
+Vercel dashboard, not a CLI tail.
+
+**Production readiness checklist** (dashboard-side config, not code — verify manually before go-live,
+`supabase projects list` doesn't expose these):
+- [ ] Supabase project is on a tier with Point-in-Time Recovery / automatic backups enabled
+      (Settings → Database → Backups in the Supabase dashboard). The free tier has daily backups
+      only, no PITR — confirm the tier matches what the client needs for recovery guarantees.
+- [ ] Error monitoring: Vercel's built-in observability (Logs + Speed Insights) is enough to start,
+      per the SOW's "Ongoing Mitigation" scope. Note here if a dedicated tool (e.g. Sentry) gets
+      added later — nothing wired for that today.
+- [ ] Every secret (`SUPABASE_SERVICE_ROLE_KEY`, `TWILIO_*`) is set via Vercel's Environment
+      Variables UI, scoped to the right environment (Production vs Preview), and not present in any
+      committed file — `.env.local` / `.env` are already gitignored, confirm nothing else leaked one.
 
 ---
 

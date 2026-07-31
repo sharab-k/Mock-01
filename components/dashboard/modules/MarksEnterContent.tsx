@@ -1,42 +1,78 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Save, CheckCircle2 } from 'lucide-react'
-import { GRADES, SECTIONS, studentsByGradeSection, INITIALS } from '@/lib/mock/students'
+import { ArrowLeft, Save, CheckCircle2, AlertCircle } from 'lucide-react'
+import { GRADES, SECTIONS, INITIALS } from '@/lib/students/constants'
+import { bulkSaveMarksAction } from '@/lib/actions/marks'
+import type { EnterRosterStudent, ExistingMark } from '@/lib/marks/enter-data'
 
 const SUBJECTS = ['Mathematics', 'English', 'Physics', 'Chemistry', 'Biology', 'Urdu']
-const EXAM_TYPES = ['Monthly', 'Half-Yearly', 'Final']
+const EXAM_TYPES: { value: 'monthly' | 'half_yearly' | 'final'; label: string }[] = [
+  { value: 'monthly', label: 'Monthly' },
+  { value: 'half_yearly', label: 'Half-Yearly' },
+  { value: 'final', label: 'Final' },
+]
 const MAX_SCORE = 100
 
 type Props = {
   /** Route prefix for this dashboard's own links — lets Super Admin render the
    *  identical bulk-entry flow within its own shell. */
   basePath?: string
+  roster: EnterRosterStudent[]
+  existingMarks: ExistingMark[]
 }
 
-export default function MarksEnterContent({ basePath = '/marks' }: Props) {
+export default function MarksEnterContent({ basePath = '/marks', roster: fullRoster, existingMarks }: Props) {
   const [grade, setGrade] = useState(GRADES[0])
   const [section, setSection] = useState(SECTIONS[0])
   const [subject, setSubject] = useState(SUBJECTS[0])
-  const [examType, setExamType] = useState(EXAM_TYPES[0])
+  const [examType, setExamType] = useState<'monthly' | 'half_yearly' | 'final'>(EXAM_TYPES[0].value)
   const [scores, setScores] = useState<Record<string, string>>({})
-  const [saved, setSaved] = useState(false)
+  const [status, setStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+  const [error, setError] = useState('')
 
-  const roster = useMemo(() => studentsByGradeSection(grade, section), [grade, section])
+  const roster = useMemo(
+    () => fullRoster.filter((s) => s.grade === grade && s.section === section),
+    [fullRoster, grade, section],
+  )
 
-  const setScore = (roll: string, value: string) => {
+  useEffect(() => {
+    const prefill: Record<string, string> = {}
+    for (const s of roster) {
+      const existing = existingMarks.find((m) => m.student_id === s.id && m.subject === subject && m.exam_type === examType)
+      if (existing) prefill[s.id] = String(existing.score)
+    }
+    setScores(prefill)
+    setStatus('idle')
+  }, [roster, existingMarks, subject, examType])
+
+  const setScore = (studentId: string, value: string) => {
     if (value !== '' && (!/^\d{1,3}$/.test(value) || Number(value) > MAX_SCORE)) return
-    setScores((prev) => ({ ...prev, [roll]: value }))
-    setSaved(false)
+    setScores((prev) => ({ ...prev, [studentId]: value }))
+    setStatus('idle')
   }
 
-  const enteredCount = roster.filter((s) => scores[s.roll_number] !== undefined && scores[s.roll_number] !== '').length
+  const enteredCount = roster.filter((s) => scores[s.id] !== undefined && scores[s.id] !== '').length
 
-  const handleSave = () => {
-    // TODO: bulk insert into `marks` table via Supabase; triggers grade-alert notification per student
-    setSaved(true)
-    setTimeout(() => setSaved(false), 3000)
+  const handleSave = async () => {
+    setStatus('saving')
+    setError('')
+
+    const entries = roster
+      .filter((s) => scores[s.id] !== undefined && scores[s.id] !== '')
+      .map((s) => ({ studentId: s.id, studentName: s.full_name, score: Number(scores[s.id]) }))
+
+    const outcome = await bulkSaveMarksAction({ subject, examType, maxScore: MAX_SCORE, classLabel: `Grade ${grade}-${section}`, entries })
+
+    if (!outcome.ok) {
+      setError(outcome.error)
+      setStatus('error')
+      return
+    }
+
+    setStatus('saved')
+    setTimeout(() => setStatus('idle'), 3000)
   }
 
   return (
@@ -52,13 +88,13 @@ export default function MarksEnterContent({ basePath = '/marks' }: Props) {
       <div className="bg-white rounded-2xl border border-neutral-200 shadow-1 p-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div>
           <label className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5">Grade</label>
-          <select value={grade} onChange={(e) => { setGrade(e.target.value as typeof grade); setScores({}) }} className="w-full text-[13px] border border-neutral-200 rounded-xl px-3 py-2.5 text-neutral-700 bg-white focus:outline-none focus:ring-1 focus:ring-ink-300 cursor-pointer">
+          <select value={grade} onChange={(e) => setGrade(e.target.value as typeof grade)} className="w-full text-[13px] border border-neutral-200 rounded-xl px-3 py-2.5 text-neutral-700 bg-white focus:outline-none focus:ring-1 focus:ring-ink-300 cursor-pointer">
             {GRADES.map((g) => <option key={g}>{g}</option>)}
           </select>
         </div>
         <div>
           <label className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5">Section</label>
-          <select value={section} onChange={(e) => { setSection(e.target.value as typeof section); setScores({}) }} className="w-full text-[13px] border border-neutral-200 rounded-xl px-3 py-2.5 text-neutral-700 bg-white focus:outline-none focus:ring-1 focus:ring-ink-300 cursor-pointer">
+          <select value={section} onChange={(e) => setSection(e.target.value as typeof section)} className="w-full text-[13px] border border-neutral-200 rounded-xl px-3 py-2.5 text-neutral-700 bg-white focus:outline-none focus:ring-1 focus:ring-ink-300 cursor-pointer">
             {SECTIONS.map((s) => <option key={s}>{s}</option>)}
           </select>
         </div>
@@ -70,26 +106,33 @@ export default function MarksEnterContent({ basePath = '/marks' }: Props) {
         </div>
         <div>
           <label className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5">Exam Type</label>
-          <select value={examType} onChange={(e) => setExamType(e.target.value)} className="w-full text-[13px] border border-neutral-200 rounded-xl px-3 py-2.5 text-neutral-700 bg-white focus:outline-none focus:ring-1 focus:ring-ink-300 cursor-pointer">
-            {EXAM_TYPES.map((e) => <option key={e}>{e}</option>)}
+          <select value={examType} onChange={(e) => setExamType(e.target.value as typeof examType)} className="w-full text-[13px] border border-neutral-200 rounded-xl px-3 py-2.5 text-neutral-700 bg-white focus:outline-none focus:ring-1 focus:ring-ink-300 cursor-pointer">
+            {EXAM_TYPES.map((e) => <option key={e.value} value={e.value}>{e.label}</option>)}
           </select>
         </div>
       </div>
 
+      {status === 'error' && (
+        <div className="flex items-start gap-2.5 bg-danger-bg border border-danger/20 rounded-xl p-3.5">
+          <AlertCircle size={14} className="text-danger mt-0.5 shrink-0" />
+          <p className="text-[12.5px] text-danger leading-relaxed">{error}</p>
+        </div>
+      )}
+
       <div className="bg-white rounded-2xl border border-neutral-200 shadow-1 overflow-hidden">
         <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-100">
           <div>
-            <h2 className="text-[14px] font-semibold text-neutral-900">Grade {grade}-{section} · {subject} · {examType}</h2>
+            <h2 className="text-[14px] font-semibold text-neutral-900">Grade {grade}-{section} · {subject} · {EXAM_TYPES.find((e) => e.value === examType)?.label}</h2>
             <p className="text-[11.5px] text-neutral-400 mt-0.5">{enteredCount} of {roster.length} scores entered</p>
           </div>
           <button
             onClick={handleSave}
-            disabled={enteredCount === 0}
+            disabled={enteredCount === 0 || status === 'saving'}
             className={`flex items-center gap-2 text-[13px] font-semibold px-3.5 py-2 rounded-xl transition-all disabled:opacity-40 disabled:cursor-not-allowed ${
-              saved ? 'bg-success-bg text-success' : 'bg-ink-700 text-white hover:bg-ink-800'
+              status === 'saved' ? 'bg-success-bg text-success' : 'bg-ink-700 text-white hover:bg-ink-800'
             }`}
           >
-            {saved ? <><CheckCircle2 size={14} /> Saved</> : <><Save size={14} /> Save All</>}
+            {status === 'saved' ? <><CheckCircle2 size={14} /> Saved</> : <><Save size={14} /> {status === 'saving' ? 'Saving…' : 'Save All'}</>}
           </button>
         </div>
 
@@ -103,8 +146,8 @@ export default function MarksEnterContent({ basePath = '/marks' }: Props) {
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 <input
-                  value={scores[s.roll_number] ?? ''}
-                  onChange={(e) => setScore(s.roll_number, e.target.value)}
+                  value={scores[s.id] ?? ''}
+                  onChange={(e) => setScore(s.id, e.target.value)}
                   placeholder="—"
                   inputMode="numeric"
                   className="w-16 text-center px-2 py-2 border border-neutral-200 rounded-xl text-[13px] font-mono focus:outline-none focus:border-ink-400 focus:ring-2 focus:ring-ink-400/10 transition-all"

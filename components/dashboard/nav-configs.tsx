@@ -91,27 +91,35 @@ export const NAV_CONFIGS: Record<string, NavSection[]> = {
     },
   ],
 
-  student: [
-    {
-      items: [{ label: 'Dashboard', href: '/student', icon: LayoutDashboard }],
-    },
-    {
-      title: 'My Learning',
-      items: [
-        { label: 'Video Lectures', href: '/student/lectures',   icon: PlayCircle    },
-        { label: 'My Attendance',  href: '/student/attendance', icon: CalendarCheck },
-        { label: 'My Marks',       href: '/student/marks',      icon: BookOpen      },
-      ],
-    },
-    {
-      title: 'School',
-      items: [{ label: 'Notices', href: '/student/notices', icon: Megaphone }],
-    },
-  ],
-
   parent: [
     {
       items: [{ label: 'Dashboard', href: '/parent', icon: LayoutDashboard }],
     },
   ],
+}
+
+// No role ever equals 'student' (CLAUDE.md §4 — one credential per family,
+// issued to the parent) — the (student) route group is reached through a
+// parent's session for one specific linked child, so its nav can't be a
+// static NAV_CONFIGS entry the way every other role's is. studentId gets
+// baked into each href here instead; see DashboardShell's `navSections` prop.
+export function buildStudentNavSections(studentId: string): NavSection[] {
+  const base = `/student/${studentId}`
+  return [
+    {
+      items: [{ label: 'Dashboard', href: base, icon: LayoutDashboard }],
+    },
+    {
+      title: 'My Learning',
+      items: [
+        { label: 'Video Lectures', href: `${base}/lectures`,   icon: PlayCircle    },
+        { label: 'My Attendance',  href: `${base}/attendance`, icon: CalendarCheck },
+        { label: 'My Marks',       href: `${base}/marks`,      icon: BookOpen      },
+      ],
+    },
+    {
+      title: 'School',
+      items: [{ label: 'Notices', href: `${base}/notices`, icon: Megaphone }],
+    },
+  ]
 }

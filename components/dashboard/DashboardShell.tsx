@@ -3,19 +3,27 @@
 import { useState } from 'react'
 import Sidebar from './Sidebar'
 import Topbar from './Topbar'
-import { NAV_CONFIGS } from './nav-configs'
+import { NAV_CONFIGS, buildStudentNavSections } from './nav-configs'
 import type { UserInfo } from './types'
 
 type Props = {
   user: UserInfo
   pageTitle?: string
   breadcrumb?: { label: string; href?: string }[]
+  /** Set when the viewer's role doesn't match the content they're looking
+   *  at, e.g. a parent browsing a linked child's student-view screens still
+   *  authenticates as 'parent', but the sidebar needs the student nav with
+   *  this studentId baked into each href, not the one-link parent nav.
+   *  Built HERE (client-side) rather than passed down as a prop, since
+   *  NavItem.icon is a component reference — Server Components can't hand
+   *  those across the server/client boundary as serialized props. */
+  studentPortalId?: string
   children: React.ReactNode
 }
 
-export default function DashboardShell({ user, pageTitle, breadcrumb, children }: Props) {
+export default function DashboardShell({ user, pageTitle, breadcrumb, studentPortalId, children }: Props) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const nav = NAV_CONFIGS[user.role] ?? []
+  const nav = studentPortalId ? buildStudentNavSections(studentPortalId) : NAV_CONFIGS[user.role] ?? []
 
   return (
     <div className="min-h-screen bg-neutral-100 font-sans">

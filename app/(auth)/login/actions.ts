@@ -2,16 +2,7 @@
 
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-
-const ROLE_DESTINATIONS: Record<string, string> = {
-  super_admin:       '/super-admin',
-  admissions_admin:  '/admissions',
-  attendance_admin:  '/attendance',
-  marks_admin:       '/marks',
-  teacher:           '/teacher',
-  student:           '/student',
-  parent:            '/parent',
-}
+import { ROLE_DESTINATIONS } from '@/lib/auth/role-destinations'
 
 export async function login(formData: FormData) {
   const email    = formData.get('email') as string
@@ -35,13 +26,17 @@ export async function login(formData: FormData) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login?error=invalid_credentials')
 
-  const result = await supabase
+  const { data: profile } = await supabase
     .from('profiles')
-    .select('role')
+    .select('role, is_active')
     .eq('id', user.id)
     .single()
 
-  const role = (result.data as { role: string } | null)?.role ?? ''
-  const destination = ROLE_DESTINATIONS[role] ?? '/login?error=no_role'
-  redirect(destination)
+  if (profile && !profile.is_active) {
+    await supabase.auth.signOut()
+    redirect('/login?error=account_inactive')
+  }
+
+  const destination = profile ? ROLE_DESTINATIONS[profile.role] : undefined
+  redirect(destination ?? '/login?error=no_role')
 }

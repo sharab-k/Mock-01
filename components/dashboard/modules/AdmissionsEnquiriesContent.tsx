@@ -3,7 +3,9 @@
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, ChevronDown, ChevronUp, Copy, Check, UserPlus } from 'lucide-react'
-import { ENQUIRIES as INITIAL_ENQUIRIES, STATUS_STYLE, type Enquiry, type EnquiryStatus } from '@/lib/mock/enquiries'
+import { STATUS_STYLE, type Enquiry, type EnquiryStatus } from '@/lib/admissions/enquiry-types'
+import { STATUS_TO_DB } from '@/lib/admissions/enquiry-mapping'
+import { updateEnquiryStatusAction } from '@/lib/actions/enquiries'
 
 const STATUS_FILTERS: ('All' | EnquiryStatus)[] = ['All', 'Unread', 'Contacted', 'Awaiting Visit', 'Enrolled', 'Declined']
 const NEXT_STATUS: Record<EnquiryStatus, EnquiryStatus> = {
@@ -20,10 +22,11 @@ type Props = {
   /** Route prefix for this dashboard's own links — lets Super Admin render the
    *  identical enquiry inbox within its own shell. */
   basePath?: string
+  initialEnquiries: Enquiry[]
 }
 
-export default function AdmissionsEnquiriesContent({ basePath = '/admissions' }: Props) {
-  const [enquiries, setEnquiries] = useState<Enquiry[]>(INITIAL_ENQUIRIES)
+export default function AdmissionsEnquiriesContent({ basePath = '/admissions', initialEnquiries }: Props) {
+  const [enquiries, setEnquiries] = useState<Enquiry[]>(initialEnquiries)
   const [statusFilter, setStatusFilter] = useState<'All' | EnquiryStatus>('All')
   const [expanded, setExpanded] = useState<string | null>(null)
   const [copiedPhone, setCopiedPhone] = useState<string | null>(null)
@@ -37,12 +40,20 @@ export default function AdmissionsEnquiriesContent({ basePath = '/admissions' }:
     try { await navigator.clipboard.writeText(phone); setCopiedPhone(phone); setTimeout(() => setCopiedPhone(null), 1500) } catch { /* clipboard blocked */ }
   }
 
+  const setStatus = async (id: string, status: EnquiryStatus) => {
+    const previous = enquiries
+    setEnquiries((prev) => prev.map((e) => e.id === id ? { ...e, status } : e))
+    const outcome = await updateEnquiryStatusAction({ id, status: STATUS_TO_DB[status] })
+    if (!outcome.ok) setEnquiries(previous)
+  }
+
   const advanceStatus = (id: string) => {
-    setEnquiries((prev) => prev.map((e) => e.id === id ? { ...e, status: NEXT_STATUS[e.status] } : e))
+    const current = enquiries.find((e) => e.id === id)
+    if (current) setStatus(id, NEXT_STATUS[current.status])
   }
 
   const decline = (id: string) => {
-    setEnquiries((prev) => prev.map((e) => e.id === id ? { ...e, status: 'Declined' } : e))
+    setStatus(id, 'Declined')
   }
 
   return (

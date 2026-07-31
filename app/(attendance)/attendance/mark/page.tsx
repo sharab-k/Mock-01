@@ -1,19 +1,10 @@
-'use client'
-
-import { useState } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, MessageSquare } from 'lucide-react'
-import AttendanceMarker from '@/components/dashboard/AttendanceMarker'
+import { ArrowLeft } from 'lucide-react'
+import AttendanceMarkContent from '@/components/dashboard/modules/AttendanceMarkContent'
+import { fetchMarkerClasses } from '@/lib/attendance/marker-classes'
 
-export default function MarkAttendancePage() {
-  const [toast, setToast] = useState<{ absent: number } | null>(null)
-
-  const handleSubmitted = (summary: { present: number; absent: number; late: number }) => {
-    if (summary.absent > 0) {
-      setToast({ absent: summary.absent })
-      setTimeout(() => setToast(null), 4000)
-    }
-  }
+export default async function MarkAttendancePage() {
+  const classes = await fetchMarkerClasses()
 
   return (
     <>
@@ -25,18 +16,7 @@ export default function MarkAttendancePage() {
         <p className="text-[13px] text-neutral-500 mt-0.5">Single-click check-in · submits trigger WhatsApp alerts for absences</p>
       </div>
 
-      <AttendanceMarker onSubmitted={handleSubmitted} />
-
-      {toast && (
-        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3 bg-neutral-900 text-white px-5 py-3.5 rounded-2xl shadow-2xl animate-in fade-in slide-in-from-bottom-2">
-          <div className="w-8 h-8 rounded-full bg-success/20 flex items-center justify-center shrink-0">
-            <MessageSquare size={14} className="text-success" />
-          </div>
-          <p className="text-[13px]">
-            <span className="font-semibold">{toast.absent} WhatsApp alert{toast.absent > 1 ? 's' : ''}</span> sent to parents of absent students
-          </p>
-        </div>
-      )}
+      <AttendanceMarkContent classes={classes} />
     </>
   )
 }
