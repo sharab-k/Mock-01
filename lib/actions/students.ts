@@ -2,6 +2,7 @@
 
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
+import { logAction } from '@/lib/audit/log'
 
 // Defense in depth — RLS's admissions_full_access policy is the real boundary
 // on the `students` table; this just fails fast with a clean error instead of
@@ -9,11 +10,11 @@ import { createClient } from '@/lib/supabase/server'
 async function requireAdmissionsCaller() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { supabase, authorized: false as const }
+  if (!user) return { supabase, userId: null, authorized: false as const }
 
   const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
   const authorized = !!profile && ['admissions_admin', 'super_admin'].includes(profile.role)
-  return { supabase, authorized }
+  return { supabase, userId: user.id, authorized }
 }
 
 const UpdateStudentSchema = z.object({
@@ -45,15 +46,20 @@ export async function deleteStudentAction(input: z.infer<typeof IdSchema>) {
   const parsed = IdSchema.safeParse(input)
   if (!parsed.success) return { ok: false as const, error: 'Invalid request.' }
 
-  const { supabase, authorized } = await requireAdmissionsCaller()
-  if (!authorized) return { ok: false as const, error: 'Not authorized.' }
+  const { supabase, userId, authorized } = await requireAdmissionsCaller()
+  if (!authorized || !userId) return { ok: false as const, error: 'Not authorized.' }
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('students')
     .update({ deleted_at: new Date().toISOString() })
     .eq('id', parsed.data.id)
+    .select('full_name, roll_number')
+    .single()
 
   if (error) return { ok: false as const, error: 'Could not delete the student record.' }
+
+  await logAction(supabase, userId, `Deleted student — ${data.full_name} · ${data.roll_number}`)
+
   return { ok: true as const }
 }
 

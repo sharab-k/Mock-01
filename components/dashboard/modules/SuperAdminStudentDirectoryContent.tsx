@@ -2,8 +2,9 @@
 
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Search, X, CalendarCheck, BookOpen, Clock3, Loader2 } from 'lucide-react'
+import { ArrowLeft, Search, X, CalendarCheck, BookOpen, Clock3, Loader2, Trash2, AlertTriangle } from 'lucide-react'
 import { fetchStudentAcademicSummaryAction, type StudentAcademicSummary } from '@/lib/actions/student-summary'
+import { deleteStudentAction } from '@/lib/actions/students'
 
 export type DirectoryStudent = {
   id: string
@@ -17,6 +18,14 @@ export type DirectoryStudent = {
   is_late_enrollment: boolean
   parent_name: string
   parent_phone: string
+  guardian_profession: string | null
+  previous_school: string | null
+  last_qualification: string | null
+  address: string | null
+  gr_number: string | null
+  registration_fee: number | null
+  tuition_fee: number | null
+  stream: string | null
 }
 
 const STATUS_PILL: Record<string, string> = {
@@ -26,13 +35,17 @@ const STATUS_PILL: Record<string, string> = {
 
 const INITIALS = (name: string) => name.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase()
 
-export default function SuperAdminStudentDirectoryContent({ students, grades }: { students: DirectoryStudent[]; grades: string[] }) {
+export default function SuperAdminStudentDirectoryContent({ students: initialStudents, grades }: { students: DirectoryStudent[]; grades: string[] }) {
+  const [students, setStudents] = useState<DirectoryStudent[]>(initialStudents)
   const [query, setQuery] = useState('')
   const [gradeFilter, setGradeFilter] = useState('All Grades')
   const [statusFilter, setStatusFilter] = useState('All Statuses')
   const [selected, setSelected] = useState<DirectoryStudent | null>(null)
   const [summary, setSummary] = useState<StudentAcademicSummary | null>(null)
   const [summaryLoading, setSummaryLoading] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<DirectoryStudent | null>(null)
+  const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState('')
 
   const filtered = useMemo(() => {
     return students.filter((s) => {
@@ -51,6 +64,18 @@ export default function SuperAdminStudentDirectoryContent({ students, grades }: 
     const outcome = await fetchStudentAcademicSummaryAction({ studentId: s.id })
     setSummaryLoading(false)
     if (outcome.ok) setSummary({ attendancePct: outcome.attendancePct, avgScore: outcome.avgScore })
+  }
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return
+    setDeleting(true)
+    setDeleteError('')
+    const outcome = await deleteStudentAction({ id: deleteTarget.id })
+    setDeleting(false)
+    if (!outcome.ok) { setDeleteError(outcome.error); return }
+    setStudents((prev) => prev.filter((s) => s.id !== deleteTarget.id))
+    setDeleteTarget(null)
+    setSelected(null)
   }
 
   return (
@@ -191,7 +216,61 @@ export default function SuperAdminStudentDirectoryContent({ students, grades }: 
                   <span className="text-neutral-400">Enrolled</span>
                   <span className="font-mono text-neutral-800">{selected.enrollment_date}</span>
                 </div>
+                {selected.stream && (
+                  <div className="flex items-center justify-between text-[13px]">
+                    <span className="text-neutral-400">Stream</span>
+                    <span className="font-medium text-neutral-800">{selected.stream}</span>
+                  </div>
+                )}
+                {selected.gr_number && (
+                  <div className="flex items-center justify-between text-[13px]">
+                    <span className="text-neutral-400">G.R. No.</span>
+                    <span className="font-mono text-neutral-800">{selected.gr_number}</span>
+                  </div>
+                )}
               </div>
+
+              {(selected.previous_school || selected.last_qualification || selected.address) && (
+                <div className="space-y-3 pt-4 border-t border-neutral-100">
+                  <p className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider">Academic Background</p>
+                  {selected.previous_school && (
+                    <div className="flex items-center justify-between text-[13px] gap-3">
+                      <span className="text-neutral-400 shrink-0">Previous school</span>
+                      <span className="font-medium text-neutral-800 text-right">{selected.previous_school}</span>
+                    </div>
+                  )}
+                  {selected.last_qualification && (
+                    <div className="flex items-center justify-between text-[13px] gap-3">
+                      <span className="text-neutral-400 shrink-0">Last qualification</span>
+                      <span className="font-medium text-neutral-800 text-right">{selected.last_qualification}</span>
+                    </div>
+                  )}
+                  {selected.address && (
+                    <div className="flex items-start justify-between text-[13px] gap-3">
+                      <span className="text-neutral-400 shrink-0">Address</span>
+                      <span className="font-medium text-neutral-800 text-right">{selected.address}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {(selected.registration_fee !== null || selected.tuition_fee !== null) && (
+                <div className="space-y-3 pt-4 border-t border-neutral-100">
+                  <p className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider">Fees</p>
+                  {selected.registration_fee !== null && (
+                    <div className="flex items-center justify-between text-[13px]">
+                      <span className="text-neutral-400">Registration fee</span>
+                      <span className="font-mono text-neutral-800">PKR {selected.registration_fee.toLocaleString()}</span>
+                    </div>
+                  )}
+                  {selected.tuition_fee !== null && (
+                    <div className="flex items-center justify-between text-[13px]">
+                      <span className="text-neutral-400">Tuition fee</span>
+                      <span className="font-mono text-neutral-800">PKR {selected.tuition_fee.toLocaleString()}</span>
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div className="space-y-3 pt-4 border-t border-neutral-100">
                 <p className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider">Parent / Guardian</p>
@@ -203,6 +282,51 @@ export default function SuperAdminStudentDirectoryContent({ students, grades }: 
                   <span className="text-neutral-400">Phone</span>
                   <span className="font-mono text-neutral-800">{selected.parent_phone}</span>
                 </div>
+                {selected.guardian_profession && (
+                  <div className="flex items-center justify-between text-[13px]">
+                    <span className="text-neutral-400">Profession</span>
+                    <span className="font-medium text-neutral-800">{selected.guardian_profession}</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="pt-4 border-t border-neutral-100">
+                <button
+                  onClick={() => { setDeleteError(''); setDeleteTarget(selected) }}
+                  className="w-full flex items-center justify-center gap-2 text-[12.5px] font-semibold text-danger bg-danger-bg border border-danger/20 py-2.5 rounded-xl hover:bg-danger/10 transition-colors"
+                >
+                  <Trash2 size={13} /> Delete Student Record
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete confirmation */}
+      {deleteTarget && (
+        <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-4">
+          <div className="fixed inset-0 bg-neutral-900/50 backdrop-blur-sm" onClick={() => !deleting && setDeleteTarget(null)} />
+          <div className="relative w-full sm:max-w-sm bg-white rounded-3xl shadow-2xl z-10 overflow-hidden">
+            <div className="flex items-center justify-between px-6 py-5 border-b border-neutral-100">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-danger-bg flex items-center justify-center">
+                  <AlertTriangle size={18} className="text-danger" />
+                </div>
+                <h3 className="text-[15px] font-bold text-neutral-900">Delete student record?</h3>
+              </div>
+              <button onClick={() => setDeleteTarget(null)} className="w-8 h-8 rounded-full flex items-center justify-center text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition-colors">
+                <X size={16} />
+              </button>
+            </div>
+            <div className="px-6 py-5">
+              <p className="text-[13px] text-neutral-600 leading-relaxed mb-2">
+                {deleteTarget.full_name} ({deleteTarget.roll_number}) will be removed from the active directory, attendance rosters, and mark-entry sheets. Their history is preserved and can be restored by a database administrator if needed.
+              </p>
+              {deleteError && <p className="text-[12.5px] text-danger mb-3">{deleteError}</p>}
+              <div className="flex items-center gap-3 mt-3">
+                <button onClick={() => setDeleteTarget(null)} disabled={deleting} className="flex-1 py-3 text-[13px] font-medium text-neutral-600 bg-neutral-100 hover:bg-neutral-200 rounded-xl transition-colors disabled:opacity-60">Cancel</button>
+                <button onClick={confirmDelete} disabled={deleting} className="flex-1 py-3 text-[13px] font-semibold rounded-xl text-white bg-danger hover:bg-danger/90 transition-colors disabled:opacity-60">{deleting ? 'Deleting…' : 'Delete'}</button>
               </div>
             </div>
           </div>

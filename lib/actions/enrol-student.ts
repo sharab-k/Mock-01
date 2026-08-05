@@ -14,6 +14,18 @@ const EnrolInputSchema = z.object({
   isLate: z.boolean(),
   parentName: z.string().min(1).max(200),
   parentPhone: z.string().min(1).max(20),
+  // From the client's paper admission form — all optional, additive to the
+  // original enrolment flow.
+  guardianProfession: z.string().max(200).optional(),
+  previousSchool: z.string().max(300).optional(),
+  lastQualification: z.string().max(200).optional(),
+  address: z.string().max(500).optional(),
+  grNumber: z.string().max(50).optional(),
+  registrationFee: z.number().min(0).max(10_000_000).optional(),
+  tuitionFee: z.number().min(0).max(10_000_000).optional(),
+  // Intermediate-level subject stream (Grade 11-12 only) — paper form's
+  // Pre. Eng / Pre. Medical / Comp. Science / Commerce checkboxes.
+  stream: z.enum(['Pre-Engineering', 'Pre-Medical', 'Computer Science', 'Commerce']).optional(),
 })
 
 export type EnrolStudentInput = z.infer<typeof EnrolInputSchema>
@@ -105,6 +117,14 @@ export async function enrolStudentAction(input: EnrolStudentInput): Promise<Enro
     p_section: data.section,
     p_is_late_enrollment: data.isLate,
     p_parent_id: parentId,
+    p_guardian_profession: data.guardianProfession || undefined,
+    p_previous_school: data.previousSchool || undefined,
+    p_last_qualification: data.lastQualification || undefined,
+    p_address: data.address || undefined,
+    p_gr_number: data.grNumber || undefined,
+    p_registration_fee: data.registrationFee ?? undefined,
+    p_tuition_fee: data.tuitionFee ?? undefined,
+    p_stream: data.stream || undefined,
   })
 
   if (enrolError || !student) {

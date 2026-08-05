@@ -7,6 +7,7 @@ import { GRADES, SECTIONS } from '@/lib/students/constants'
 import { enrolStudentAction, type EnrolStudentResult } from '@/lib/actions/enrol-student'
 
 const PROGRAMS = ['Primary Years', 'Middle School', 'Matriculation', 'Intermediate']
+const STREAMS = ['Pre-Engineering', 'Pre-Medical', 'Computer Science', 'Commerce'] as const
 
 type Props = {
   /** Route prefix for this dashboard's own links — lets Super Admin render the
@@ -20,8 +21,16 @@ export default function AdmissionsNewStudentContent({ basePath = '/admissions' }
   const [section, setSection] = useState(SECTIONS[0])
   const [program, setProgram] = useState(PROGRAMS[2])
   const [isLate, setIsLate] = useState(false)
+  const [stream, setStream] = useState<typeof STREAMS[number] | ''>('')
   const [parentName, setParentName] = useState('')
   const [parentPhone, setParentPhone] = useState('')
+  const [guardianProfession, setGuardianProfession] = useState('')
+  const [address, setAddress] = useState('')
+  const [previousSchool, setPreviousSchool] = useState('')
+  const [lastQualification, setLastQualification] = useState('')
+  const [grNumber, setGrNumber] = useState('')
+  const [registrationFee, setRegistrationFee] = useState('')
+  const [tuitionFee, setTuitionFee] = useState('')
   const [status, setStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle')
   const [result, setResult] = useState<Extract<EnrolStudentResult, { ok: true }> | null>(null)
   const [error, setError] = useState('')
@@ -40,6 +49,14 @@ export default function AdmissionsNewStudentContent({ basePath = '/admissions' }
       isLate,
       parentName,
       parentPhone,
+      guardianProfession: guardianProfession || undefined,
+      address: address || undefined,
+      previousSchool: previousSchool || undefined,
+      lastQualification: lastQualification || undefined,
+      grNumber: grNumber || undefined,
+      registrationFee: registrationFee ? Number(registrationFee) : undefined,
+      tuitionFee: tuitionFee ? Number(tuitionFee) : undefined,
+      stream: stream || undefined,
     })
 
     if (!outcome.ok) {
@@ -119,7 +136,11 @@ export default function AdmissionsNewStudentContent({ basePath = '/admissions' }
             <div className="flex items-center gap-3 w-full pt-1">
               <Link href={`${basePath}/students`} className="flex-1 py-3 text-[13px] font-medium text-neutral-600 bg-neutral-100 hover:bg-neutral-200 rounded-xl transition-colors no-underline text-center">View Directory</Link>
               <button
-                onClick={() => { setStatus('idle'); setResult(null); setStudentName(''); setParentName(''); setParentPhone(''); setIsLate(false) }}
+                onClick={() => {
+                  setStatus('idle'); setResult(null); setStudentName(''); setParentName(''); setParentPhone(''); setIsLate(false)
+                  setStream(''); setGuardianProfession(''); setAddress(''); setPreviousSchool(''); setLastQualification('')
+                  setGrNumber(''); setRegistrationFee(''); setTuitionFee('')
+                }}
                 className="flex-1 py-3 text-[13px] font-semibold rounded-xl bg-ink-700 text-white hover:bg-ink-800 transition-colors"
               >
                 Enrol Another
@@ -175,6 +196,31 @@ export default function AdmissionsNewStudentContent({ basePath = '/admissions' }
               </span>
             </label>
 
+            {(grade === '11' || grade === '12') && (
+              <div>
+                <label className="block text-[12px] font-semibold text-neutral-700 mb-1.5">Stream <span className="text-neutral-400 font-normal">(Intermediate)</span></label>
+                <select value={stream} onChange={(e) => setStream(e.target.value as typeof stream)} className="w-full px-3.5 py-2.5 border border-neutral-200 rounded-xl text-[13px] bg-white focus:outline-none focus:ring-1 focus:ring-ink-300 cursor-pointer">
+                  <option value="">Not selected</option>
+                  {STREAMS.map((s) => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </div>
+            )}
+
+            <div className="flex items-center gap-3 pt-3 border-t border-neutral-100">
+              <p className="text-[12.5px] font-semibold text-neutral-400 uppercase tracking-wider">Academic Background <span className="text-neutral-400 font-normal normal-case">(optional)</span></p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[12px] font-semibold text-neutral-700 mb-1.5">Previous school / college</label>
+                <input value={previousSchool} onChange={(e) => setPreviousSchool(e.target.value)} placeholder="e.g. City Public School" className="w-full px-3.5 py-2.5 border border-neutral-200 rounded-xl text-[13px] bg-neutral-50 placeholder-neutral-400 focus:outline-none focus:border-ink-400 focus:ring-2 focus:ring-ink-400/10 focus:bg-white transition-all" />
+              </div>
+              <div>
+                <label className="block text-[12px] font-semibold text-neutral-700 mb-1.5">Last qualification</label>
+                <input value={lastQualification} onChange={(e) => setLastQualification(e.target.value)} placeholder="e.g. Grade 8 · Distinction" className="w-full px-3.5 py-2.5 border border-neutral-200 rounded-xl text-[13px] bg-neutral-50 placeholder-neutral-400 focus:outline-none focus:border-ink-400 focus:ring-2 focus:ring-ink-400/10 focus:bg-white transition-all" />
+              </div>
+            </div>
+
             <div className="flex items-center gap-3 pt-3 border-t border-neutral-100">
               <p className="text-[12.5px] font-semibold text-neutral-400 uppercase tracking-wider">Parent / Guardian</p>
             </div>
@@ -187,6 +233,33 @@ export default function AdmissionsNewStudentContent({ basePath = '/admissions' }
               <div>
                 <label className="block text-[12px] font-semibold text-neutral-700 mb-1.5">WhatsApp / Phone</label>
                 <input required value={parentPhone} onChange={(e) => setParentPhone(e.target.value)} placeholder="03XX XXXXXXX" className="w-full px-3.5 py-2.5 border border-neutral-200 rounded-xl text-[13px] bg-neutral-50 placeholder-neutral-400 focus:outline-none focus:border-ink-400 focus:ring-2 focus:ring-ink-400/10 focus:bg-white transition-all" />
+              </div>
+              <div>
+                <label className="block text-[12px] font-semibold text-neutral-700 mb-1.5">Profession <span className="text-neutral-400 font-normal">(optional)</span></label>
+                <input value={guardianProfession} onChange={(e) => setGuardianProfession(e.target.value)} placeholder="e.g. Engineer" className="w-full px-3.5 py-2.5 border border-neutral-200 rounded-xl text-[13px] bg-neutral-50 placeholder-neutral-400 focus:outline-none focus:border-ink-400 focus:ring-2 focus:ring-ink-400/10 focus:bg-white transition-all" />
+              </div>
+              <div>
+                <label className="block text-[12px] font-semibold text-neutral-700 mb-1.5">Address <span className="text-neutral-400 font-normal">(optional)</span></label>
+                <input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="House / street / area" className="w-full px-3.5 py-2.5 border border-neutral-200 rounded-xl text-[13px] bg-neutral-50 placeholder-neutral-400 focus:outline-none focus:border-ink-400 focus:ring-2 focus:ring-ink-400/10 focus:bg-white transition-all" />
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 pt-3 border-t border-neutral-100">
+              <p className="text-[12.5px] font-semibold text-neutral-400 uppercase tracking-wider">Office Use <span className="text-neutral-400 font-normal normal-case">(optional)</span></p>
+            </div>
+
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <label className="block text-[12px] font-semibold text-neutral-700 mb-1.5">G.R. No.</label>
+                <input value={grNumber} onChange={(e) => setGrNumber(e.target.value)} placeholder="e.g. 4821" className="w-full px-3.5 py-2.5 border border-neutral-200 rounded-xl text-[13px] bg-neutral-50 placeholder-neutral-400 focus:outline-none focus:border-ink-400 focus:ring-2 focus:ring-ink-400/10 focus:bg-white transition-all" />
+              </div>
+              <div>
+                <label className="block text-[12px] font-semibold text-neutral-700 mb-1.5">Registration fee</label>
+                <input type="number" min="0" value={registrationFee} onChange={(e) => setRegistrationFee(e.target.value)} placeholder="PKR" className="w-full px-3.5 py-2.5 border border-neutral-200 rounded-xl text-[13px] bg-neutral-50 placeholder-neutral-400 focus:outline-none focus:border-ink-400 focus:ring-2 focus:ring-ink-400/10 focus:bg-white transition-all" />
+              </div>
+              <div>
+                <label className="block text-[12px] font-semibold text-neutral-700 mb-1.5">Tuition fee</label>
+                <input type="number" min="0" value={tuitionFee} onChange={(e) => setTuitionFee(e.target.value)} placeholder="PKR" className="w-full px-3.5 py-2.5 border border-neutral-200 rounded-xl text-[13px] bg-neutral-50 placeholder-neutral-400 focus:outline-none focus:border-ink-400 focus:ring-2 focus:ring-ink-400/10 focus:bg-white transition-all" />
               </div>
             </div>
 

@@ -376,45 +376,102 @@ export type Database = {
       }
       students: {
         Row: {
+          address: string | null
           created_at: string
           deleted_at: string | null
           enrollment_date: string
           full_name: string
+          gr_number: string | null
           grade_level: string
+          guardian_profession: string | null
           id: string
           is_late_enrollment: boolean
+          last_qualification: string | null
+          previous_school: string | null
           program: string
+          registration_fee: number | null
           roll_number: string
           section: string
           status: Database["public"]["Enums"]["student_status"]
+          stream: string | null
+          tuition_fee: number | null
           updated_at: string
         }
         Insert: {
+          address?: string | null
           created_at?: string
           deleted_at?: string | null
           enrollment_date?: string
           full_name: string
+          gr_number?: string | null
           grade_level: string
+          guardian_profession?: string | null
           id?: string
           is_late_enrollment?: boolean
+          last_qualification?: string | null
+          previous_school?: string | null
           program: string
+          registration_fee?: number | null
           roll_number: string
           section: string
           status?: Database["public"]["Enums"]["student_status"]
+          stream?: string | null
+          tuition_fee?: number | null
           updated_at?: string
         }
         Update: {
+          address?: string | null
           created_at?: string
           deleted_at?: string | null
           enrollment_date?: string
           full_name?: string
+          gr_number?: string | null
           grade_level?: string
+          guardian_profession?: string | null
           id?: string
           is_late_enrollment?: boolean
+          last_qualification?: string | null
+          previous_school?: string | null
           program?: string
+          registration_fee?: number | null
           roll_number?: string
           section?: string
           status?: Database["public"]["Enums"]["student_status"]
+          stream?: string | null
+          tuition_fee?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      teachers: {
+        Row: {
+          classes: string[]
+          created_at: string
+          email: string | null
+          full_name: string
+          id: string
+          phone: string | null
+          subject: string
+          updated_at: string
+        }
+        Insert: {
+          classes?: string[]
+          created_at?: string
+          email?: string | null
+          full_name: string
+          id?: string
+          phone?: string | null
+          subject: string
+          updated_at?: string
+        }
+        Update: {
+          classes?: string[]
+          created_at?: string
+          email?: string | null
+          full_name?: string
+          id?: string
+          phone?: string | null
+          subject?: string
           updated_at?: string
         }
         Relationships: []
@@ -505,25 +562,41 @@ export type Database = {
       }
       enrol_student: {
         Args: {
+          p_address?: string
           p_full_name: string
+          p_gr_number?: string
           p_grade_level: string
+          p_guardian_profession?: string
           p_is_late_enrollment: boolean
+          p_last_qualification?: string
           p_parent_id: string
+          p_previous_school?: string
           p_program: string
+          p_registration_fee?: number
           p_section: string
+          p_stream?: string
+          p_tuition_fee?: number
         }
         Returns: {
+          address: string | null
           created_at: string
           deleted_at: string | null
           enrollment_date: string
           full_name: string
+          gr_number: string | null
           grade_level: string
+          guardian_profession: string | null
           id: string
           is_late_enrollment: boolean
+          last_qualification: string | null
+          previous_school: string | null
           program: string
+          registration_fee: number | null
           roll_number: string
           section: string
           status: Database["public"]["Enums"]["student_status"]
+          stream: string | null
+          tuition_fee: number | null
           updated_at: string
         }
         SetofOptions: {
