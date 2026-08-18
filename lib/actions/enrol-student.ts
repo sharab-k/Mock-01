@@ -1,15 +1,20 @@
 'use server'
 
 import { z } from 'zod'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { generateUsername, generateTempPassword } from '@/lib/auth/generate-credentials'
 import { logAction } from '@/lib/audit/log'
+import { sectionsForGrade, type Grade, type Section } from '@/lib/students/constants'
+import type { Database } from '@/types/supabase'
 
 const EnrolInputSchema = z.object({
   studentName: z.string().min(1).max(200),
   grade: z.enum(['9', '10', '11', '12']),
-  section: z.enum(['A', 'B', 'C', 'D']),
+  // Grades 9-10 are Boys/Girls (B/G), 11-12 (Intermediate) are co-ed (A-D) —
+  // the pairing is enforced below via superRefine, this just accepts either alphabet.
+  section: z.enum(['A', 'B', 'C', 'D', 'G']),
   program: z.string().min(1).max(100),
   isLate: z.boolean(),
   parentName: z.string().min(1).max(200),
@@ -26,26 +31,33 @@ const EnrolInputSchema = z.object({
   // Intermediate-level subject stream (Grade 11-12 only) — paper form's
   // Pre. Eng / Pre. Medical / Comp. Science / Commerce checkboxes.
   stream: z.enum(['Pre-Engineering', 'Pre-Medical', 'Computer Science', 'Commerce']).optional(),
+}).superRefine((data, ctx) => {
+  if (!sectionsForGrade(data.grade as Grade).includes(data.section as Section)) {
+    ctx.addIssue({ code: 'custom', path: ['section'], message: `Section ${data.section} is not valid for Grade ${data.grade}` })
+  }
 })
 
 export type EnrolStudentInput = z.infer<typeof EnrolInputSchema>
 
 export type EnrolStudentResult =
-  | { ok: true; rollNumber: string; parentAccountType: 'new'; username: string; tempPassword: string }
-  | { ok: true; rollNumber: string; parentAccountType: 'existing'; username: string }
+  | { ok: true; rollNumber: string; registrationNumber: string; parentAccountType: 'new'; username: string; tempPassword: string }
+  | { ok: true; rollNumber: string; registrationNumber: string; parentAccountType: 'existing'; username: string }
   | { ok: false; error: string }
 
 // Shared by both /admissions/students/new and /super-admin/admissions/students/new
 // (same AdmissionsNewStudentContent component, basePath-parameterized) — one
 // Server Action, not duplicated per route.
-export async function enrolStudentAction(input: EnrolStudentInput): Promise<EnrolStudentResult> {
+export async function enrolStudentAction(
+  input: EnrolStudentInput,
+  supabaseOverride?: SupabaseClient<Database>,
+): Promise<EnrolStudentResult> {
   const parsed = EnrolInputSchema.safeParse(input)
   if (!parsed.success) return { ok: false, error: 'Invalid enrolment details.' }
   const data = parsed.data
 
   // Defense in depth — the route's layout already gates this, but a Server
   // Action is a reachable POST target on its own, so verify here too.
-  const supabase = await createClient()
+  const supabase = supabaseOverride ?? await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { ok: false, error: 'Not signed in.' }
 
@@ -132,12 +144,12 @@ export async function enrolStudentAction(input: EnrolStudentInput): Promise<Enro
     return { ok: false, error: 'Could not enrol the student. Please try again.' }
   }
 
-  await logAction(supabase, user.id, `Enrolled student — ${data.studentName} · ${student.roll_number} · Grade ${data.grade}-${data.section}`)
+  await logAction(supabase, user.id, `Enrolled student — ${data.studentName} · ${student.roll_number} · Reg ${student.registration_number} · Grade ${data.grade}-${data.section}`)
   if (createdNewParentId) {
     await logAction(supabase, user.id, `Parent credentials issued — parent of ${data.studentName}`)
   }
 
   return existingParent
-    ? { ok: true, rollNumber: student.roll_number, parentAccountType: 'existing', username }
-    : { ok: true, rollNumber: student.roll_number, parentAccountType: 'new', username, tempPassword }
+    ? { ok: true, rollNumber: student.roll_number, registrationNumber: student.registration_number, parentAccountType: 'existing', username }
+    : { ok: true, rollNumber: student.roll_number, registrationNumber: student.registration_number, parentAccountType: 'new', username, tempPassword }
 }

@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, type FormEvent } from 'react'
+import { useState, useEffect, type FormEvent } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, CheckCircle2, KeyRound, Copy, Check, UserPlus, AlertCircle, Users } from 'lucide-react'
-import { GRADES, SECTIONS } from '@/lib/students/constants'
+import { GRADES, sectionsForGrade } from '@/lib/students/constants'
 import { enrolStudentAction, type EnrolStudentResult } from '@/lib/actions/enrol-student'
 
 const PROGRAMS = ['Primary Years', 'Middle School', 'Matriculation', 'Intermediate']
@@ -18,7 +18,7 @@ type Props = {
 export default function AdmissionsNewStudentContent({ basePath = '/admissions' }: Props) {
   const [studentName, setStudentName] = useState('')
   const [grade, setGrade] = useState(GRADES[0])
-  const [section, setSection] = useState(SECTIONS[0])
+  const [section, setSection] = useState(sectionsForGrade(GRADES[0])[0])
   const [program, setProgram] = useState(PROGRAMS[2])
   const [isLate, setIsLate] = useState(false)
   const [stream, setStream] = useState<typeof STREAMS[number] | ''>('')
@@ -35,6 +35,13 @@ export default function AdmissionsNewStudentContent({ basePath = '/admissions' }
   const [result, setResult] = useState<Extract<EnrolStudentResult, { ok: true }> | null>(null)
   const [error, setError] = useState('')
   const [copied, setCopied] = useState(false)
+
+  // Section options depend on grade (9-10 are Boys/Girls, 11-12 are A-D) —
+  // reset to the first valid option whenever grade changes.
+  useEffect(() => {
+    const valid = sectionsForGrade(grade)
+    if (!valid.includes(section)) setSection(valid[0])
+  }, [grade, section])
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -72,8 +79,8 @@ export default function AdmissionsNewStudentContent({ basePath = '/admissions' }
   const copyCredentials = async () => {
     if (!result) return
     const text = result.parentAccountType === 'new'
-      ? `Roll: ${result.rollNumber}\nUsername: ${result.username}\nTemporary password: ${result.tempPassword}`
-      : `Roll: ${result.rollNumber}\nLinked to existing parent account: ${result.username}`
+      ? `Roll: ${result.rollNumber}\nRegistration: ${result.registrationNumber}\nUsername: ${result.username}\nTemporary password: ${result.tempPassword}`
+      : `Roll: ${result.rollNumber}\nRegistration: ${result.registrationNumber}\nLinked to existing parent account: ${result.username}`
     try {
       await navigator.clipboard.writeText(text)
       setCopied(true)
@@ -110,6 +117,7 @@ export default function AdmissionsNewStudentContent({ basePath = '/admissions' }
                 </div>
                 <div className="space-y-2 font-mono text-[12.5px] text-neutral-800">
                   <div className="flex justify-between"><span className="text-neutral-400">Roll number</span><span>{result.rollNumber}</span></div>
+                  <div className="flex justify-between"><span className="text-neutral-400">Registration number</span><span>{result.registrationNumber}</span></div>
                   <div className="flex justify-between"><span className="text-neutral-400">Username</span><span>{result.username}</span></div>
                   <div className="flex justify-between"><span className="text-neutral-400">Temp password</span><span>{result.tempPassword}</span></div>
                 </div>
@@ -128,6 +136,7 @@ export default function AdmissionsNewStudentContent({ basePath = '/admissions' }
                 </p>
                 <div className="space-y-2 font-mono text-[12.5px] text-neutral-800 pt-3 border-t border-warning/20">
                   <div className="flex justify-between"><span className="text-neutral-400">Roll number</span><span>{result.rollNumber}</span></div>
+                  <div className="flex justify-between"><span className="text-neutral-400">Registration number</span><span>{result.registrationNumber}</span></div>
                   <div className="flex justify-between"><span className="text-neutral-400">Parent username</span><span>{result.username}</span></div>
                 </div>
               </div>
@@ -178,7 +187,7 @@ export default function AdmissionsNewStudentContent({ basePath = '/admissions' }
               <div>
                 <label className="block text-[12px] font-semibold text-neutral-700 mb-1.5">Section</label>
                 <select value={section} onChange={(e) => setSection(e.target.value as typeof section)} className="w-full px-3.5 py-2.5 border border-neutral-200 rounded-xl text-[13px] bg-white focus:outline-none focus:ring-1 focus:ring-ink-300 cursor-pointer">
-                  {SECTIONS.map((s) => <option key={s}>{s}</option>)}
+                  {sectionsForGrade(grade).map((s) => <option key={s}>{s}</option>)}
                 </select>
               </div>
               <div>

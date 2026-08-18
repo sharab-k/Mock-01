@@ -9,6 +9,7 @@ import { deleteStudentAction } from '@/lib/actions/students'
 export type DirectoryStudent = {
   id: string
   roll_number: string
+  registration_number: string
   full_name: string
   grade: string
   section: string
@@ -222,6 +223,10 @@ export default function SuperAdminStudentDirectoryContent({ students: initialStu
                     <span className="font-medium text-neutral-800">{selected.stream}</span>
                   </div>
                 )}
+                <div className="flex items-center justify-between text-[13px]">
+                  <span className="text-neutral-400">Registration No.</span>
+                  <span className="font-mono text-neutral-800">{selected.registration_number}</span>
+                </div>
                 {selected.gr_number && (
                   <div className="flex items-center justify-between text-[13px]">
                     <span className="text-neutral-400">G.R. No.</span>

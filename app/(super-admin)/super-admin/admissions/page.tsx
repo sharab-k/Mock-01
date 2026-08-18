@@ -1,6 +1,6 @@
 import AdmissionsDashboardContent from '@/components/dashboard/modules/AdmissionsDashboardContent'
 import { createClient } from '@/lib/supabase/server'
-import { GRADES, SECTIONS } from '@/lib/students/constants'
+import { GRADES, sectionsForGrade } from '@/lib/students/constants'
 import { STATUS_FROM_DB } from '@/lib/admissions/enquiry-mapping'
 import { countParentAccounts } from '@/lib/admissions/parent-lookup'
 
@@ -19,7 +19,7 @@ export default async function SuperAdminAdmissionsPage() {
   const classGrid: Record<string, Record<string, number>> = {}
   for (const g of GRADES) {
     classGrid[g] = {}
-    for (const s of SECTIONS) classGrid[g][s] = 0
+    for (const s of sectionsForGrade(g)) classGrid[g][s] = 0
   }
   for (const row of studentsRes.data ?? []) {
     if (classGrid[row.grade_level] && row.section in classGrid[row.grade_level]) {

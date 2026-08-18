@@ -7,7 +7,7 @@ export default async function SuperAdminStudentsPage() {
   const supabase = await createClient()
   const { data: rows } = await supabase
     .from('students')
-    .select('id, roll_number, full_name, grade_level, section, program, status, enrollment_date, is_late_enrollment, guardian_profession, previous_school, last_qualification, address, gr_number, registration_fee, tuition_fee, stream')
+    .select('id, roll_number, registration_number, full_name, grade_level, section, program, status, enrollment_date, is_late_enrollment, guardian_profession, previous_school, last_qualification, address, gr_number, registration_fee, tuition_fee, stream')
     .is('deleted_at', null)
     .order('created_at', { ascending: false })
 
@@ -16,6 +16,7 @@ export default async function SuperAdminStudentsPage() {
   const students: DirectoryStudent[] = (rows ?? []).map((s) => ({
     id: s.id,
     roll_number: s.roll_number,
+    registration_number: s.registration_number,
     full_name: s.full_name,
     grade: s.grade_level,
     section: s.section,

@@ -1,11 +1,13 @@
 'use server'
 
 import { z } from 'zod'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/server'
 import { logAction } from '@/lib/audit/log'
+import type { Database } from '@/types/supabase'
 
-async function requireSuperAdminCaller() {
-  const supabase = await createClient()
+async function requireSuperAdminCaller(supabaseOverride?: SupabaseClient<Database>) {
+  const supabase = supabaseOverride ?? await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { supabase, userId: null, authorized: false as const }
 
@@ -21,11 +23,14 @@ const TeacherInputSchema = z.object({
   phone: z.string().max(20).optional().or(z.literal('')),
 })
 
-export async function createTeacherAction(input: z.infer<typeof TeacherInputSchema>) {
+export async function createTeacherAction(
+  input: z.infer<typeof TeacherInputSchema>,
+  supabaseOverride?: SupabaseClient<Database>,
+) {
   const parsed = TeacherInputSchema.safeParse(input)
   if (!parsed.success) return { ok: false as const, error: 'Invalid teacher details.' }
 
-  const { supabase, userId, authorized } = await requireSuperAdminCaller()
+  const { supabase, userId, authorized } = await requireSuperAdminCaller(supabaseOverride)
   if (!authorized || !userId) return { ok: false as const, error: 'Not authorized.' }
 
   const { fullName, subject, classes, email, phone } = parsed.data
@@ -44,11 +49,14 @@ export async function createTeacherAction(input: z.infer<typeof TeacherInputSche
 
 const UpdateTeacherSchema = TeacherInputSchema.extend({ id: z.string().uuid() })
 
-export async function updateTeacherAction(input: z.infer<typeof UpdateTeacherSchema>) {
+export async function updateTeacherAction(
+  input: z.infer<typeof UpdateTeacherSchema>,
+  supabaseOverride?: SupabaseClient<Database>,
+) {
   const parsed = UpdateTeacherSchema.safeParse(input)
   if (!parsed.success) return { ok: false as const, error: 'Invalid teacher details.' }
 
-  const { supabase, userId, authorized } = await requireSuperAdminCaller()
+  const { supabase, userId, authorized } = await requireSuperAdminCaller(supabaseOverride)
   if (!authorized || !userId) return { ok: false as const, error: 'Not authorized.' }
 
   const { id, fullName, subject, classes, email, phone } = parsed.data
@@ -66,11 +74,14 @@ export async function updateTeacherAction(input: z.infer<typeof UpdateTeacherSch
 
 const IdSchema = z.object({ id: z.string().uuid() })
 
-export async function deleteTeacherAction(input: z.infer<typeof IdSchema>) {
+export async function deleteTeacherAction(
+  input: z.infer<typeof IdSchema>,
+  supabaseOverride?: SupabaseClient<Database>,
+) {
   const parsed = IdSchema.safeParse(input)
   if (!parsed.success) return { ok: false as const, error: 'Invalid request.' }
 
-  const { supabase, userId, authorized } = await requireSuperAdminCaller()
+  const { supabase, userId, authorized } = await requireSuperAdminCaller(supabaseOverride)
   if (!authorized || !userId) return { ok: false as const, error: 'Not authorized.' }
 
   const { data, error } = await supabase

@@ -7,6 +7,7 @@ import {
   Users, UserPlus, Inbox, KeyRound, Copy, Check,
   ChevronDown, ChevronUp, ArrowUpCircle, X, ChevronRight, AlertTriangle,
 } from 'lucide-react'
+import { sectionsForGrade } from '@/lib/students/constants'
 
 // ── Data ──────────────────────────────────────────────────────────────────────
 const INITIALS = (name: string) => name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
@@ -121,9 +122,9 @@ export default function AdmissionsDashboardContent({
                 </span>
               </div>
 
-              {/* 4 section cards — each is a Link to the detail page */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {(['A', 'B', 'C', 'D'] as const).map(section => {
+              {/* Section cards — each is a Link to the detail page (2-4 depending on grade) */}
+              <div className="grid grid-cols-2 gap-3">
+                {sectionsForGrade(grade).map(section => {
                   const count = classGrid[grade][section]
                   return (
                     <Link

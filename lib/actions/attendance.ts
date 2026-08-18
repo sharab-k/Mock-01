@@ -7,8 +7,8 @@ import { getLinkedParentPhones, sendAbsenceAlert } from '@/lib/notifications/sen
 import { logAction } from '@/lib/audit/log'
 import type { Database } from '@/types/supabase'
 
-async function requireAttendanceCaller() {
-  const supabase = await createClient()
+async function requireAttendanceCaller(supabaseOverride?: SupabaseClient<Database>) {
+  const supabase = supabaseOverride ?? await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { supabase, user: null, authorized: false as const }
 
@@ -70,11 +70,14 @@ async function markOneAttendance(
   return { ok: true, notified }
 }
 
-export async function markAttendanceAction(input: z.infer<typeof MarkOneSchema>) {
+export async function markAttendanceAction(
+  input: z.infer<typeof MarkOneSchema>,
+  supabaseOverride?: SupabaseClient<Database>,
+) {
   const parsed = MarkOneSchema.safeParse(input)
   if (!parsed.success) return { ok: false as const, error: 'Invalid attendance details.' }
 
-  const { supabase, user, authorized } = await requireAttendanceCaller()
+  const { supabase, user, authorized } = await requireAttendanceCaller(supabaseOverride)
   if (!authorized || !user) return { ok: false as const, error: 'Not authorized.' }
 
   const result = await markOneAttendance(supabase, user.id, parsed.data)
@@ -94,11 +97,14 @@ const SubmitClassSchema = z.object({
   })).min(1),
 })
 
-export async function submitClassAttendanceAction(input: z.infer<typeof SubmitClassSchema>) {
+export async function submitClassAttendanceAction(
+  input: z.infer<typeof SubmitClassSchema>,
+  supabaseOverride?: SupabaseClient<Database>,
+) {
   const parsed = SubmitClassSchema.safeParse(input)
   if (!parsed.success) return { ok: false as const, error: 'Invalid attendance batch.' }
 
-  const { supabase, user, authorized } = await requireAttendanceCaller()
+  const { supabase, user, authorized } = await requireAttendanceCaller(supabaseOverride)
   if (!authorized || !user) return { ok: false as const, error: 'Not authorized.' }
 
   const classDate = parsed.data.classDate ?? today()

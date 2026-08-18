@@ -46,3 +46,4 @@ dev-server.log
 
 # claude local settings (machine-specific permissions)
 .claude/settings.local.json
+.env*

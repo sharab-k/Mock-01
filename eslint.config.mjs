@@ -10,6 +10,7 @@ const compat = new FlatCompat({
 })
 
 const eslintConfig = [
+  { ignores: ['mobile/**'] },
   ...compat.extends('next/core-web-vitals', 'next/typescript'),
 ]
 

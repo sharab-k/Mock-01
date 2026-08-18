@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useState } from 'react'
 import StatCard from '@/components/dashboard/StatCard'
 import { UserCheck, UserX, Clock, Percent, MessageSquare, TrendingUp } from 'lucide-react'
+import { sectionsForGrade } from '@/lib/students/constants'
 
 export type ClassAttendanceStat = { present: number; absent: number; late: number; total: number }
 export type DayAttendanceStat = { day: string; date: string; present: number; absent: number; late: number; total: number; isToday: boolean }
@@ -88,8 +89,8 @@ export default function AttendanceDashboardContent({ basePath = '/attendance', t
                   {Object.values(classStats[grade]).reduce((a, c) => a + c.total, 0)} students
                 </span>
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {(['A', 'B', 'C', 'D'] as const).map(section => {
+              <div className="grid grid-cols-2 gap-3">
+                {sectionsForGrade(grade).map(section => {
                   const c   = classStats[grade][section]
                   const pct = rate(c)
                   const st  = rateStyle(pct)

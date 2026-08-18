@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, Save, CheckCircle2, AlertCircle } from 'lucide-react'
-import { GRADES, SECTIONS, INITIALS } from '@/lib/students/constants'
+import { GRADES, sectionsForGrade, INITIALS } from '@/lib/students/constants'
 import { bulkSaveMarksAction } from '@/lib/actions/marks'
 import type { EnterRosterStudent, ExistingMark } from '@/lib/marks/enter-data'
 
@@ -25,7 +25,7 @@ type Props = {
 
 export default function MarksEnterContent({ basePath = '/marks', roster: fullRoster, existingMarks }: Props) {
   const [grade, setGrade] = useState(GRADES[0])
-  const [section, setSection] = useState(SECTIONS[0])
+  const [section, setSection] = useState(sectionsForGrade(GRADES[0])[0])
   const [subject, setSubject] = useState(SUBJECTS[0])
   const [examType, setExamType] = useState<'monthly' | 'half_yearly' | 'final'>(EXAM_TYPES[0].value)
   const [scores, setScores] = useState<Record<string, string>>({})
@@ -36,6 +36,13 @@ export default function MarksEnterContent({ basePath = '/marks', roster: fullRos
     () => fullRoster.filter((s) => s.grade === grade && s.section === section),
     [fullRoster, grade, section],
   )
+
+  // Section options depend on grade (9-10 are Boys/Girls, 11-12 are A-D) —
+  // reset to the first valid option whenever grade changes.
+  useEffect(() => {
+    const valid = sectionsForGrade(grade)
+    if (!valid.includes(section)) setSection(valid[0])
+  }, [grade, section])
 
   useEffect(() => {
     const prefill: Record<string, string> = {}
@@ -95,7 +102,7 @@ export default function MarksEnterContent({ basePath = '/marks', roster: fullRos
         <div>
           <label className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5">Section</label>
           <select value={section} onChange={(e) => setSection(e.target.value as typeof section)} className="w-full text-[13px] border border-neutral-200 rounded-xl px-3 py-2.5 text-neutral-700 bg-white focus:outline-none focus:ring-1 focus:ring-ink-300 cursor-pointer">
-            {SECTIONS.map((s) => <option key={s}>{s}</option>)}
+            {sectionsForGrade(grade).map((s) => <option key={s}>{s}</option>)}
           </select>
         </div>
         <div>

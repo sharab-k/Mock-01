@@ -1,5 +1,7 @@
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/server'
 import { computeCreditedWatchedSeconds } from './credit-math'
+import type { Database } from '@/types/supabase'
 
 export type HeartbeatResult =
   | { ok: true; watchedSeconds: number; durationSeconds: number; completed: boolean }
@@ -13,8 +15,12 @@ export type HeartbeatResult =
 // lecture not double-count (whichever tab's heartbeat lands first claims
 // that window; the next tab's heartbeat moments later measures near-zero
 // elapsed time since the row was just updated).
-export async function recordHeartbeat(studentId: string, lectureId: string): Promise<HeartbeatResult> {
-  const supabase = await createClient()
+export async function recordHeartbeat(
+  studentId: string,
+  lectureId: string,
+  supabaseOverride?: SupabaseClient<Database>,
+): Promise<HeartbeatResult> {
+  const supabase = supabaseOverride ?? await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { ok: false, error: 'Not signed in.', status: 401 }
 

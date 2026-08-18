@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
-import { createClient } from '@/lib/supabase/server'
+import { resolveRequestClient } from '@/lib/supabase/session'
 import { getLinkedParentPhones, sendAbsenceAlert } from '@/lib/notifications/send-notification'
 
 const BodySchema = z.object({
@@ -17,7 +17,7 @@ const BodySchema = z.object({
 // that immediate request (a retry action, a future admin "resend alert"
 // button) without duplicating the pipeline logic.
 export async function POST(request: Request) {
-  const supabase = await createClient()
+  const supabase = await resolveRequestClient(request)
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Not signed in.' }, { status: 401 })
 

@@ -1,14 +1,21 @@
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { absenceAlertPrefix } from '@/lib/notifications/message-templates'
 import type { RosterStudent, Status } from '@/components/dashboard/modules/AttendanceClassDetailContent'
+import type { Database } from '@/types/supabase'
 
 function today(): string {
   return new Date().toISOString().slice(0, 10)
 }
 
-export async function fetchClassRoster(grade: string, section: string): Promise<RosterStudent[]> {
-  const supabase = await createClient()
+// supabaseOverride lets the mobile app's bearer-authed GET route (Phase 0's
+// pattern, app/api/mobile/attendance/class-roster) reuse this exact query
+// instead of re-implementing it — the admin-client enrichment below (parent
+// phone, alert status) stays server-side either way, since that key can
+// never ship to a mobile bundle.
+export async function fetchClassRoster(grade: string, section: string, supabaseOverride?: SupabaseClient<Database>): Promise<RosterStudent[]> {
+  const supabase = supabaseOverride ?? await createClient()
   const classDate = today()
 
   const { data: students } = await supabase

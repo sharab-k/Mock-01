@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { GRADES, SECTIONS } from '@/lib/students/constants'
+import { GRADES, sectionsForGrade } from '@/lib/students/constants'
 import type { ClassAttendanceStat, DayAttendanceStat } from '@/components/dashboard/modules/AttendanceDashboardContent'
 
 function isoDate(d: Date): string {
@@ -43,7 +43,7 @@ export async function fetchAttendanceDashboardData(): Promise<AttendanceDashboar
   const classStats: Record<string, Record<string, ClassAttendanceStat>> = {}
   for (const g of GRADES) {
     classStats[g] = {}
-    for (const s of SECTIONS) classStats[g][s] = { present: 0, absent: 0, late: 0, total: 0 }
+    for (const s of sectionsForGrade(g)) classStats[g][s] = { present: 0, absent: 0, late: 0, total: 0 }
   }
   for (const row of studentsRes.data ?? []) {
     if (classStats[row.grade_level]?.[row.section]) classStats[row.grade_level][row.section].total++

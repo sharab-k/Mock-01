@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { GRADES, SECTIONS } from '@/lib/students/constants'
+import { GRADES, sectionsForGrade } from '@/lib/students/constants'
 import { fetchStudentAverages } from './student-averages'
 import { fetchSubjectStats, type SubjectStat } from './subjects-data'
 import type { Tier } from './tier'
@@ -32,7 +32,7 @@ export async function fetchMarksDashboardData(): Promise<MarksDashboardData> {
   const classStats: Record<string, Record<string, ClassMarksStat>> = {}
   for (const g of GRADES) {
     classStats[g] = {}
-    for (const s of SECTIONS) classStats[g][s] = { avg: 0, entries: 0, graded: 0, total: 0 }
+    for (const s of sectionsForGrade(g)) classStats[g][s] = { avg: 0, entries: 0, graded: 0, total: 0 }
   }
   for (const row of studentsRes.data ?? []) {
     if (classStats[row.grade_level]?.[row.section]) classStats[row.grade_level][row.section].total++
@@ -52,7 +52,7 @@ export async function fetchMarksDashboardData(): Promise<MarksDashboardData> {
     gradedStudentsByClass.get(key)!.add(row.student_id)
   }
   for (const g of GRADES) {
-    for (const s of SECTIONS) {
+    for (const s of sectionsForGrade(g)) {
       const key = `${g}-${s}`
       const stat = classStats[g][s]
       stat.graded = gradedStudentsByClass.get(key)?.size ?? 0

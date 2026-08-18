@@ -1,7 +1,7 @@
 import SuperAdminDashboardContent from '@/components/dashboard/modules/SuperAdminDashboardContent'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { GRADES, SECTIONS } from '@/lib/students/constants'
+import { GRADES, sectionsForGrade } from '@/lib/students/constants'
 import { STAFF_ROLES } from '@/lib/staff/roles'
 import { fetchStaffDirectory } from '@/lib/staff/fetch'
 import { fetchAuditLog } from '@/lib/audit/fetch'
@@ -53,7 +53,7 @@ export default async function SuperAdminDashboard() {
   const classGrid: Record<string, Record<string, number>> = {}
   for (const g of GRADES) {
     classGrid[g] = {}
-    for (const s of SECTIONS) classGrid[g][s] = 0
+    for (const s of sectionsForGrade(g)) classGrid[g][s] = 0
   }
   for (const row of studentsRes.data ?? []) {
     if (classGrid[row.grade_level] && row.section in classGrid[row.grade_level]) {

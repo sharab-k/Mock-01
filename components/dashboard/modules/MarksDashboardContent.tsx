@@ -5,6 +5,7 @@ import { useState } from 'react'
 import StatCard from '@/components/dashboard/StatCard'
 import { PenLine, BookOpen, CheckCircle, Users, Upload, X } from 'lucide-react'
 import { TIER_ORDER, TIER_RANGE, TIER_STYLE, type Tier } from '@/lib/marks/tier'
+import { sectionsForGrade } from '@/lib/students/constants'
 import type { ClassMarksStat, SubjectStat } from '@/lib/marks/dashboard-data'
 
 function avgStyle(avg: number): { badge: string; bar: string } {
@@ -107,8 +108,8 @@ export default function MarksDashboardContent({
                 </span>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {(['A', 'B', 'C', 'D'] as const).map(section => {
+              <div className="grid grid-cols-2 gap-3">
+                {sectionsForGrade(grade).map(section => {
                   const c   = classStats[grade][section]
                   const st  = avgStyle(c.avg)
                   const pct = c.total > 0 ? Math.round((c.graded / c.total) * 100) : 0

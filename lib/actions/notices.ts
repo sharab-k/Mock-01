@@ -1,14 +1,16 @@
 'use server'
 
 import { z } from 'zod'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/server'
 import { logAction } from '@/lib/audit/log'
+import type { Database } from '@/types/supabase'
 
 const CATEGORIES = ['Academic', 'Event', 'Holiday', 'Admissions'] as const
 const AUDIENCES = ['All', 'Students', 'Parents', 'Staff'] as const
 
-async function requireSuperAdminCaller() {
-  const supabase = await createClient()
+async function requireSuperAdminCaller(supabaseOverride?: SupabaseClient<Database>) {
+  const supabase = supabaseOverride ?? await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { supabase, userId: null, authorized: false as const }
 
@@ -23,11 +25,14 @@ const NoticeInputSchema = z.object({
   audience: z.enum(AUDIENCES),
 })
 
-export async function createNoticeAction(input: z.infer<typeof NoticeInputSchema>) {
+export async function createNoticeAction(
+  input: z.infer<typeof NoticeInputSchema>,
+  supabaseOverride?: SupabaseClient<Database>,
+) {
   const parsed = NoticeInputSchema.safeParse(input)
   if (!parsed.success) return { ok: false as const, error: 'Invalid notice details.' }
 
-  const { supabase, userId, authorized } = await requireSuperAdminCaller()
+  const { supabase, userId, authorized } = await requireSuperAdminCaller(supabaseOverride)
   if (!authorized || !userId) return { ok: false as const, error: 'Not authorized.' }
 
   const { data, error } = await supabase
@@ -44,11 +49,14 @@ export async function createNoticeAction(input: z.infer<typeof NoticeInputSchema
 
 const UpdateNoticeSchema = NoticeInputSchema.extend({ id: z.string().uuid() })
 
-export async function updateNoticeAction(input: z.infer<typeof UpdateNoticeSchema>) {
+export async function updateNoticeAction(
+  input: z.infer<typeof UpdateNoticeSchema>,
+  supabaseOverride?: SupabaseClient<Database>,
+) {
   const parsed = UpdateNoticeSchema.safeParse(input)
   if (!parsed.success) return { ok: false as const, error: 'Invalid notice details.' }
 
-  const { supabase, authorized } = await requireSuperAdminCaller()
+  const { supabase, authorized } = await requireSuperAdminCaller(supabaseOverride)
   if (!authorized) return { ok: false as const, error: 'Not authorized.' }
 
   const { id, ...fields } = parsed.data
@@ -59,11 +67,14 @@ export async function updateNoticeAction(input: z.infer<typeof UpdateNoticeSchem
 
 const SetPublishedSchema = z.object({ id: z.string().uuid(), published: z.boolean() })
 
-export async function setNoticePublishedAction(input: z.infer<typeof SetPublishedSchema>) {
+export async function setNoticePublishedAction(
+  input: z.infer<typeof SetPublishedSchema>,
+  supabaseOverride?: SupabaseClient<Database>,
+) {
   const parsed = SetPublishedSchema.safeParse(input)
   if (!parsed.success) return { ok: false as const, error: 'Invalid request.' }
 
-  const { supabase, userId, authorized } = await requireSuperAdminCaller()
+  const { supabase, userId, authorized } = await requireSuperAdminCaller(supabaseOverride)
   if (!authorized || !userId) return { ok: false as const, error: 'Not authorized.' }
 
   const { data, error } = await supabase

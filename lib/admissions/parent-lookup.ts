@@ -19,6 +19,24 @@ export async function fetchParentNamesByStudentId(studentIds: string[]): Promise
   return parentByStudent
 }
 
+// Same rationale as fetchParentNamesByStudentId — needed by Admissions
+// Admin's student directory to target a "reset parent password" action at a
+// specific parent_id (Admissions Admin has no separate parent directory
+// page, unlike Super Admin's fetchParentDirectory() below).
+export async function fetchParentIdsByStudentId(studentIds: string[]): Promise<Map<string, string>> {
+  const parentIdByStudent = new Map<string, string>()
+  if (studentIds.length === 0) return parentIdByStudent
+
+  const admin = createAdminClient()
+  const { data: links } = await admin
+    .from('parent_student_links')
+    .select('student_id, parent_id')
+    .in('student_id', studentIds)
+
+  for (const link of links ?? []) parentIdByStudent.set(link.student_id, link.parent_id)
+  return parentIdByStudent
+}
+
 export type ParentContact = { name: string; phone: string }
 
 // Same rationale as fetchParentNamesByStudentId — service-role client needed

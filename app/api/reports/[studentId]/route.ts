@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
-import { createClient } from '@/lib/supabase/server'
+import { resolveRequestClient } from '@/lib/supabase/session'
 import { fetchReportData } from '@/lib/reports/report-data'
 import { renderReportHtml } from '@/lib/reports/template'
 import { renderHtmlToPdf } from '@/lib/reports/pdf'
@@ -21,7 +21,7 @@ export async function GET(
   if (!parsed.success) return NextResponse.json({ error: 'Invalid student id.' }, { status: 400 })
   const { studentId } = parsed.data
 
-  const supabase = await createClient()
+  const supabase = await resolveRequestClient(request)
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Not signed in.' }, { status: 401 })
 

@@ -3,8 +3,9 @@
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, Search, UserPlus, X, AlertTriangle } from 'lucide-react'
-import { setStaffActiveAction } from '@/lib/actions/staff'
+import { setStaffActiveAction, setStaffPasswordAction } from '@/lib/actions/staff'
 import type { StaffMember } from '@/lib/staff/fetch'
+import SetPasswordModal from '@/components/dashboard/SetPasswordModal'
 
 const ROLE_DOT: Record<string, string> = {
   'Admissions Admin': 'bg-[#A26D53]',
@@ -20,6 +21,7 @@ export default function SuperAdminStaffContent({ initialStaff }: { initialStaff:
   const [roleFilter, setRoleFilter] = useState('All Roles')
   const [confirmTarget, setConfirmTarget] = useState<StaffMember | null>(null)
   const [toggling, setToggling] = useState(false)
+  const [passwordTarget, setPasswordTarget] = useState<StaffMember | null>(null)
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -107,9 +109,14 @@ export default function SuperAdminStaffContent({ initialStaff }: { initialStaff:
                     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold ${a.status === 'Active' ? 'bg-success-bg text-success' : 'bg-neutral-100 text-neutral-500'}`}>{a.status}</span>
                   </td>
                   <td className="px-3 py-3.5">
-                    <button onClick={() => setConfirmTarget(a)} className={`text-[11.5px] font-medium transition-colors ${a.status === 'Active' ? 'text-danger hover:text-danger/80' : 'text-success hover:text-success/80'}`}>
-                      {a.status === 'Active' ? 'Deactivate' : 'Reactivate'}
-                    </button>
+                    <div className="flex items-center gap-3">
+                      <button onClick={() => setConfirmTarget(a)} className={`text-[11.5px] font-medium transition-colors ${a.status === 'Active' ? 'text-danger hover:text-danger/80' : 'text-success hover:text-success/80'}`}>
+                        {a.status === 'Active' ? 'Deactivate' : 'Reactivate'}
+                      </button>
+                      <button onClick={() => setPasswordTarget(a)} className="text-[11.5px] font-medium text-ink-600 hover:text-ink-800 transition-colors">
+                        Reset password
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -151,6 +158,14 @@ export default function SuperAdminStaffContent({ initialStaff }: { initialStaff:
             </div>
           </div>
         </div>
+      )}
+
+      {passwordTarget && (
+        <SetPasswordModal
+          targetName={passwordTarget.name}
+          onClose={() => setPasswordTarget(null)}
+          onSubmit={(newPassword) => setStaffPasswordAction({ id: passwordTarget.id, newPassword })}
+        />
       )}
     </>
   )

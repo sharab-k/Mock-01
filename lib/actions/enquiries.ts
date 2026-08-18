@@ -1,18 +1,23 @@
 'use server'
 
 import { z } from 'zod'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/server'
+import type { Database } from '@/types/supabase'
 
 const UpdateStatusSchema = z.object({
   id: z.string().uuid(),
   status: z.enum(['unread', 'contacted', 'awaiting_visit', 'enrolled', 'declined']),
 })
 
-export async function updateEnquiryStatusAction(input: z.infer<typeof UpdateStatusSchema>) {
+export async function updateEnquiryStatusAction(
+  input: z.infer<typeof UpdateStatusSchema>,
+  supabaseOverride?: SupabaseClient<Database>,
+) {
   const parsed = UpdateStatusSchema.safeParse(input)
   if (!parsed.success) return { ok: false as const, error: 'Invalid request.' }
 
-  const supabase = await createClient()
+  const supabase = supabaseOverride ?? await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { ok: false as const, error: 'Not signed in.' }
 

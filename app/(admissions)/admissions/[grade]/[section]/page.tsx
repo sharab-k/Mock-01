@@ -1,9 +1,9 @@
 import AdmissionsClassDetailContent, { type ClassDetailStudent } from '@/components/dashboard/modules/AdmissionsClassDetailContent'
 import { createClient } from '@/lib/supabase/server'
 import { fetchParentNamesByStudentId } from '@/lib/admissions/parent-lookup'
+import { sectionsForGrade, type Grade, type Section } from '@/lib/students/constants'
 
 const VALID_GRADES = ['9', '10', '11', '12']
-const VALID_SECTIONS = ['A', 'B', 'C', 'D']
 
 async function fetchClassStudents(grade: string, section: string): Promise<ClassDetailStudent[]> {
   const supabase = await createClient()
@@ -36,7 +36,7 @@ export default async function ClassPipelinePage({
   params: Promise<{ grade: string; section: string }>
 }) {
   const { grade, section } = await params
-  const isValid = VALID_GRADES.includes(grade) && VALID_SECTIONS.includes(section)
+  const isValid = VALID_GRADES.includes(grade) && sectionsForGrade(grade as Grade).includes(section as Section)
   const students = isValid ? await fetchClassStudents(grade, section) : []
 
   return <AdmissionsClassDetailContent grade={grade} section={section} basePath="/admissions" students={students} />

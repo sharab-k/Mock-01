@@ -4,11 +4,14 @@ import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, Search } from 'lucide-react'
 import type { ParentDirectoryRow } from '@/lib/admissions/parent-lookup'
+import { setParentPasswordAction } from '@/lib/actions/parents'
+import SetPasswordModal from '@/components/dashboard/SetPasswordModal'
 
 const INITIALS = (name: string) => name.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase()
 
 export default function SuperAdminParentDirectoryContent({ parents }: { parents: ParentDirectoryRow[] }) {
   const [query, setQuery] = useState('')
+  const [passwordTarget, setPasswordTarget] = useState<ParentDirectoryRow | null>(null)
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -48,6 +51,7 @@ export default function SuperAdminParentDirectoryContent({ parents }: { parents:
                 <th className="px-5 py-3 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">Parent / Guardian</th>
                 <th className="px-3 py-3 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider hidden sm:table-cell">Phone</th>
                 <th className="px-3 py-3 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">Linked Children</th>
+                <th className="px-3 py-3 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-100">
@@ -74,15 +78,28 @@ export default function SuperAdminParentDirectoryContent({ parents }: { parents:
                       )}
                     </div>
                   </td>
+                  <td className="px-3 py-3.5">
+                    <button onClick={() => setPasswordTarget(p)} className="text-[11.5px] font-medium text-ink-600 hover:text-ink-800 transition-colors">
+                      Reset password
+                    </button>
+                  </td>
                 </tr>
               ))}
               {filtered.length === 0 && (
-                <tr><td colSpan={3} className="px-5 py-10 text-center text-[13px] text-neutral-400">No parents match this search.</td></tr>
+                <tr><td colSpan={4} className="px-5 py-10 text-center text-[13px] text-neutral-400">No parents match this search.</td></tr>
               )}
             </tbody>
           </table>
         </div>
       </div>
+
+      {passwordTarget && (
+        <SetPasswordModal
+          targetName={passwordTarget.name}
+          onClose={() => setPasswordTarget(null)}
+          onSubmit={(newPassword) => setParentPasswordAction({ id: passwordTarget.key, newPassword })}
+        />
+      )}
     </>
   )
 }

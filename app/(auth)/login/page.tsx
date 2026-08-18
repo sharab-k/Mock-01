@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { login } from './actions'
 
 type Props = {
-  searchParams: Promise<{ error?: string }>
+  searchParams: Promise<{ error?: string; success?: string }>
 }
 
 const ERROR_MESSAGES: Record<string, string> = {
@@ -11,11 +11,17 @@ const ERROR_MESSAGES: Record<string, string> = {
   no_role:                   'Your account has not been assigned a role. Contact your administrator.',
   account_inactive:          'This account has been deactivated. Contact your Super Admin to restore access.',
   supabase_not_configured:   'Supabase is not configured yet. Use the dev portal links below to preview the dashboards.',
+  reset_link_invalid:        'This password reset link is invalid or has expired. Please request a new one.',
+}
+
+const SUCCESS_MESSAGES: Record<string, string> = {
+  password_updated: 'Password updated. Please sign in with your new password.',
 }
 
 export default async function LoginPage({ searchParams }: Props) {
-  const { error } = await searchParams
+  const { error, success } = await searchParams
   const errorMessage = error ? (ERROR_MESSAGES[error] ?? 'Something went wrong. Please try again.') : null
+  const successMessage = success ? (SUCCESS_MESSAGES[success] ?? null) : null
 
   return (
     <div className="min-h-screen bg-white flex flex-col">
@@ -70,6 +76,17 @@ export default async function LoginPage({ searchParams }: Props) {
           <div className="bg-white border border-neutral-200 rounded-2xl shadow-2 p-8">
             <form action={login} className="space-y-5">
 
+              {/* Success banner */}
+              {successMessage && (
+                <div className="flex items-start gap-3 bg-success-bg border border-success/20 rounded-xl px-4 py-3">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-success shrink-0 mt-0.5" aria-hidden="true">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                    <path d="M22 4 12 14.01l-3-3" />
+                  </svg>
+                  <p className="text-[13px] text-success leading-snug">{successMessage}</p>
+                </div>
+              )}
+
               {/* Error banner */}
               {errorMessage && (
                 <div className="flex items-start gap-3 bg-danger-bg border border-danger/20 rounded-xl px-4 py-3">
@@ -103,12 +120,20 @@ export default async function LoginPage({ searchParams }: Props) {
 
               {/* Password */}
               <div>
-                <label
-                  htmlFor="password"
-                  className="block text-[12px] font-semibold text-neutral-700 mb-1.5"
-                >
-                  Password
-                </label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label
+                    htmlFor="password"
+                    className="block text-[12px] font-semibold text-neutral-700"
+                  >
+                    Password
+                  </label>
+                  <Link
+                    href="/forgot-password"
+                    className="text-[12px] font-medium text-ink-600 hover:text-ink-800 no-underline transition-colors"
+                  >
+                    Forgot password?
+                  </Link>
+                </div>
                 <input
                   id="password"
                   name="password"

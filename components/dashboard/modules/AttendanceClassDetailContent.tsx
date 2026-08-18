@@ -8,6 +8,7 @@ import {
   MessageSquare, CalendarCheck, AlertCircle, X,
 } from 'lucide-react'
 import { markAttendanceAction } from '@/lib/actions/attendance'
+import { sectionsForGrade, type Grade, type Section } from '@/lib/students/constants'
 
 export type Status = 'unmarked' | 'present' | 'absent' | 'late'
 
@@ -34,8 +35,7 @@ const STATUS_ORDER: Record<Status, number> = { unmarked: 0, absent: 1, late: 2, 
 const NEXT_STATUS: Record<Status, 'present' | 'absent'> = { unmarked: 'present', present: 'absent', absent: 'present', late: 'present' }
 const INITIALS = (name: string) => name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
 
-const VALID_GRADES   = ['9', '10', '11', '12']
-const VALID_SECTIONS = ['A', 'B', 'C', 'D']
+const VALID_GRADES = ['9', '10', '11', '12']
 
 type Props = {
   grade: string
@@ -51,7 +51,7 @@ export default function AttendanceClassDetailContent({ grade, section, basePath 
   const [pending, setPending] = useState<Record<string, boolean>>({})
   const [selectedId, setSelectedId] = useState<string | null>(null)
 
-  const isValid = VALID_GRADES.includes(grade) && VALID_SECTIONS.includes(section)
+  const isValid = VALID_GRADES.includes(grade) && sectionsForGrade(grade as Grade).includes(section as Section)
 
   if (!isValid) {
     return (

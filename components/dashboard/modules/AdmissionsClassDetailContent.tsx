@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import StatCard from '@/components/dashboard/StatCard'
 import {
@@ -8,6 +8,7 @@ import {
   Pencil, Trash2, CheckCircle2, X,
 } from 'lucide-react'
 import { updateStudentAction, deleteStudentAction } from '@/lib/actions/students'
+import { sectionsForGrade, type Grade, type Section } from '@/lib/students/constants'
 
 export type ClassDetailStudent = {
   id: string
@@ -23,8 +24,7 @@ export type ClassDetailStudent = {
 
 const INITIALS = (name: string) => name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
 
-const VALID_GRADES   = ['9', '10', '11', '12']
-const VALID_SECTIONS = ['A', 'B', 'C', 'D']
+const VALID_GRADES = ['9', '10', '11', '12']
 
 type Props = {
   grade: string
@@ -41,7 +41,7 @@ export default function AdmissionsClassDetailContent({ grade, section, basePath 
   const [editStudent,   setEditStudent]   = useState<ClassDetailStudent | null>(null)
   const [editName,      setEditName]      = useState('')
   const [editGrade,     setEditGrade]     = useState('9')
-  const [editSection,   setEditSection]   = useState('A')
+  const [editSection,   setEditSection]   = useState<string>(sectionsForGrade('9')[0])
   const [saving,        setSaving]        = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
 
@@ -52,14 +52,21 @@ export default function AdmissionsClassDetailContent({ grade, section, basePath 
     setEditSection(s.section)
   }
 
+  // Section options depend on grade (9-10 are Boys/Girls, 11-12 are A-D) —
+  // reset to the first valid option whenever the modal's grade selection changes.
+  useEffect(() => {
+    const valid = sectionsForGrade(editGrade as Grade)
+    if (!valid.includes(editSection as Section)) setEditSection(valid[0])
+  }, [editGrade, editSection])
+
   const saveEdit = async () => {
     if (!editStudent) return
     setSaving(true)
     const outcome = await updateStudentAction({
       id: editStudent.id,
       fullName: editName,
-      grade: editGrade as '9' | '10' | '11' | '12',
-      section: editSection as 'A' | 'B' | 'C' | 'D',
+      grade: editGrade as Grade,
+      section: editSection as Section,
     })
     setSaving(false)
     if (!outcome.ok) return
@@ -80,7 +87,7 @@ export default function AdmissionsClassDetailContent({ grade, section, basePath 
   }
 
   // Handle invalid route params gracefully
-  const isValid = VALID_GRADES.includes(grade) && VALID_SECTIONS.includes(section)
+  const isValid = VALID_GRADES.includes(grade) && sectionsForGrade(grade as Grade).includes(section as Section)
 
   const enrolledTotal  = students.length
   const credSent       = students.filter(s => s.credentialSent).length
@@ -275,7 +282,7 @@ export default function AdmissionsClassDetailContent({ grade, section, basePath 
                 <div>
                   <label className="block text-[12px] font-semibold text-neutral-700 mb-1.5">Section</label>
                   <select value={editSection} onChange={e => setEditSection(e.target.value)} className="w-full text-[13px] border border-neutral-200 rounded-xl px-4 py-3 text-neutral-800 bg-white focus:outline-none focus:ring-2 focus:ring-ink-200 cursor-pointer">
-                    {['A', 'B', 'C', 'D'].map(s => <option key={s} value={s}>Section {s}</option>)}
+                    {sectionsForGrade(editGrade as Grade).map(s => <option key={s} value={s}>Section {s}</option>)}
                   </select>
                 </div>
                 <div className="sm:col-span-2">

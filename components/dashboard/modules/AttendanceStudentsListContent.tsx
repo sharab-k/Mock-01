@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, Search } from 'lucide-react'
-import { GRADES, SECTIONS } from '@/lib/students/constants'
+import { GRADES, sectionsForGrade } from '@/lib/students/constants'
 
 const INITIALS = (name: string) => name.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase()
 
@@ -24,7 +24,7 @@ export default function AttendanceStudentsListContent({ students }: { students: 
     const matches = students.filter((s) => !q || s.full_name.toLowerCase().includes(q) || s.roll_number.toLowerCase().includes(q))
     return GRADES.map((grade) => ({
       grade,
-      sections: SECTIONS.map((section) => ({
+      sections: sectionsForGrade(grade).map((section) => ({
         section,
         students: matches.filter((s) => s.grade === grade && s.section === section),
       })).filter((sec) => sec.students.length > 0),

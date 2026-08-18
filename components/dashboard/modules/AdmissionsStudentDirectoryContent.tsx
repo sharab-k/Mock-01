@@ -5,6 +5,8 @@ import Link from 'next/link'
 import { ArrowLeft, Search, UserPlus } from 'lucide-react'
 import { GRADES, INITIALS } from '@/lib/students/constants'
 import { setStudentStatusAction } from '@/lib/actions/students'
+import { setParentPasswordAction } from '@/lib/actions/parents'
+import SetPasswordModal from '@/components/dashboard/SetPasswordModal'
 
 export type DirectoryStudent = {
   id: string
@@ -12,6 +14,7 @@ export type DirectoryStudent = {
   roll_number: string
   grade: string
   section: string
+  parent_id: string | null
   parent_name: string | null
   status: 'Active' | 'Inactive'
 }
@@ -25,6 +28,7 @@ export default function AdmissionsStudentDirectoryContent({ initialStudents }: {
   const [students, setStudents] = useState<DirectoryStudent[]>(initialStudents)
   const [query, setQuery] = useState('')
   const [gradeFilter, setGradeFilter] = useState('All Grades')
+  const [passwordTarget, setPasswordTarget] = useState<DirectoryStudent | null>(null)
 
   const filtered = useMemo(() => {
     return students.filter((s) => {
@@ -102,9 +106,16 @@ export default function AdmissionsStudentDirectoryContent({ initialStudents }: {
                     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold ${STATUS_PILL[s.status]}`}>{s.status}</span>
                   </td>
                   <td className="px-3 py-3.5">
-                    <button onClick={() => toggleStatus(s.id)} className={`text-[11.5px] font-medium transition-colors ${s.status === 'Active' ? 'text-danger hover:text-danger/80' : 'text-success hover:text-success/80'}`}>
-                      {s.status === 'Active' ? 'Deactivate' : 'Reactivate'}
-                    </button>
+                    <div className="flex items-center gap-3">
+                      <button onClick={() => toggleStatus(s.id)} className={`text-[11.5px] font-medium transition-colors ${s.status === 'Active' ? 'text-danger hover:text-danger/80' : 'text-success hover:text-success/80'}`}>
+                        {s.status === 'Active' ? 'Deactivate' : 'Reactivate'}
+                      </button>
+                      {s.parent_id && (
+                        <button onClick={() => setPasswordTarget(s)} className="text-[11.5px] font-medium text-ink-600 hover:text-ink-800 transition-colors">
+                          Reset parent password
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -115,6 +126,14 @@ export default function AdmissionsStudentDirectoryContent({ initialStudents }: {
           </table>
         </div>
       </div>
+
+      {passwordTarget && passwordTarget.parent_id && (
+        <SetPasswordModal
+          targetName={passwordTarget.parent_name ?? 'this parent'}
+          onClose={() => setPasswordTarget(null)}
+          onSubmit={(newPassword) => setParentPasswordAction({ id: passwordTarget.parent_id!, newPassword })}
+        />
+      )}
     </>
   )
 }

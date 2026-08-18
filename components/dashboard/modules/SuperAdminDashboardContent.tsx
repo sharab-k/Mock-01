@@ -4,7 +4,7 @@ import { useState } from 'react'
 import StatCard from '@/components/dashboard/StatCard'
 import {
   Users, UserCog, CalendarCheck, AlertOctagon, Activity,
-  AlertTriangle, UserPlus, ArrowUpCircle, X, ChevronRight,
+  AlertTriangle, UserPlus, X,
 } from 'lucide-react'
 import { setStaffActiveAction } from '@/lib/actions/staff'
 import type { StaffMember } from '@/lib/staff/fetch'
@@ -41,16 +41,11 @@ export default function SuperAdminDashboardContent({
   totalStudents, enrolledThisMonth, subAdminCount, inactiveSubAdminCount,
   todaysAttendancePct, attendanceDelta, flaggedCount, staffPreview, gradeCounts, auditEntries,
 }: Props & { auditEntries: AuditEntry[] }) {
-  const [showPromoteModal, setShowPromoteModal] = useState(false)
-  const [promoteFrom,      setPromoteFrom]      = useState(gradeCounts[0]?.label ?? '')
-  const [promoted,         setPromoted]          = useState(false)
   const [staff,            setStaff]             = useState<StaffMember[]>(staffPreview)
   const [confirmTarget,    setConfirmTarget]     = useState<StaffMember | null>(null)
   const [toggling,         setToggling]          = useState(false)
 
   const totalGraded   = gradeCounts.reduce((a, g) => a + g.count, 0)
-  const selectedGrade = gradeCounts.find(g => g.label === promoteFrom)
-  const promoteTo     = selectedGrade?.to ?? ''
 
   const STATS = [
     {
@@ -73,14 +68,6 @@ export default function SuperAdminDashboardContent({
       sub: flaggedCount > 0 ? 'Review required' : 'All clear', href: '/super-admin/audit',
     },
   ]
-
-  const handlePromote = () => {
-    setPromoted(true)
-    setTimeout(() => {
-      setPromoted(false)
-      setShowPromoteModal(false)
-    }, 1800)
-  }
 
   const applyToggle = async () => {
     if (!confirmTarget) return
@@ -106,12 +93,6 @@ export default function SuperAdminDashboardContent({
             <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse inline-block" />
             All systems operational
           </span>
-          <button
-            onClick={() => setShowPromoteModal(true)}
-            className="flex items-center gap-2 px-3.5 py-2 bg-white border border-neutral-200 text-neutral-700 text-[13px] font-medium rounded-xl hover:bg-neutral-50 transition-colors"
-          >
-            <ArrowUpCircle size={14} className="text-ink-600" /> Promote Students
-          </button>
           <a
             href="/super-admin/staff/new"
             className="flex items-center gap-2 px-3.5 py-2 bg-ink-700 text-white text-[13px] font-semibold rounded-xl hover:bg-ink-800 transition-colors no-underline"
@@ -201,12 +182,6 @@ export default function SuperAdminDashboardContent({
           <style>{`.no-sb::-webkit-scrollbar{display:none}`}</style>
           <div className="flex items-center justify-between mb-5">
             <h2 className="text-[14px] font-semibold text-neutral-900">Enrolment by Grade</h2>
-            <button
-              onClick={() => setShowPromoteModal(true)}
-              className="flex items-center gap-1 text-[11.5px] text-ink-600 hover:text-ink-800 font-medium transition-colors"
-            >
-              <ArrowUpCircle size={12} /> Promote
-            </button>
           </div>
           <div className="space-y-4">
             {gradeCounts.map((g) => (
@@ -277,105 +252,6 @@ export default function SuperAdminDashboardContent({
           )}
         </div>
       </div>
-
-      {/* ── Promote Students Modal ─────────────────────────────────────── */}
-      {showPromoteModal && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4">
-          <div className="fixed inset-0 bg-neutral-900/50 backdrop-blur-sm" onClick={() => !promoted && setShowPromoteModal(false)} />
-          <div className="relative w-full sm:max-w-md bg-white rounded-3xl shadow-2xl z-10 overflow-hidden">
-            {/* Modal header */}
-            <div className="flex items-center justify-between px-6 py-5 border-b border-neutral-100">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-ink-100 flex items-center justify-center">
-                  <ArrowUpCircle size={18} className="text-ink-600" />
-                </div>
-                <div>
-                  <h3 className="text-[15px] font-bold text-neutral-900">Promote Students</h3>
-                  <p className="text-[11.5px] text-neutral-400 mt-0.5">Move passing students to next grade</p>
-                </div>
-              </div>
-              <button
-                onClick={() => setShowPromoteModal(false)}
-                className="w-8 h-8 rounded-full flex items-center justify-center text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition-colors"
-              >
-                <X size={16} />
-              </button>
-            </div>
-
-            <div className="px-6 py-5 space-y-5">
-              {/* Source grade selector */}
-              <div>
-                <label className="block text-[12px] font-semibold text-neutral-700 mb-2">From Grade</label>
-                <select
-                  value={promoteFrom}
-                  onChange={e => setPromoteFrom(e.target.value)}
-                  className="w-full text-[13px] border border-neutral-200 rounded-xl px-4 py-3 text-neutral-800 bg-white focus:outline-none focus:ring-2 focus:ring-ink-300 cursor-pointer"
-                >
-                  {gradeCounts.filter(g => g.to !== 'Graduated').map(g => (
-                    <option key={g.label}>{g.label}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Summary card */}
-              <div className="bg-ink-50 border border-ink-100 rounded-2xl p-4">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="flex-1">
-                    <p className="text-[11px] text-neutral-400 mb-1">From</p>
-                    <p className="text-[14px] font-bold text-neutral-900">{promoteFrom}</p>
-                  </div>
-                  <ChevronRight size={20} className="text-ink-400 shrink-0" />
-                  <div className="flex-1">
-                    <p className="text-[11px] text-neutral-400 mb-1">To</p>
-                    <p className="text-[14px] font-bold text-neutral-900">{promoteTo}</p>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-2 pt-3 border-t border-ink-100">
-                  <div>
-                    <p className="text-[11px] text-neutral-400">Eligible students</p>
-                    <p className="text-[20px] font-bold text-ink-700">
-                      {selectedGrade?.count ?? 0}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-[11px] text-neutral-400">Sections</p>
-                    <p className="text-[13px] font-semibold text-neutral-700 mt-1">A · B · C · D</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Warning note */}
-              <div className="flex items-start gap-2.5 bg-warning-bg border border-warning/20 rounded-xl p-3.5">
-                <AlertTriangle size={14} className="text-warning mt-0.5 shrink-0" />
-                <p className="text-[11.5px] text-warning leading-relaxed">
-                  This action promotes all eligible students simultaneously. Individual transfers can be done from the student profile.
-                </p>
-              </div>
-
-              {/* Actions */}
-              <div className="flex items-center gap-3 pt-1">
-                <button
-                  onClick={() => setShowPromoteModal(false)}
-                  className="flex-1 py-3 text-[13px] font-medium text-neutral-600 bg-neutral-100 hover:bg-neutral-200 rounded-xl transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handlePromote}
-                  disabled={promoted}
-                  className={`flex-1 py-3 text-[13px] font-semibold rounded-xl transition-all ${
-                    promoted
-                      ? 'bg-success text-white cursor-default'
-                      : 'bg-ink-700 text-white hover:bg-ink-800'
-                  }`}
-                >
-                  {promoted ? '✓ Promoted' : `Promote ${selectedGrade?.count ?? 0} Students`}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {confirmTarget && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4">

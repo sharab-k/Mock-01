@@ -1,13 +1,15 @@
 'use server'
 
 import { z } from 'zod'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/server'
 import { getLinkedParentPhones, sendGradeAlert } from '@/lib/notifications/send-notification'
 import { currentTerm } from '@/lib/marks/term'
 import { logAction } from '@/lib/audit/log'
+import type { Database } from '@/types/supabase'
 
-async function requireMarksCaller() {
-  const supabase = await createClient()
+async function requireMarksCaller(supabaseOverride?: SupabaseClient<Database>) {
+  const supabase = supabaseOverride ?? await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { supabase, user: null, authorized: false as const }
 
@@ -34,11 +36,14 @@ const BulkSaveSchema = z.object({
   })).min(1),
 })
 
-export async function bulkSaveMarksAction(input: z.infer<typeof BulkSaveSchema>) {
+export async function bulkSaveMarksAction(
+  input: z.infer<typeof BulkSaveSchema>,
+  supabaseOverride?: SupabaseClient<Database>,
+) {
   const parsed = BulkSaveSchema.safeParse(input)
   if (!parsed.success) return { ok: false as const, error: 'Invalid marks batch.' }
 
-  const { supabase, user, authorized } = await requireMarksCaller()
+  const { supabase, user, authorized } = await requireMarksCaller(supabaseOverride)
   if (!authorized || !user) return { ok: false as const, error: 'Not authorized.' }
 
   const { subject, examType, maxScore, entries } = parsed.data
