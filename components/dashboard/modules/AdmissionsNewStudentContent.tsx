@@ -3,10 +3,9 @@
 import { useState, useEffect, type FormEvent } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, CheckCircle2, KeyRound, Copy, Check, UserPlus, AlertCircle, Users } from 'lucide-react'
-import { GRADES, sectionsForGrade } from '@/lib/students/constants'
+import { PROGRAMS, PROGRAM_GRADE, sectionsForGrade, type Program } from '@/lib/students/constants'
 import { enrolStudentAction, type EnrolStudentResult } from '@/lib/actions/enrol-student'
 
-const PROGRAMS = ['Primary Years', 'Middle School', 'Matriculation', 'Intermediate']
 const STREAMS = ['Pre-Engineering', 'Pre-Medical', 'Computer Science', 'Commerce'] as const
 
 type Props = {
@@ -17,13 +16,17 @@ type Props = {
 
 export default function AdmissionsNewStudentContent({ basePath = '/admissions' }: Props) {
   const [studentName, setStudentName] = useState('')
-  const [grade, setGrade] = useState(GRADES[0])
-  const [section, setSection] = useState(sectionsForGrade(GRADES[0])[0])
-  const [program, setProgram] = useState(PROGRAMS[2])
+  // Programme IS the grade choice (SSC-1/2 = grade 9/10, HSC-1/2 = grade 11/12)
+  // — no separate grade picker.
+  const [program, setProgram] = useState<Program>(PROGRAMS[0])
+  const grade = PROGRAM_GRADE[program]
+  const [section, setSection] = useState(sectionsForGrade(grade)[0])
   const [isLate, setIsLate] = useState(false)
   const [stream, setStream] = useState<typeof STREAMS[number] | ''>('')
   const [parentName, setParentName] = useState('')
   const [parentPhone, setParentPhone] = useState('')
+  const [parentSecondaryPhone, setParentSecondaryPhone] = useState('')
+  const [parentWhatsapp2, setParentWhatsapp2] = useState('')
   const [guardianProfession, setGuardianProfession] = useState('')
   const [address, setAddress] = useState('')
   const [previousSchool, setPreviousSchool] = useState('')
@@ -56,11 +59,13 @@ export default function AdmissionsNewStudentContent({ basePath = '/admissions' }
       isLate,
       parentName,
       parentPhone,
+      parentSecondaryPhone: parentSecondaryPhone || undefined,
+      parentWhatsapp2: parentWhatsapp2 || undefined,
       guardianProfession: guardianProfession || undefined,
       address: address || undefined,
       previousSchool: previousSchool || undefined,
       lastQualification: lastQualification || undefined,
-      grNumber: grNumber || undefined,
+      grNumber,
       registrationFee: registrationFee ? Number(registrationFee) : undefined,
       tuitionFee: tuitionFee ? Number(tuitionFee) : undefined,
       stream: stream || undefined,
@@ -172,28 +177,28 @@ export default function AdmissionsNewStudentContent({ basePath = '/admissions' }
               </div>
             )}
 
-            <div>
-              <label className="block text-[12px] font-semibold text-neutral-700 mb-1.5">Student full name</label>
-              <input required value={studentName} onChange={(e) => setStudentName(e.target.value)} placeholder="e.g. Zoya Ahmed" className="w-full px-3.5 py-2.5 border border-neutral-200 rounded-xl text-[13px] bg-neutral-50 placeholder-neutral-400 focus:outline-none focus:border-ink-400 focus:ring-2 focus:ring-ink-400/10 focus:bg-white transition-all" />
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[12px] font-semibold text-neutral-700 mb-1.5">Student full name</label>
+                <input required value={studentName} onChange={(e) => setStudentName(e.target.value)} placeholder="e.g. Zoya Ahmed" className="w-full px-3.5 py-2.5 border border-neutral-200 rounded-xl text-[13px] bg-neutral-50 placeholder-neutral-400 focus:outline-none focus:border-ink-400 focus:ring-2 focus:ring-ink-400/10 focus:bg-white transition-all" />
+              </div>
+              <div>
+                <label className="block text-[12px] font-semibold text-neutral-700 mb-1.5">G.R. No.</label>
+                <input required value={grNumber} onChange={(e) => setGrNumber(e.target.value)} placeholder="e.g. 4821" className="w-full px-3.5 py-2.5 border border-neutral-200 rounded-xl text-[13px] bg-neutral-50 placeholder-neutral-400 focus:outline-none focus:border-ink-400 focus:ring-2 focus:ring-ink-400/10 focus:bg-white transition-all" />
+              </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-[12px] font-semibold text-neutral-700 mb-1.5">Grade</label>
-                <select value={grade} onChange={(e) => setGrade(e.target.value as typeof grade)} className="w-full px-3.5 py-2.5 border border-neutral-200 rounded-xl text-[13px] bg-white focus:outline-none focus:ring-1 focus:ring-ink-300 cursor-pointer">
-                  {GRADES.map((g) => <option key={g}>{g}</option>)}
+                <label className="block text-[12px] font-semibold text-neutral-700 mb-1.5">Programme</label>
+                <select value={program} onChange={(e) => setProgram(e.target.value as Program)} className="w-full px-3.5 py-2.5 border border-neutral-200 rounded-xl text-[13px] bg-white focus:outline-none focus:ring-1 focus:ring-ink-300 cursor-pointer">
+                  {PROGRAMS.map((p) => <option key={p}>{p}</option>)}
                 </select>
               </div>
               <div>
                 <label className="block text-[12px] font-semibold text-neutral-700 mb-1.5">Section</label>
                 <select value={section} onChange={(e) => setSection(e.target.value as typeof section)} className="w-full px-3.5 py-2.5 border border-neutral-200 rounded-xl text-[13px] bg-white focus:outline-none focus:ring-1 focus:ring-ink-300 cursor-pointer">
                   {sectionsForGrade(grade).map((s) => <option key={s}>{s}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="block text-[12px] font-semibold text-neutral-700 mb-1.5">Programme</label>
-                <select value={program} onChange={(e) => setProgram(e.target.value)} className="w-full px-3.5 py-2.5 border border-neutral-200 rounded-xl text-[13px] bg-white focus:outline-none focus:ring-1 focus:ring-ink-300 cursor-pointer">
-                  {PROGRAMS.map((p) => <option key={p}>{p}</option>)}
                 </select>
               </div>
             </div>
@@ -221,7 +226,7 @@ export default function AdmissionsNewStudentContent({ basePath = '/admissions' }
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-[12px] font-semibold text-neutral-700 mb-1.5">Previous school / college</label>
+                <label className="block text-[12px] font-semibold text-neutral-700 mb-1.5">School / college</label>
                 <input value={previousSchool} onChange={(e) => setPreviousSchool(e.target.value)} placeholder="e.g. City Public School" className="w-full px-3.5 py-2.5 border border-neutral-200 rounded-xl text-[13px] bg-neutral-50 placeholder-neutral-400 focus:outline-none focus:border-ink-400 focus:ring-2 focus:ring-ink-400/10 focus:bg-white transition-all" />
               </div>
               <div>
@@ -240,8 +245,16 @@ export default function AdmissionsNewStudentContent({ basePath = '/admissions' }
                 <input required value={parentName} onChange={(e) => setParentName(e.target.value)} placeholder="e.g. Mr. Ahmed Raza" className="w-full px-3.5 py-2.5 border border-neutral-200 rounded-xl text-[13px] bg-neutral-50 placeholder-neutral-400 focus:outline-none focus:border-ink-400 focus:ring-2 focus:ring-ink-400/10 focus:bg-white transition-all" />
               </div>
               <div>
-                <label className="block text-[12px] font-semibold text-neutral-700 mb-1.5">WhatsApp / Phone</label>
+                <label className="block text-[12px] font-semibold text-neutral-700 mb-1.5">WhatsApp No.</label>
                 <input required value={parentPhone} onChange={(e) => setParentPhone(e.target.value)} placeholder="03XX XXXXXXX" className="w-full px-3.5 py-2.5 border border-neutral-200 rounded-xl text-[13px] bg-neutral-50 placeholder-neutral-400 focus:outline-none focus:border-ink-400 focus:ring-2 focus:ring-ink-400/10 focus:bg-white transition-all" />
+              </div>
+              <div>
+                <label className="block text-[12px] font-semibold text-neutral-700 mb-1.5">Phone No. <span className="text-neutral-400 font-normal">(optional)</span></label>
+                <input value={parentSecondaryPhone} onChange={(e) => setParentSecondaryPhone(e.target.value)} placeholder="03XX XXXXXXX" className="w-full px-3.5 py-2.5 border border-neutral-200 rounded-xl text-[13px] bg-neutral-50 placeholder-neutral-400 focus:outline-none focus:border-ink-400 focus:ring-2 focus:ring-ink-400/10 focus:bg-white transition-all" />
+              </div>
+              <div>
+                <label className="block text-[12px] font-semibold text-neutral-700 mb-1.5">WhatsApp 2 <span className="text-neutral-400 font-normal">(optional)</span></label>
+                <input value={parentWhatsapp2} onChange={(e) => setParentWhatsapp2(e.target.value)} placeholder="03XX XXXXXXX" className="w-full px-3.5 py-2.5 border border-neutral-200 rounded-xl text-[13px] bg-neutral-50 placeholder-neutral-400 focus:outline-none focus:border-ink-400 focus:ring-2 focus:ring-ink-400/10 focus:bg-white transition-all" />
               </div>
               <div>
                 <label className="block text-[12px] font-semibold text-neutral-700 mb-1.5">Profession <span className="text-neutral-400 font-normal">(optional)</span></label>
@@ -257,11 +270,7 @@ export default function AdmissionsNewStudentContent({ basePath = '/admissions' }
               <p className="text-[12.5px] font-semibold text-neutral-400 uppercase tracking-wider">Office Use <span className="text-neutral-400 font-normal normal-case">(optional)</span></p>
             </div>
 
-            <div className="grid grid-cols-3 gap-3">
-              <div>
-                <label className="block text-[12px] font-semibold text-neutral-700 mb-1.5">G.R. No.</label>
-                <input value={grNumber} onChange={(e) => setGrNumber(e.target.value)} placeholder="e.g. 4821" className="w-full px-3.5 py-2.5 border border-neutral-200 rounded-xl text-[13px] bg-neutral-50 placeholder-neutral-400 focus:outline-none focus:border-ink-400 focus:ring-2 focus:ring-ink-400/10 focus:bg-white transition-all" />
-              </div>
+            <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-[12px] font-semibold text-neutral-700 mb-1.5">Registration fee</label>
                 <input type="number" min="0" value={registrationFee} onChange={(e) => setRegistrationFee(e.target.value)} placeholder="PKR" className="w-full px-3.5 py-2.5 border border-neutral-200 rounded-xl text-[13px] bg-neutral-50 placeholder-neutral-400 focus:outline-none focus:border-ink-400 focus:ring-2 focus:ring-ink-400/10 focus:bg-white transition-all" />

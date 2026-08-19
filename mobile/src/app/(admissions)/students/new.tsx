@@ -15,17 +15,18 @@ import { TextField } from '@/components/ui/text-field';
 import { Ink, Radius, Semantic, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { enrolStudentAction, type EnrolStudentResult } from '@/lib/actions/enrol-student';
-import { GRADES, sectionsForGrade } from '@/lib/students/constants';
+import { PROGRAMS, PROGRAM_GRADE, sectionsForGrade, type Program } from '@/lib/students/constants';
 
-const PROGRAMS = ['Primary Years', 'Middle School', 'Matriculation', 'Intermediate'] as const;
 const STREAMS = ['Pre-Engineering', 'Pre-Medical', 'Computer Science', 'Commerce'] as const;
 
 type Status = 'idle' | 'submitting' | 'success' | 'error';
 
+// Programme IS the grade choice (SSC-1/2 = grade 9/10, HSC-1/2 = grade
+// 11/12) — no separate grade picker.
 const emptyForm = {
-  studentName: '', grade: GRADES[0], section: sectionsForGrade(GRADES[0])[0], program: PROGRAMS[2] as string,
+  studentName: '', program: PROGRAMS[0] as Program, section: sectionsForGrade(PROGRAM_GRADE[PROGRAMS[0]])[0],
   isLate: false, stream: '' as typeof STREAMS[number] | '',
-  parentName: '', parentPhone: '', guardianProfession: '', address: '',
+  parentName: '', parentPhone: '', parentSecondaryPhone: '', parentWhatsapp2: '', guardianProfession: '', address: '',
   previousSchool: '', lastQualification: '', grNumber: '', registrationFee: '', tuitionFee: '',
 };
 
@@ -42,11 +43,11 @@ export default function EnrolStudentScreen() {
   }
 
   // Section options depend on grade (9-10 are Boys/Girls, 11-12 are A-D) —
-  // reset to the first valid option whenever grade changes.
-  function setGrade(grade: string) {
-    const g = grade as (typeof GRADES)[number];
-    const valid = sectionsForGrade(g);
-    setForm((f) => ({ ...f, grade: g, section: valid.includes(f.section) ? f.section : valid[0] }));
+  // reset to the first valid option whenever the programme (= grade) changes.
+  function setProgram(program: string) {
+    const p = program as Program;
+    const valid = sectionsForGrade(PROGRAM_GRADE[p]);
+    setForm((f) => ({ ...f, program: p, section: valid.includes(f.section) ? f.section : valid[0] }));
   }
 
   async function handleSubmit() {
@@ -55,17 +56,19 @@ export default function EnrolStudentScreen() {
 
     const outcome = await enrolStudentAction({
       studentName: form.studentName,
-      grade: form.grade,
+      grade: PROGRAM_GRADE[form.program],
       section: form.section,
       program: form.program,
       isLate: form.isLate,
       parentName: form.parentName,
       parentPhone: form.parentPhone,
+      parentSecondaryPhone: form.parentSecondaryPhone || undefined,
+      parentWhatsapp2: form.parentWhatsapp2 || undefined,
       guardianProfession: form.guardianProfession || undefined,
       previousSchool: form.previousSchool || undefined,
       lastQualification: form.lastQualification || undefined,
       address: form.address || undefined,
-      grNumber: form.grNumber || undefined,
+      grNumber: form.grNumber,
       registrationFee: form.registrationFee ? Number(form.registrationFee) : undefined,
       tuitionFee: form.tuitionFee ? Number(form.tuitionFee) : undefined,
       stream: form.stream || undefined,
@@ -90,8 +93,9 @@ export default function EnrolStudentScreen() {
     setTimeout(() => setCopied(false), 1500);
   }
 
-  const isIntermediate = form.grade === '11' || form.grade === '12';
-  const canSubmit = form.studentName.trim().length > 0 && form.parentName.trim().length > 0 && form.parentPhone.trim().length > 0;
+  const grade = PROGRAM_GRADE[form.program];
+  const isIntermediate = grade === '11' || grade === '12';
+  const canSubmit = form.studentName.trim().length > 0 && form.grNumber.trim().length > 0 && form.parentName.trim().length > 0 && form.parentPhone.trim().length > 0;
 
   return (
     <ThemedView style={styles.container}>
@@ -108,7 +112,7 @@ export default function EnrolStudentScreen() {
               </View>
               <ThemedText variant="bodyMedium">{form.studentName} enrolled</ThemedText>
               <ThemedText variant="small" color="textSecondary" style={{ textAlign: 'center' }}>
-                Grade {form.grade}-{form.section} · {form.program}{form.isLate ? ' · Late enrollment (watch-time tracking enabled)' : ''}
+                Grade {grade}-{form.section} · {form.program}{form.isLate ? ' · Late enrollment (watch-time tracking enabled)' : ''}
               </ThemedText>
 
               {result.parentAccountType === 'new' ? (
@@ -155,9 +159,9 @@ export default function EnrolStudentScreen() {
               <View style={{ gap: Spacing.three }}>
                 <ThemedText variant="label" color="textMuted">Student Information</ThemedText>
                 <TextField label="Student full name" placeholder="e.g. Zoya Ahmed" value={form.studentName} onChangeText={(v) => set('studentName', v)} />
-                <ChipSelect label="Grade" options={GRADES} value={form.grade} onChange={setGrade} />
-                <ChipSelect label="Section" options={sectionsForGrade(form.grade)} value={form.section} onChange={(v) => set('section', v)} />
-                <ChipSelect label="Programme" options={PROGRAMS} value={form.program} onChange={(v) => set('program', v)} />
+                <TextField label="G.R. No." placeholder="e.g. 4821" value={form.grNumber} onChangeText={(v) => set('grNumber', v)} />
+                <ChipSelect label="Programme" options={PROGRAMS} value={form.program} onChange={setProgram} />
+                <ChipSelect label="Section" options={sectionsForGrade(PROGRAM_GRADE[form.program])} value={form.section} onChange={(v) => set('section', v)} />
 
                 <Pressable onPress={() => set('isLate', !form.isLate)} style={[styles.lateToggle, { backgroundColor: Semantic.warningBg }]}>
                   <View style={[styles.checkbox, form.isLate && { backgroundColor: Semantic.warning, borderColor: Semantic.warning }]}>
@@ -175,21 +179,22 @@ export default function EnrolStudentScreen() {
 
               <View style={{ gap: Spacing.three }}>
                 <ThemedText variant="label" color="textMuted">Academic Background (optional)</ThemedText>
-                <TextField label="Previous school / college" placeholder="e.g. City Public School" value={form.previousSchool} onChangeText={(v) => set('previousSchool', v)} />
+                <TextField label="School / college" placeholder="e.g. City Public School" value={form.previousSchool} onChangeText={(v) => set('previousSchool', v)} />
                 <TextField label="Last qualification" placeholder="e.g. Grade 8 · Distinction" value={form.lastQualification} onChangeText={(v) => set('lastQualification', v)} />
               </View>
 
               <View style={{ gap: Spacing.three }}>
                 <ThemedText variant="label" color="textMuted">Parent / Guardian</ThemedText>
                 <TextField label="Parent's name" placeholder="e.g. Mr. Ahmed Raza" value={form.parentName} onChangeText={(v) => set('parentName', v)} />
-                <TextField label="WhatsApp / Phone" placeholder="03XX XXXXXXX" value={form.parentPhone} onChangeText={(v) => set('parentPhone', v)} keyboardType="phone-pad" />
+                <TextField label="WhatsApp No." placeholder="03XX XXXXXXX" value={form.parentPhone} onChangeText={(v) => set('parentPhone', v)} keyboardType="phone-pad" />
+                <TextField label="Phone No. (optional)" placeholder="03XX XXXXXXX" value={form.parentSecondaryPhone} onChangeText={(v) => set('parentSecondaryPhone', v)} keyboardType="phone-pad" />
+                <TextField label="WhatsApp 2 (optional)" placeholder="03XX XXXXXXX" value={form.parentWhatsapp2} onChangeText={(v) => set('parentWhatsapp2', v)} keyboardType="phone-pad" />
                 <TextField label="Profession (optional)" placeholder="e.g. Engineer" value={form.guardianProfession} onChangeText={(v) => set('guardianProfession', v)} />
                 <TextField label="Address (optional)" placeholder="House / street / area" value={form.address} onChangeText={(v) => set('address', v)} />
               </View>
 
               <View style={{ gap: Spacing.three }}>
                 <ThemedText variant="label" color="textMuted">Office Use (optional)</ThemedText>
-                <TextField label="G.R. No." placeholder="e.g. 4821" value={form.grNumber} onChangeText={(v) => set('grNumber', v)} />
                 <TextField label="Registration fee (PKR)" value={form.registrationFee} onChangeText={(v) => set('registrationFee', v)} keyboardType="numeric" />
                 <TextField label="Tuition fee (PKR)" value={form.tuitionFee} onChangeText={(v) => set('tuitionFee', v)} keyboardType="numeric" />
               </View>

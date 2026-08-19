@@ -24,9 +24,10 @@ const UpdateStudentSchema = z.object({
   id: z.string().uuid(),
   fullName: z.string().min(1).max(200),
   grade: z.enum(['9', '10', '11', '12']),
-  // Grades 9-10 are Boys/Girls (B/G), 11-12 (Intermediate) are co-ed (A-D) —
-  // the pairing is enforced below via superRefine, this just accepts either alphabet.
-  section: z.enum(['A', 'B', 'C', 'D', 'G']),
+  // Grades 9-10 are Girls G1-G3 / Boys B1-B3, 11-12 (Intermediate) are co-ed
+  // A-E — the pairing is enforced below via superRefine, this just accepts
+  // any valid code across both schemes.
+  section: z.enum(['A', 'B', 'C', 'D', 'E', 'G1', 'G2', 'G3', 'B1', 'B2', 'B3']),
 }).superRefine((data, ctx) => {
   if (!sectionsForGrade(data.grade as Grade).includes(data.section as Section)) {
     ctx.addIssue({ code: 'custom', path: ['section'], message: `Section ${data.section} is not valid for Grade ${data.grade}` })

@@ -1,18 +1,21 @@
 import { callMobileApi } from '@/lib/api/client';
+import type { Grade, Section } from '@/lib/students/constants';
 
 export type EnrolStudentInput = {
   studentName: string;
-  grade: '9' | '10' | '11' | '12';
-  section: 'A' | 'B' | 'C' | 'D' | 'G';
+  grade: Grade;
+  section: Section;
   program: string;
   isLate: boolean;
   parentName: string;
   parentPhone: string;
+  parentSecondaryPhone?: string;
+  parentWhatsapp2?: string;
   guardianProfession?: string;
   previousSchool?: string;
   lastQualification?: string;
   address?: string;
-  grNumber?: string;
+  grNumber: string;
   registrationFee?: number;
   tuitionFee?: number;
   stream?: 'Pre-Engineering' | 'Pre-Medical' | 'Computer Science' | 'Commerce';

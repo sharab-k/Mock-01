@@ -43,7 +43,7 @@ export default function AttendanceDashboardContent({ basePath = '/attendance', t
   const STATS = [
     { label: 'Present Today',   value: String(totalPresent), icon: <UserCheck size={22} />, iconBg: 'bg-success-bg', iconColor: 'text-success', sub: `of ${totalAll} enrolled`, subUp: true },
     { label: 'Absent Today',    value: String(totalAbsent),  icon: <UserX size={22} />,     iconBg: 'bg-danger-bg',  iconColor: 'text-danger',  sub: failedAlertsToday > 0 ? `${failedAlertsToday} alert${failedAlertsToday > 1 ? 's' : ''} failed` : 'Alerts sent' },
-    { label: 'Late Arrivals',   value: String(totalLate),    icon: <Clock size={22} />,     iconBg: 'bg-warning-bg', iconColor: 'text-warning', sub: 'After 8:30 AM' },
+    { label: 'Late Arrivals',   value: String(totalLate),    icon: <Clock size={22} />,     iconBg: 'bg-warning-bg', iconColor: 'text-warning' },
     { label: 'Attendance Rate', value: `${globalRate}%`,     icon: <Percent size={22} />,   iconBg: 'bg-ink-100',    iconColor: 'text-ink-600', sub: 'Marked so far today' },
   ]
 

@@ -5,9 +5,10 @@ import { fetchClassRoster } from '@/lib/attendance/roster'
 
 const QuerySchema = z.object({
   grade: z.enum(['9', '10', '11', '12']),
-  // Reads an existing class — accepts either alphabet (A-D for 11-12, B/G for
-  // 9-10) without re-validating the pairing, which is an enrolment-time rule.
-  section: z.enum(['A', 'B', 'C', 'D', 'G']),
+  // Reads an existing class — accepts any valid code across both schemes
+  // (A-E for 11-12, G1-G3/B1-B3 for 9-10) without re-validating the pairing,
+  // which is an enrolment-time rule.
+  section: z.enum(['A', 'B', 'C', 'D', 'E', 'G1', 'G2', 'G3', 'B1', 'B2', 'B3']),
 })
 
 // Read-only GET counterpart to Phase 0's mobile write routes — needed

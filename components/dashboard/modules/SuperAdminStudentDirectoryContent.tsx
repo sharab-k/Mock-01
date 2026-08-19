@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Search, X, CalendarCheck, BookOpen, Clock3, Loader2, Trash2, AlertTriangle } from 'lucide-react'
+import { ArrowLeft, Search, X, CalendarCheck, BookOpen, Clock3, Loader2, Trash2, AlertTriangle, UserPlus } from 'lucide-react'
 import { fetchStudentAcademicSummaryAction, type StudentAcademicSummary } from '@/lib/actions/student-summary'
 import { deleteStudentAction } from '@/lib/actions/students'
 
@@ -90,6 +90,9 @@ export default function SuperAdminStudentDirectoryContent({ students: initialStu
             <h1 className="text-[20px] font-bold text-neutral-900">Student Directory</h1>
             <p className="text-[13px] text-neutral-500 mt-0.5">{students.length} students · {filtered.length} matching filters</p>
           </div>
+          <Link href="/super-admin/admissions/students/new" className="flex items-center gap-2 px-3.5 py-2 bg-ink-700 text-white text-[13px] font-semibold rounded-xl hover:bg-ink-800 transition-colors no-underline">
+            <UserPlus size={14} /> Enrol Student
+          </Link>
         </div>
       </div>
 
@@ -139,7 +142,9 @@ export default function SuperAdminStudentDirectoryContent({ students: initialStu
                       <div className="w-8 h-8 rounded-full bg-ink-100 text-ink-700 flex items-center justify-center font-mono text-[10px] font-bold shrink-0">{INITIALS(s.full_name)}</div>
                       <div className="min-w-0">
                         <span className="block font-medium text-neutral-900 truncate">{s.full_name}</span>
-                        <span className="block text-[11px] font-mono text-neutral-400">{s.roll_number}</span>
+                        <span className="block text-[11px] font-mono text-neutral-400">
+                          {s.roll_number}{s.gr_number ? ` · GR ${s.gr_number}` : ''}
+                        </span>
                       </div>
                     </div>
                   </td>
