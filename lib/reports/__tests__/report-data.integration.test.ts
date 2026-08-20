@@ -27,13 +27,13 @@ let fullStudentId = ''
 
 beforeAll(async () => {
   const { data: emptyStudent, error: emptyError } = await admin.from('students').insert({
-    roll_number: `JE-TEST-RPT-EMPTY-${runId}`, full_name: 'Report Test Empty Student', program: 'Matriculation', grade_level: '9', section: 'A',
+    roll_number: `JE-TEST-RPT-EMPTY-${runId}`, registration_number: `JE-TEST-REG-RPT-EMPTY-${runId}`, academic_year: 2026, full_name: 'Report Test Empty Student', program: 'Matriculation', grade_level: '9', section: 'A',
   }).select('id').single()
   if (emptyError || !emptyStudent) throw emptyError ?? new Error('seed empty student insert returned no row')
   emptyStudentId = emptyStudent.id
 
   const { data: fullStudent, error: fullError } = await admin.from('students').insert({
-    roll_number: `JE-TEST-RPT-FULL-${runId}`, full_name: 'Report Test Full Student', program: 'Matriculation', grade_level: '10', section: 'B',
+    roll_number: `JE-TEST-RPT-FULL-${runId}`, registration_number: `JE-TEST-REG-RPT-FULL-${runId}`, academic_year: 2026, full_name: 'Report Test Full Student', program: 'Matriculation', grade_level: '10', section: 'B',
   }).select('id').single()
   if (fullError || !fullStudent) throw fullError ?? new Error('seed full student insert returned no row')
   fullStudentId = fullStudent.id

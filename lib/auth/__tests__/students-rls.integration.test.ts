@@ -61,6 +61,8 @@ beforeAll(async () => {
     .from('students')
     .insert({
       roll_number: `JE-TEST-${runId}`,
+      registration_number: `JE-TEST-REG-${runId}`,
+      academic_year: 2026,
       full_name: 'RLS Test Student',
       program: 'Matriculation',
       grade_level: '9',
@@ -91,7 +93,7 @@ describe('students RLS enforcement (live Supabase project)', () => {
     const client = await signInAs(testUsers[0].email)
     const { data: inserted, error: insertError } = await client
       .from('students')
-      .insert({ roll_number: `JE-TEST-INS-${runId}`, full_name: 'Insert Test', program: 'Matriculation', grade_level: '9', section: 'B' })
+      .insert({ roll_number: `JE-TEST-INS-${runId}`, registration_number: `JE-TEST-REG-INS-${runId}`, academic_year: 2026, full_name: 'Insert Test', program: 'Matriculation', grade_level: '9', section: 'B' })
       .select('id')
       .single()
     expect(insertError).toBeNull()
@@ -110,7 +112,7 @@ describe('students RLS enforcement (live Supabase project)', () => {
 
     const { error: insertError } = await client
       .from('students')
-      .insert({ roll_number: `JE-TEST-DENY-ATT-${runId}`, full_name: 'Should Not Insert', program: 'Matriculation', grade_level: '9', section: 'C' })
+      .insert({ roll_number: `JE-TEST-DENY-ATT-${runId}`, registration_number: `JE-TEST-REG-DENY-ATT-${runId}`, academic_year: 2026, full_name: 'Should Not Insert', program: 'Matriculation', grade_level: '9', section: 'C' })
     expect(insertError).not.toBeNull()
   })
 
@@ -123,7 +125,7 @@ describe('students RLS enforcement (live Supabase project)', () => {
 
     const { error: insertError } = await client
       .from('students')
-      .insert({ roll_number: `JE-TEST-DENY-MARKS-${runId}`, full_name: 'Should Not Insert', program: 'Matriculation', grade_level: '9', section: 'D' })
+      .insert({ roll_number: `JE-TEST-DENY-MARKS-${runId}`, registration_number: `JE-TEST-REG-DENY-MARKS-${runId}`, academic_year: 2026, full_name: 'Should Not Insert', program: 'Matriculation', grade_level: '9', section: 'D' })
     expect(insertError).not.toBeNull()
 
     const { error: deleteError } = await client.from('students').delete().eq('id', seedStudentId)

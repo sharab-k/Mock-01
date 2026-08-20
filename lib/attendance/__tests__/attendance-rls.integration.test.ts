@@ -65,14 +65,14 @@ beforeAll(async () => {
   await admin.from('profiles').insert({ id: parentBId, role: 'parent', email: parentBEmail, full_name: 'Phase 3 Test Parent B' })
 
   const { data: studentA, error: studentAError } = await admin.from('students').insert({
-    roll_number: `JE-TEST-ATT-A-${runId}`, full_name: 'Attendance Test Student A', program: 'Matriculation', grade_level: '9', section: 'A',
+    roll_number: `JE-TEST-ATT-A-${runId}`, registration_number: `JE-TEST-REG-ATT-A-${runId}`, academic_year: 2026, full_name: 'Attendance Test Student A', program: 'Matriculation', grade_level: '9', section: 'A',
   }).select('id').single()
   if (studentAError || !studentA) throw studentAError ?? new Error('seed student A insert returned no row')
   studentAId = studentA.id
   await admin.from('parent_student_links').insert({ parent_id: parentAId, student_id: studentAId })
 
   const { data: studentB, error: studentBError } = await admin.from('students').insert({
-    roll_number: `JE-TEST-ATT-B-${runId}`, full_name: 'Attendance Test Student B', program: 'Matriculation', grade_level: '9', section: 'B',
+    roll_number: `JE-TEST-ATT-B-${runId}`, registration_number: `JE-TEST-REG-ATT-B-${runId}`, academic_year: 2026, full_name: 'Attendance Test Student B', program: 'Matriculation', grade_level: '9', section: 'B',
   }).select('id').single()
   if (studentBError || !studentB) throw studentBError ?? new Error('seed student B insert returned no row')
   studentBId = studentB.id

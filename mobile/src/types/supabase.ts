@@ -350,7 +350,9 @@ export type Database = {
           is_active: boolean
           phone: string | null
           role: Database["public"]["Enums"]["user_role"]
+          secondary_phone: string | null
           updated_at: string
+          whatsapp_number_2: string | null
         }
         Insert: {
           created_at?: string
@@ -360,7 +362,9 @@ export type Database = {
           is_active?: boolean
           phone?: string | null
           role: Database["public"]["Enums"]["user_role"]
+          secondary_phone?: string | null
           updated_at?: string
+          whatsapp_number_2?: string | null
         }
         Update: {
           created_at?: string
@@ -370,12 +374,36 @@ export type Database = {
           is_active?: boolean
           phone?: string | null
           role?: Database["public"]["Enums"]["user_role"]
+          secondary_phone?: string | null
           updated_at?: string
+          whatsapp_number_2?: string | null
+        }
+        Relationships: []
+      }
+      roll_number_counters: {
+        Row: {
+          academic_year: number
+          grade_level: string
+          next_number: number
+          section: string
+        }
+        Insert: {
+          academic_year: number
+          grade_level: string
+          next_number?: number
+          section: string
+        }
+        Update: {
+          academic_year?: number
+          grade_level?: string
+          next_number?: number
+          section?: string
         }
         Relationships: []
       }
       students: {
         Row: {
+          academic_year: number
           address: string | null
           created_at: string
           deleted_at: string | null
@@ -390,6 +418,7 @@ export type Database = {
           previous_school: string | null
           program: string
           registration_fee: number | null
+          registration_number: string
           roll_number: string
           section: string
           status: Database["public"]["Enums"]["student_status"]
@@ -398,6 +427,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          academic_year: number
           address?: string | null
           created_at?: string
           deleted_at?: string | null
@@ -412,6 +442,7 @@ export type Database = {
           previous_school?: string | null
           program: string
           registration_fee?: number | null
+          registration_number: string
           roll_number: string
           section: string
           status?: Database["public"]["Enums"]["student_status"]
@@ -420,6 +451,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          academic_year?: number
           address?: string | null
           created_at?: string
           deleted_at?: string | null
@@ -434,6 +466,7 @@ export type Database = {
           previous_school?: string | null
           program?: string
           registration_fee?: number | null
+          registration_number?: string
           roll_number?: string
           section?: string
           status?: Database["public"]["Enums"]["student_status"]
@@ -556,6 +589,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      allocate_roll_number: {
+        Args: { p_grade: string; p_section: string; p_year: number }
+        Returns: number
+      }
       current_role: {
         Args: never
         Returns: Database["public"]["Enums"]["user_role"]
@@ -578,6 +615,7 @@ export type Database = {
           p_tuition_fee?: number
         }
         Returns: {
+          academic_year: number
           address: string | null
           created_at: string
           deleted_at: string | null
@@ -592,6 +630,7 @@ export type Database = {
           previous_school: string | null
           program: string
           registration_fee: number | null
+          registration_number: string
           roll_number: string
           section: string
           status: Database["public"]["Enums"]["student_status"]

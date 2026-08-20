@@ -50,19 +50,19 @@ beforeAll(async () => {
   await admin.from('profiles').insert({ id: parentBId, role: 'parent', email: parentBEmail, full_name: 'Phase 5 Test Parent B' })
 
   const { data: studentA1, error: sA1Error } = await admin.from('students').insert({
-    roll_number: `JE-TEST-P5-A1-${runId}`, full_name: 'Phase5 Child A1', program: 'Matriculation', grade_level: '9', section: 'A',
+    roll_number: `JE-TEST-P5-A1-${runId}`, registration_number: `JE-TEST-REG-P5-A1-${runId}`, academic_year: 2026, full_name: 'Phase5 Child A1', program: 'Matriculation', grade_level: '9', section: 'A',
   }).select('id').single()
   if (sA1Error || !studentA1) throw sA1Error ?? new Error('seed student A1 insert returned no row')
   studentA1Id = studentA1.id
 
   const { data: studentA2, error: sA2Error } = await admin.from('students').insert({
-    roll_number: `JE-TEST-P5-A2-${runId}`, full_name: 'Phase5 Child A2', program: 'Matriculation', grade_level: '9', section: 'B',
+    roll_number: `JE-TEST-P5-A2-${runId}`, registration_number: `JE-TEST-REG-P5-A2-${runId}`, academic_year: 2026, full_name: 'Phase5 Child A2', program: 'Matriculation', grade_level: '9', section: 'B',
   }).select('id').single()
   if (sA2Error || !studentA2) throw sA2Error ?? new Error('seed student A2 insert returned no row')
   studentA2Id = studentA2.id
 
   const { data: studentB1, error: sB1Error } = await admin.from('students').insert({
-    roll_number: `JE-TEST-P5-B1-${runId}`, full_name: 'Phase5 Child B1', program: 'Matriculation', grade_level: '9', section: 'C',
+    roll_number: `JE-TEST-P5-B1-${runId}`, registration_number: `JE-TEST-REG-P5-B1-${runId}`, academic_year: 2026, full_name: 'Phase5 Child B1', program: 'Matriculation', grade_level: '9', section: 'C',
   }).select('id').single()
   if (sB1Error || !studentB1) throw sB1Error ?? new Error('seed student B1 insert returned no row')
   studentB1Id = studentB1.id

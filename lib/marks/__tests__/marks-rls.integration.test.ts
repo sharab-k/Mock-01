@@ -49,7 +49,7 @@ beforeAll(async () => {
   }
 
   const { data: student, error: studentError } = await admin.from('students').insert({
-    roll_number: `JE-TEST-MARKS-${runId}`, full_name: 'Marks Test Student', program: 'Matriculation', grade_level: '9', section: 'A',
+    roll_number: `JE-TEST-MARKS-${runId}`, registration_number: `JE-TEST-REG-MARKS-${runId}`, academic_year: 2026, full_name: 'Marks Test Student', program: 'Matriculation', grade_level: '9', section: 'A',
   }).select('id').single()
   if (studentError || !student) throw studentError ?? new Error('seed student insert returned no row')
   studentId = student.id

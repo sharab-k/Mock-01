@@ -31,7 +31,7 @@ const testRecipient = `+1555${String(runId).slice(-7)}`
 
 beforeAll(async () => {
   const { data, error } = await admin.from('students').insert({
-    roll_number: `JE-TEST-NOTIFY-${runId}`, full_name: 'Notification Test Student', program: 'Matriculation', grade_level: '9', section: 'C',
+    roll_number: `JE-TEST-NOTIFY-${runId}`, registration_number: `JE-TEST-REG-NOTIFY-${runId}`, academic_year: 2026, full_name: 'Notification Test Student', program: 'Matriculation', grade_level: '9', section: 'C',
   }).select('id').single()
   if (error || !data) throw error ?? new Error('seed student insert returned no row')
   studentId = data.id
