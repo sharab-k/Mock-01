@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useState } from 'react'
 import StatCard from '@/components/dashboard/StatCard'
-import { UserCheck, UserX, Clock, Percent, MessageSquare, TrendingUp } from 'lucide-react'
+import { UserCheck, UserX, Clock, Percent, MessageSquare, TrendingUp, Clock3 } from 'lucide-react'
 import { sectionsForGrade } from '@/lib/students/constants'
 
 export type ClassAttendanceStat = { present: number; absent: number; late: number; total: number }
@@ -68,6 +68,31 @@ export default function AttendanceDashboardContent({ basePath = '/attendance', t
 
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
         {STATS.map(s => <StatCard key={s.label} {...s} />)}
+      </div>
+
+      {/* ── Class timings & late policy ──────────────────────────────────── */}
+      <div className="bg-white rounded-2xl border border-neutral-200 shadow-1 p-5">
+        <div className="flex items-center gap-2.5 mb-4">
+          <Clock3 size={15} className="text-ink-600" />
+          <h2 className="text-[14px] font-semibold text-neutral-900">Class Timings &amp; Late Policy</h2>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="rounded-xl bg-neutral-50 border border-neutral-100 p-3.5">
+            <p className="text-[11.5px] font-semibold text-neutral-700">Class IX &amp; X — Girls</p>
+            <p className="text-[13px] font-mono text-neutral-900 mt-1">4:00 PM – 6:30 PM</p>
+            <p className="text-[11.5px] text-warning mt-1">Late after 4:15 PM</p>
+          </div>
+          <div className="rounded-xl bg-neutral-50 border border-neutral-100 p-3.5">
+            <p className="text-[11.5px] font-semibold text-neutral-700">Class IX &amp; X — Boys</p>
+            <p className="text-[13px] font-mono text-neutral-900 mt-1">6:30 PM – 9:00 PM</p>
+            <p className="text-[11.5px] text-warning mt-1">Late after 6:45 PM</p>
+          </div>
+          <div className="rounded-xl bg-neutral-50 border border-neutral-100 p-3.5">
+            <p className="text-[11.5px] font-semibold text-neutral-700">Class XI &amp; XII</p>
+            <p className="text-[13px] font-mono text-neutral-900 mt-1">Per class schedule</p>
+            <p className="text-[11.5px] text-warning mt-1">Late 15 mins after class starts</p>
+          </div>
+        </div>
       </div>
 
       {/* ── Class / Section grid ─────────────────────────────────────────── */}

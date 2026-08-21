@@ -54,6 +54,9 @@ type Props = {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 export default function AdmissionsClassDetailContent({ grade, section, basePath = '/admissions', students: initialStudents }: Props) {
+  // Server-side re-checks the caller's actual role regardless — this only
+  // decides whether to show Roll No./G.R. No. as editable in the UI.
+  const isSuperAdmin = basePath.startsWith('/super-admin')
   const [students,      setStudents]      = useState<ClassDetailStudent[]>(initialStudents)
   const [editStudent,   setEditStudent]   = useState<ClassDetailStudent | null>(null)
   const [editName,      setEditName]      = useState('')
@@ -66,6 +69,7 @@ export default function AdmissionsClassDetailContent({ grade, section, basePath 
   const [editLastQualification,  setEditLastQualification]  = useState('')
   const [editAddress,            setEditAddress]            = useState('')
   const [editGrNumber,           setEditGrNumber]           = useState('')
+  const [editRollNumber,         setEditRollNumber]         = useState('')
   const [editRegistrationFee,    setEditRegistrationFee]    = useState('')
   const [editTuitionFee,         setEditTuitionFee]         = useState('')
   const [editParentName,           setEditParentName]           = useState('')
@@ -91,6 +95,7 @@ export default function AdmissionsClassDetailContent({ grade, section, basePath 
     setEditLastQualification(s.lastQualification ?? '')
     setEditAddress(s.address ?? '')
     setEditGrNumber(s.grNumber ?? '')
+    setEditRollNumber(s.roll)
     setEditRegistrationFee(s.registrationFee !== null ? String(s.registrationFee) : '')
     setEditTuitionFee(s.tuitionFee !== null ? String(s.tuitionFee) : '')
     setEditParentName(s.parentName ?? '')
@@ -123,6 +128,7 @@ export default function AdmissionsClassDetailContent({ grade, section, basePath 
       lastQualification: editLastQualification || undefined,
       address: editAddress || undefined,
       grNumber: editGrNumber || undefined,
+      rollNumber: isSuperAdmin ? (editRollNumber || undefined) : undefined,
       registrationFee: editRegistrationFee ? Number(editRegistrationFee) : undefined,
       tuitionFee: editTuitionFee ? Number(editTuitionFee) : undefined,
     })
@@ -160,7 +166,8 @@ export default function AdmissionsClassDetailContent({ grade, section, basePath 
         isLate: editIsLate, stream: editStream || null,
         guardianProfession: editGuardianProfession || null, previousSchool: editPreviousSchool || null,
         lastQualification: editLastQualification || null, address: editAddress || null,
-        grNumber: p.grNumber || editGrNumber || null,
+        grNumber: isSuperAdmin ? (editGrNumber || null) : (p.grNumber || editGrNumber || null),
+        roll: isSuperAdmin && editRollNumber ? editRollNumber : p.roll,
         registrationFee: editRegistrationFee ? Number(editRegistrationFee) : null,
         tuitionFee: editTuitionFee ? Number(editTuitionFee) : null,
         parentName: editParentName || null, parentPhone: editParentPhone || null,
@@ -367,19 +374,26 @@ export default function AdmissionsClassDetailContent({ grade, section, basePath 
                   <input value={editName} onChange={e => setEditName(e.target.value)} className="w-full text-[13px] border border-neutral-200 rounded-xl px-4 py-3 text-neutral-800 focus:outline-none focus:ring-2 focus:ring-ink-200" />
                 </div>
                 <div>
-                  <label className="block text-[12px] font-semibold text-neutral-700 mb-1.5">Roll Number</label>
-                  <input defaultValue={editStudent.roll} className="w-full text-[13px] border border-neutral-200 rounded-xl px-4 py-3 text-neutral-500 bg-neutral-50 font-mono focus:outline-none cursor-not-allowed" readOnly />
+                  <label className="block text-[12px] font-semibold text-neutral-700 mb-1.5">
+                    Roll Number {!isSuperAdmin && <span className="text-neutral-400 font-normal">(Super Admin only)</span>}
+                  </label>
+                  <input
+                    value={editRollNumber}
+                    onChange={e => setEditRollNumber(e.target.value)}
+                    readOnly={!isSuperAdmin}
+                    className={`w-full text-[13px] border border-neutral-200 rounded-xl px-4 py-3 font-mono focus:outline-none ${!isSuperAdmin ? 'text-neutral-500 bg-neutral-50 cursor-not-allowed' : 'text-neutral-800 focus:ring-2 focus:ring-ink-200'}`}
+                  />
                 </div>
                 <div>
                   <label className="block text-[12px] font-semibold text-neutral-700 mb-1.5">
-                    G.R. No. {editStudent.grNumber && <span className="text-neutral-400 font-normal">(locked once set)</span>}
+                    G.R. No. {!isSuperAdmin && editStudent.grNumber && <span className="text-neutral-400 font-normal">(locked once set)</span>}
                   </label>
                   <input
                     value={editGrNumber}
                     onChange={e => setEditGrNumber(e.target.value)}
-                    readOnly={!!editStudent.grNumber}
+                    readOnly={!isSuperAdmin && !!editStudent.grNumber}
                     placeholder="e.g. 4821"
-                    className={`w-full text-[13px] border border-neutral-200 rounded-xl px-4 py-3 focus:outline-none ${editStudent.grNumber ? 'text-neutral-500 bg-neutral-50 font-mono cursor-not-allowed' : 'text-neutral-800 focus:ring-2 focus:ring-ink-200'}`}
+                    className={`w-full text-[13px] border border-neutral-200 rounded-xl px-4 py-3 focus:outline-none ${!isSuperAdmin && editStudent.grNumber ? 'text-neutral-500 bg-neutral-50 font-mono cursor-not-allowed' : 'text-neutral-800 focus:ring-2 focus:ring-ink-200'}`}
                   />
                 </div>
                 <div>

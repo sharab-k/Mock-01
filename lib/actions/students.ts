@@ -13,11 +13,11 @@ import type { Database } from '@/types/supabase'
 async function requireAdmissionsCaller(supabaseOverride?: SupabaseClient<Database>) {
   const supabase = supabaseOverride ?? await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { supabase, userId: null, authorized: false as const }
+  if (!user) return { supabase, userId: null, authorized: false as const, isSuperAdmin: false }
 
   const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
   const authorized = !!profile && ['admissions_admin', 'super_admin'].includes(profile.role)
-  return { supabase, userId: user.id, authorized }
+  return { supabase, userId: user.id, authorized, isSuperAdmin: profile?.role === 'super_admin' }
 }
 
 // Mirrors EnrolInputSchema (lib/actions/enrol-student.ts) — Super Admin and
@@ -39,9 +39,14 @@ const UpdateStudentSchema = z.object({
   previousSchool: z.string().max(300).optional(),
   lastQualification: z.string().max(200).optional(),
   address: z.string().max(500).optional(),
-  // G.R. No. is locked once set (see updateStudentAction below) — only ever
-  // applied if the record doesn't already have one.
+  // G.R. No. is locked once set for everyone except Super Admin (see
+  // updateStudentAction below, which checks the caller's actual role rather
+  // than trusting the client) — Admissions Admin can still assign it once if
+  // it's still unset, but can't overwrite an existing value.
   grNumber: z.string().min(1).max(50).optional(),
+  // Roll number is auto-generated at enrolment and never otherwise
+  // editable — Super Admin only, same role check as gr_number above.
+  rollNumber: z.string().min(1).max(50).optional(),
   registrationFee: z.number().min(0).max(10_000_000).optional(),
   tuitionFee: z.number().min(0).max(10_000_000).optional(),
 }).superRefine((data, ctx) => {
@@ -60,7 +65,7 @@ export async function updateStudentAction(
   const data = parsed.data
   const grade = PROGRAM_GRADE[data.program as Program]
 
-  const { supabase, authorized } = await requireAdmissionsCaller(supabaseOverride)
+  const { supabase, authorized, isSuperAdmin } = await requireAdmissionsCaller(supabaseOverride)
   if (!authorized) return { ok: false as const, error: 'Not authorized.' }
 
   const { error } = await supabase
@@ -83,19 +88,34 @@ export async function updateStudentAction(
 
   if (error) return { ok: false as const, error: 'Could not update the student record.' }
 
-  // G.R. No. is permanent once assigned — this only ever touches a row where
-  // it's still NULL, so it can never be overwritten after the fact. The
-  // `.is('gr_number', null)` guard makes this atomic and race-safe: if it
-  // was already set (by this or a concurrent request), the update simply
-  // matches zero rows instead of needing a separate read-then-write check.
   if (data.grNumber) {
-    const { error: grError } = await supabase
-      .from('students')
-      .update({ gr_number: data.grNumber })
-      .eq('id', data.id)
-      .is('gr_number', null)
-    if (grError?.code === '23505') {
-      return { ok: false as const, error: 'That G.R. No. is already assigned to another student.' }
+    if (isSuperAdmin) {
+      // Super Admin can correct an already-assigned G.R. No. directly.
+      const { error: grError } = await supabase.from('students').update({ gr_number: data.grNumber }).eq('id', data.id)
+      if (grError?.code === '23505') {
+        return { ok: false as const, error: 'That G.R. No. is already assigned to another student.' }
+      }
+    } else {
+      // Everyone else: permanent once assigned. Only ever touches a row
+      // that's still NULL — the `.is('gr_number', null)` guard makes this
+      // atomic and race-safe, matching zero rows if it was already set
+      // instead of needing a separate read-then-write check.
+      const { error: grError } = await supabase
+        .from('students')
+        .update({ gr_number: data.grNumber })
+        .eq('id', data.id)
+        .is('gr_number', null)
+      if (grError?.code === '23505') {
+        return { ok: false as const, error: 'That G.R. No. is already assigned to another student.' }
+      }
+    }
+  }
+
+  // Roll number is otherwise auto-generated and never editable — Super Admin only.
+  if (data.rollNumber && isSuperAdmin) {
+    const { error: rollError } = await supabase.from('students').update({ roll_number: data.rollNumber }).eq('id', data.id)
+    if (rollError?.code === '23505') {
+      return { ok: false as const, error: 'That roll number is already in use for this class and year.' }
     }
   }
 
