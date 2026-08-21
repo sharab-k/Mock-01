@@ -61,6 +61,36 @@ export async function fetchParentContactsByStudentId(studentIds: string[]): Prom
   return contactByStudent
 }
 
+export type ParentEditContact = { id: string; name: string; phone: string; secondaryPhone: string | null; whatsapp2: string | null }
+
+// Same rationale as fetchParentContactsByStudentId — carries the parent's
+// id and every contact field, for the student edit form's "Parent /
+// Guardian" section (updateParentContactAction needs the parent's id to
+// target the right profiles row).
+export async function fetchParentEditContactsByStudentId(studentIds: string[]): Promise<Map<string, ParentEditContact>> {
+  const contactByStudent = new Map<string, ParentEditContact>()
+  if (studentIds.length === 0) return contactByStudent
+
+  const admin = createAdminClient()
+  const { data: links } = await admin
+    .from('parent_student_links')
+    .select('student_id, profiles(id, full_name, phone, secondary_phone, whatsapp_number_2)')
+    .in('student_id', studentIds)
+
+  for (const link of links ?? []) {
+    if (link.profiles) {
+      contactByStudent.set(link.student_id, {
+        id: link.profiles.id,
+        name: link.profiles.full_name ?? '—',
+        phone: link.profiles.phone ?? '',
+        secondaryPhone: link.profiles.secondary_phone,
+        whatsapp2: link.profiles.whatsapp_number_2,
+      })
+    }
+  }
+  return contactByStudent
+}
+
 export type ParentDirectoryRow = {
   key: string
   name: string

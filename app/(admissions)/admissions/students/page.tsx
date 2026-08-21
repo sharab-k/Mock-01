@@ -8,7 +8,7 @@ export default async function AdmissionsStudentsPage() {
     .from('students')
     .select('id, roll_number, full_name, grade_level, section, status')
     .is('deleted_at', null)
-    .order('created_at', { ascending: false })
+    .order('gr_number', { ascending: true })
 
   const studentIds = (rows ?? []).map((s) => s.id)
   const [parentByStudent, parentIdByStudent] = await Promise.all([

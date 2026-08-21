@@ -149,6 +149,54 @@ export type Database = {
           },
         ]
       }
+      fee_payments: {
+        Row: {
+          created_at: string
+          id: string
+          marked_by: string | null
+          month: number
+          status: Database["public"]["Enums"]["fee_status"]
+          student_id: string
+          updated_at: string
+          year: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          marked_by?: string | null
+          month: number
+          status?: Database["public"]["Enums"]["fee_status"]
+          student_id: string
+          updated_at?: string
+          year: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          marked_by?: string | null
+          month?: number
+          status?: Database["public"]["Enums"]["fee_status"]
+          student_id?: string
+          updated_at?: string
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fee_payments_marked_by_fkey"
+            columns: ["marked_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fee_payments_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       marks: {
         Row: {
           created_at: string
@@ -655,6 +703,7 @@ export type Database = {
         | "enrolled"
         | "declined"
       exam_type: "monthly" | "half_yearly" | "final"
+      fee_status: "paid" | "unpaid"
       notice_audience: "All" | "Students" | "Parents" | "Staff"
       notice_category: "Academic" | "Event" | "Holiday" | "Admissions"
       notification_channel: "whatsapp" | "sms"
@@ -806,6 +855,7 @@ export const Constants = {
         "declined",
       ],
       exam_type: ["monthly", "half_yearly", "final"],
+      fee_status: ["paid", "unpaid"],
       notice_audience: ["All", "Students", "Parents", "Staff"],
       notice_category: ["Academic", "Event", "Holiday", "Admissions"],
       notification_channel: ["whatsapp", "sms"],

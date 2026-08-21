@@ -9,6 +9,7 @@ async function fetchStudents(): Promise<MarksStudentRow[]> {
     .select('id, full_name, roll_number, grade_level, section')
     .is('deleted_at', null)
     .eq('status', 'active')
+    .order('gr_number', { ascending: true })
 
   const averages = await fetchStudentAverages()
 

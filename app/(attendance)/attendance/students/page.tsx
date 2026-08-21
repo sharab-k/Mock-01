@@ -9,6 +9,7 @@ async function fetchStudents(): Promise<GroupedStudent[]> {
     .select('id, roll_number, full_name, grade_level, section')
     .is('deleted_at', null)
     .eq('status', 'active')
+    .order('gr_number', { ascending: true })
 
   const pctByStudent = await fetchAttendancePercentages()
 

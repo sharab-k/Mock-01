@@ -27,11 +27,18 @@ export type DirectoryStudent = {
   registration_fee: number | null
   tuition_fee: number | null
   stream: string | null
+  /** Current calendar month's fee status — see lib/fees/roster.ts. */
+  fee_status: 'paid' | 'unpaid'
 }
 
 const STATUS_PILL: Record<string, string> = {
   Active: 'bg-success-bg text-success',
   Inactive: 'bg-neutral-100 text-neutral-500',
+}
+
+const FEE_STATUS_PILL: Record<string, string> = {
+  paid: 'bg-success-bg text-success',
+  unpaid: 'bg-danger-bg text-danger',
 }
 
 const INITIALS = (name: string) => name.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase()
@@ -41,6 +48,7 @@ export default function SuperAdminStudentDirectoryContent({ students: initialStu
   const [query, setQuery] = useState('')
   const [gradeFilter, setGradeFilter] = useState('All Grades')
   const [statusFilter, setStatusFilter] = useState('All Statuses')
+  const [feeFilter, setFeeFilter] = useState('All Fees')
   const [selected, setSelected] = useState<DirectoryStudent | null>(null)
   const [summary, setSummary] = useState<StudentAcademicSummary | null>(null)
   const [summaryLoading, setSummaryLoading] = useState(false)
@@ -54,9 +62,10 @@ export default function SuperAdminStudentDirectoryContent({ students: initialStu
       const matchesQuery = !q || s.full_name.toLowerCase().includes(q) || s.roll_number.toLowerCase().includes(q)
       const matchesGrade = gradeFilter === 'All Grades' || s.grade === gradeFilter
       const matchesStatus = statusFilter === 'All Statuses' || s.status === statusFilter
-      return matchesQuery && matchesGrade && matchesStatus
+      const matchesFee = feeFilter === 'All Fees' || (feeFilter === 'Paid' ? s.fee_status === 'paid' : s.fee_status === 'unpaid')
+      return matchesQuery && matchesGrade && matchesStatus && matchesFee
     })
-  }, [students, query, gradeFilter, statusFilter])
+  }, [students, query, gradeFilter, statusFilter, feeFilter])
 
   const openStudent = async (s: DirectoryStudent) => {
     setSelected(s)
@@ -116,8 +125,13 @@ export default function SuperAdminStudentDirectoryContent({ students: initialStu
           <option>Active</option>
           <option>Inactive</option>
         </select>
-        {(query || gradeFilter !== 'All Grades' || statusFilter !== 'All Statuses') && (
-          <button onClick={() => { setQuery(''); setGradeFilter('All Grades'); setStatusFilter('All Statuses') }} className="text-[11.5px] text-ink-600 font-medium">Clear ×</button>
+        <select value={feeFilter} onChange={(e) => setFeeFilter(e.target.value)} className="text-[12.5px] border border-neutral-200 rounded-xl px-3 py-2.5 text-neutral-700 bg-white focus:outline-none focus:ring-1 focus:ring-ink-300 cursor-pointer">
+          <option>All Fees</option>
+          <option>Paid</option>
+          <option>Unpaid</option>
+        </select>
+        {(query || gradeFilter !== 'All Grades' || statusFilter !== 'All Statuses' || feeFilter !== 'All Fees') && (
+          <button onClick={() => { setQuery(''); setGradeFilter('All Grades'); setStatusFilter('All Statuses'); setFeeFilter('All Fees') }} className="text-[11.5px] text-ink-600 font-medium">Clear ×</button>
         )}
       </div>
 
@@ -131,6 +145,7 @@ export default function SuperAdminStudentDirectoryContent({ students: initialStu
                 <th className="px-3 py-3 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">Class</th>
                 <th className="px-3 py-3 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider hidden sm:table-cell">Programme</th>
                 <th className="px-3 py-3 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">Status</th>
+                <th className="px-3 py-3 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">Fees</th>
                 <th className="px-3 py-3 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider hidden md:table-cell">Enrolled</th>
               </tr>
             </thead>
@@ -153,11 +168,14 @@ export default function SuperAdminStudentDirectoryContent({ students: initialStu
                   <td className="px-3 py-3.5">
                     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold ${STATUS_PILL[s.status]}`}>{s.status}</span>
                   </td>
+                  <td className="px-3 py-3.5">
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold ${FEE_STATUS_PILL[s.fee_status]}`}>{s.fee_status === 'paid' ? 'Paid' : 'Unpaid'}</span>
+                  </td>
                   <td className="px-3 py-3.5 text-neutral-400 font-mono text-[12px] hidden md:table-cell">{s.enrollment_date}</td>
                 </tr>
               ))}
               {filtered.length === 0 && (
-                <tr><td colSpan={5} className="px-5 py-10 text-center text-[13px] text-neutral-400">No students match this filter.</td></tr>
+                <tr><td colSpan={6} className="px-5 py-10 text-center text-[13px] text-neutral-400">No students match this filter.</td></tr>
               )}
             </tbody>
           </table>

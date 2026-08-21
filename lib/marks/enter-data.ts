@@ -6,7 +6,7 @@ export type ExistingMark = { student_id: string; subject: string; exam_type: str
 export async function fetchMarksEntryData(): Promise<{ roster: EnterRosterStudent[]; existingMarks: ExistingMark[] }> {
   const supabase = await createClient()
   const [studentsRes, marksRes] = await Promise.all([
-    supabase.from('students').select('id, full_name, roll_number, grade_level, section').is('deleted_at', null).eq('status', 'active'),
+    supabase.from('students').select('id, full_name, roll_number, grade_level, section').is('deleted_at', null).eq('status', 'active').order('gr_number', { ascending: true }),
     supabase.from('marks').select('student_id, subject, exam_type, score'),
   ])
 

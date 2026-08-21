@@ -26,6 +26,7 @@ export async function fetchClassMarks(grade: string, section: string): Promise<C
     .eq('section', section)
     .is('deleted_at', null)
     .eq('status', 'active')
+    .order('gr_number', { ascending: true })
 
   const studentIds = (students ?? []).map((s) => s.id)
   if (studentIds.length === 0) return []

@@ -9,9 +9,19 @@ export default async function SuperAdminStudentsPage() {
     .from('students')
     .select('id, roll_number, registration_number, full_name, grade_level, section, program, status, enrollment_date, is_late_enrollment, guardian_profession, previous_school, last_qualification, address, gr_number, registration_fee, tuition_fee, stream')
     .is('deleted_at', null)
-    .order('created_at', { ascending: false })
+    .order('gr_number', { ascending: true })
 
   const contactByStudent = await fetchParentContactsByStudentId((rows ?? []).map((s) => s.id))
+
+  // Current month's fee status, for the directory's "Fee Status" filter —
+  // absence of a row means unpaid, same convention as lib/fees/roster.ts.
+  const now = new Date()
+  const { data: payments } = await supabase
+    .from('fee_payments')
+    .select('student_id, status')
+    .eq('year', now.getFullYear())
+    .eq('month', now.getMonth() + 1)
+  const feeStatusByStudent = new Map((payments ?? []).map((p) => [p.student_id, p.status]))
 
   const students: DirectoryStudent[] = (rows ?? []).map((s) => ({
     id: s.id,
@@ -34,6 +44,7 @@ export default async function SuperAdminStudentsPage() {
     registration_fee: s.registration_fee,
     tuition_fee: s.tuition_fee,
     stream: s.stream,
+    fee_status: feeStatusByStudent.get(s.id) ?? 'unpaid',
   }))
 
   return <SuperAdminStudentDirectoryContent students={students} grades={GRADES} />

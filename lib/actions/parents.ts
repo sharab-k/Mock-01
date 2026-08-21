@@ -53,3 +53,53 @@ export async function setParentPasswordAction(
 
   return { ok: true as const }
 }
+
+const UpdateParentContactSchema = z.object({
+  id: z.string().uuid(),
+  fullName: z.string().min(1).max(200),
+  phone: z.string().min(1).max(20),
+  secondaryPhone: z.string().max(20).optional(),
+  whatsapp2: z.string().max(20).optional(),
+})
+
+// Edits a linked parent's contact details from the student edit form (part
+// of the "whole admission form" a Super Admin or Admissions Admin can now
+// revise post-enrolment) — same service-role requirement as
+// setParentPasswordAction, since profiles has no RLS letting one user
+// update another's row.
+export async function updateParentContactAction(
+  input: z.infer<typeof UpdateParentContactSchema>,
+  supabaseOverride?: SupabaseClient<Database>,
+) {
+  const parsed = UpdateParentContactSchema.safeParse(input)
+  if (!parsed.success) return { ok: false as const, error: 'Invalid request.' }
+
+  const { supabase, userId, authorized } = await requireParentPasswordCaller(supabaseOverride)
+  if (!authorized || !userId) return { ok: false as const, error: 'Not authorized.' }
+
+  const admin = createAdminClient()
+  const { data: target } = await admin
+    .from('profiles')
+    .select('full_name')
+    .eq('id', parsed.data.id)
+    .eq('role', 'parent')
+    .maybeSingle()
+
+  if (!target) return { ok: false as const, error: 'Parent account not found.' }
+
+  const { error } = await admin
+    .from('profiles')
+    .update({
+      full_name: parsed.data.fullName,
+      phone: parsed.data.phone,
+      secondary_phone: parsed.data.secondaryPhone || null,
+      whatsapp_number_2: parsed.data.whatsapp2 || null,
+    })
+    .eq('id', parsed.data.id)
+
+  if (error) return { ok: false as const, error: 'Could not update the parent contact details.' }
+
+  await logAction(supabase, userId, `Updated parent contact — ${parsed.data.fullName}`)
+
+  return { ok: true as const }
+}

@@ -8,7 +8,10 @@ import {
   Pencil, Trash2, CheckCircle2, X,
 } from 'lucide-react'
 import { updateStudentAction, deleteStudentAction } from '@/lib/actions/students'
-import { sectionsForGrade, type Grade, type Section } from '@/lib/students/constants'
+import { updateParentContactAction } from '@/lib/actions/parents'
+import { sectionsForGrade, PROGRAM_GRADE, PROGRAMS, type Grade, type Section, type Program } from '@/lib/students/constants'
+
+const STREAMS = ['Pre-Engineering', 'Pre-Medical', 'Computer Science', 'Commerce'] as const
 
 export type ClassDetailStudent = {
   id: string
@@ -16,7 +19,21 @@ export type ClassDetailStudent = {
   roll: string
   grade: string
   section: string
+  program: string
+  isLate: boolean
+  stream: string | null
+  guardianProfession: string | null
+  previousSchool: string | null
+  lastQualification: string | null
+  address: string | null
+  grNumber: string | null
+  registrationFee: number | null
+  tuitionFee: number | null
+  parentId: string | null
   parentName: string | null
+  parentPhone: string | null
+  parentSecondaryPhone: string | null
+  parentWhatsapp2: string | null
   credentialSent: boolean
   pdfReady: boolean
   date: string
@@ -40,42 +57,115 @@ export default function AdmissionsClassDetailContent({ grade, section, basePath 
   const [students,      setStudents]      = useState<ClassDetailStudent[]>(initialStudents)
   const [editStudent,   setEditStudent]   = useState<ClassDetailStudent | null>(null)
   const [editName,      setEditName]      = useState('')
-  const [editGrade,     setEditGrade]     = useState('9')
-  const [editSection,   setEditSection]   = useState<string>(sectionsForGrade('9')[0])
+  const [editProgram,   setEditProgram]   = useState<Program>(PROGRAMS[0])
+  const [editSection,   setEditSection]   = useState<string>(sectionsForGrade(PROGRAM_GRADE[PROGRAMS[0]])[0])
+  const [editIsLate,    setEditIsLate]    = useState(false)
+  const [editStream,    setEditStream]    = useState<typeof STREAMS[number] | ''>('')
+  const [editGuardianProfession, setEditGuardianProfession] = useState('')
+  const [editPreviousSchool,     setEditPreviousSchool]     = useState('')
+  const [editLastQualification,  setEditLastQualification]  = useState('')
+  const [editAddress,            setEditAddress]            = useState('')
+  const [editGrNumber,           setEditGrNumber]           = useState('')
+  const [editRegistrationFee,    setEditRegistrationFee]    = useState('')
+  const [editTuitionFee,         setEditTuitionFee]         = useState('')
+  const [editParentName,           setEditParentName]           = useState('')
+  const [editParentPhone,          setEditParentPhone]          = useState('')
+  const [editParentSecondaryPhone, setEditParentSecondaryPhone] = useState('')
+  const [editParentWhatsapp2,      setEditParentWhatsapp2]      = useState('')
   const [saving,        setSaving]        = useState(false)
+  const [saveError,     setSaveError]     = useState('')
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
+
+  const editGrade = PROGRAM_GRADE[editProgram]
 
   const openEdit = (s: ClassDetailStudent) => {
     setEditStudent(s)
+    setSaveError('')
     setEditName(s.name)
-    setEditGrade(s.grade)
+    setEditProgram((PROGRAMS.includes(s.program as Program) ? s.program : PROGRAMS[0]) as Program)
     setEditSection(s.section)
+    setEditIsLate(s.isLate)
+    setEditStream((s.stream as typeof editStream) ?? '')
+    setEditGuardianProfession(s.guardianProfession ?? '')
+    setEditPreviousSchool(s.previousSchool ?? '')
+    setEditLastQualification(s.lastQualification ?? '')
+    setEditAddress(s.address ?? '')
+    setEditGrNumber(s.grNumber ?? '')
+    setEditRegistrationFee(s.registrationFee !== null ? String(s.registrationFee) : '')
+    setEditTuitionFee(s.tuitionFee !== null ? String(s.tuitionFee) : '')
+    setEditParentName(s.parentName ?? '')
+    setEditParentPhone(s.parentPhone ?? '')
+    setEditParentSecondaryPhone(s.parentSecondaryPhone ?? '')
+    setEditParentWhatsapp2(s.parentWhatsapp2 ?? '')
   }
 
-  // Section options depend on grade (9-10 are Boys/Girls, 11-12 are A-D) —
-  // reset to the first valid option whenever the modal's grade selection changes.
+  // Section options depend on grade (9-10 are Girls/Boys, 11-12 are A-E) —
+  // reset to the first valid option whenever the modal's programme changes.
   useEffect(() => {
-    const valid = sectionsForGrade(editGrade as Grade)
+    const valid = sectionsForGrade(editGrade)
     if (!valid.includes(editSection as Section)) setEditSection(valid[0])
   }, [editGrade, editSection])
 
   const saveEdit = async () => {
     if (!editStudent) return
     setSaving(true)
+    setSaveError('')
+
     const outcome = await updateStudentAction({
       id: editStudent.id,
       fullName: editName,
-      grade: editGrade as Grade,
+      program: editProgram,
       section: editSection as Section,
+      isLate: editIsLate,
+      stream: editStream || undefined,
+      guardianProfession: editGuardianProfession || undefined,
+      previousSchool: editPreviousSchool || undefined,
+      lastQualification: editLastQualification || undefined,
+      address: editAddress || undefined,
+      grNumber: editGrNumber || undefined,
+      registrationFee: editRegistrationFee ? Number(editRegistrationFee) : undefined,
+      tuitionFee: editTuitionFee ? Number(editTuitionFee) : undefined,
     })
+
+    if (!outcome.ok) {
+      setSaving(false)
+      setSaveError(outcome.error)
+      return
+    }
+
+    if (editStudent.parentId) {
+      const parentOutcome = await updateParentContactAction({
+        id: editStudent.parentId,
+        fullName: editParentName,
+        phone: editParentPhone,
+        secondaryPhone: editParentSecondaryPhone || undefined,
+        whatsapp2: editParentWhatsapp2 || undefined,
+      })
+      if (!parentOutcome.ok) {
+        setSaving(false)
+        setSaveError(parentOutcome.error)
+        return
+      }
+    }
+
     setSaving(false)
-    if (!outcome.ok) return
 
     if (editGrade !== grade || editSection !== section) {
       // Moved out of this class-section view — drop it from the current roster.
       setStudents(prev => prev.filter(p => p.id !== editStudent.id))
     } else {
-      setStudents(prev => prev.map(p => p.id === editStudent.id ? { ...p, name: editName, grade: editGrade, section: editSection } : p))
+      setStudents(prev => prev.map(p => p.id === editStudent.id ? {
+        ...p,
+        name: editName, grade: editGrade, section: editSection, program: editProgram,
+        isLate: editIsLate, stream: editStream || null,
+        guardianProfession: editGuardianProfession || null, previousSchool: editPreviousSchool || null,
+        lastQualification: editLastQualification || null, address: editAddress || null,
+        grNumber: p.grNumber || editGrNumber || null,
+        registrationFee: editRegistrationFee ? Number(editRegistrationFee) : null,
+        tuitionFee: editTuitionFee ? Number(editTuitionFee) : null,
+        parentName: editParentName || null, parentPhone: editParentPhone || null,
+        parentSecondaryPhone: editParentSecondaryPhone || null, parentWhatsapp2: editParentWhatsapp2 || null,
+      } : p))
     }
     setEditStudent(null)
   }
@@ -248,8 +338,8 @@ export default function AdmissionsClassDetailContent({ grade, section, basePath 
       {editStudent && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4">
           <div className="fixed inset-0 bg-neutral-900/50 backdrop-blur-sm" onClick={() => setEditStudent(null)} />
-          <div className="relative w-full sm:max-w-lg bg-white rounded-3xl shadow-2xl z-10 overflow-hidden">
-            <div className="flex items-center justify-between px-6 py-5 border-b border-neutral-100">
+          <div className="relative w-full sm:max-w-2xl bg-white rounded-3xl shadow-2xl z-10 overflow-hidden max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between px-6 py-5 border-b border-neutral-100 shrink-0">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-xl bg-ink-100 flex items-center justify-center">
                   <Pencil size={16} className="text-ink-600" />
@@ -263,7 +353,14 @@ export default function AdmissionsClassDetailContent({ grade, section, basePath 
                 <X size={16} />
               </button>
             </div>
-            <div className="px-6 py-5 space-y-4">
+            <div className="px-6 py-5 space-y-5 overflow-y-auto">
+              {saveError && (
+                <div className="bg-danger-bg border border-danger/20 rounded-xl px-4 py-3">
+                  <p className="text-[12.5px] text-danger leading-snug">{saveError}</p>
+                </div>
+              )}
+
+              <p className="text-[11.5px] font-semibold text-neutral-400 uppercase tracking-wider">Student Information</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[12px] font-semibold text-neutral-700 mb-1.5">Full Name</label>
@@ -274,26 +371,131 @@ export default function AdmissionsClassDetailContent({ grade, section, basePath 
                   <input defaultValue={editStudent.roll} className="w-full text-[13px] border border-neutral-200 rounded-xl px-4 py-3 text-neutral-500 bg-neutral-50 font-mono focus:outline-none cursor-not-allowed" readOnly />
                 </div>
                 <div>
-                  <label className="block text-[12px] font-semibold text-neutral-700 mb-1.5">Grade</label>
-                  <select value={editGrade} onChange={e => setEditGrade(e.target.value)} className="w-full text-[13px] border border-neutral-200 rounded-xl px-4 py-3 text-neutral-800 bg-white focus:outline-none focus:ring-2 focus:ring-ink-200 cursor-pointer">
-                    {['9', '10', '11', '12'].map(g => <option key={g} value={g}>Grade {g}</option>)}
+                  <label className="block text-[12px] font-semibold text-neutral-700 mb-1.5">
+                    G.R. No. {editStudent.grNumber && <span className="text-neutral-400 font-normal">(locked once set)</span>}
+                  </label>
+                  <input
+                    value={editGrNumber}
+                    onChange={e => setEditGrNumber(e.target.value)}
+                    readOnly={!!editStudent.grNumber}
+                    placeholder="e.g. 4821"
+                    className={`w-full text-[13px] border border-neutral-200 rounded-xl px-4 py-3 focus:outline-none ${editStudent.grNumber ? 'text-neutral-500 bg-neutral-50 font-mono cursor-not-allowed' : 'text-neutral-800 focus:ring-2 focus:ring-ink-200'}`}
+                  />
+                </div>
+                <div>
+                  <label className="block text-[12px] font-semibold text-neutral-700 mb-1.5">Programme</label>
+                  <select value={editProgram} onChange={e => setEditProgram(e.target.value as Program)} className="w-full text-[13px] border border-neutral-200 rounded-xl px-4 py-3 text-neutral-800 bg-white focus:outline-none focus:ring-2 focus:ring-ink-200 cursor-pointer">
+                    {PROGRAMS.map(p => <option key={p} value={p}>{p}</option>)}
                   </select>
                 </div>
                 <div>
                   <label className="block text-[12px] font-semibold text-neutral-700 mb-1.5">Section</label>
                   <select value={editSection} onChange={e => setEditSection(e.target.value)} className="w-full text-[13px] border border-neutral-200 rounded-xl px-4 py-3 text-neutral-800 bg-white focus:outline-none focus:ring-2 focus:ring-ink-200 cursor-pointer">
-                    {sectionsForGrade(editGrade as Grade).map(s => <option key={s} value={s}>Section {s}</option>)}
+                    {sectionsForGrade(editGrade).map(s => <option key={s} value={s}>Section {s}</option>)}
                   </select>
                 </div>
-                <div className="sm:col-span-2">
-                  <label className="block text-[12px] font-semibold text-neutral-700 mb-1.5">Parent / Guardian Name</label>
-                  <input defaultValue={editStudent.parentName ?? 'Not assigned'} className="w-full text-[13px] border border-neutral-200 rounded-xl px-4 py-3 text-neutral-500 bg-neutral-50 focus:outline-none cursor-not-allowed" readOnly />
+                {(editGrade === '11' || editGrade === '12') && (
+                  <div>
+                    <label className="block text-[12px] font-semibold text-neutral-700 mb-1.5">Stream <span className="text-neutral-400 font-normal">(Intermediate)</span></label>
+                    <select value={editStream} onChange={e => setEditStream(e.target.value as typeof editStream)} className="w-full text-[13px] border border-neutral-200 rounded-xl px-4 py-3 text-neutral-800 bg-white focus:outline-none focus:ring-2 focus:ring-ink-200 cursor-pointer">
+                      <option value="">Not selected</option>
+                      {STREAMS.map(s => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                  </div>
+                )}
+              </div>
+
+              <label className="flex items-start gap-2.5 p-3.5 bg-warning-bg/50 border border-warning/20 rounded-xl cursor-pointer select-none">
+                <input type="checkbox" checked={editIsLate} onChange={e => setEditIsLate(e.target.checked)} className="mt-0.5 w-4 h-4 rounded border-neutral-300 text-warning focus:ring-warning/30" />
+                <span className="text-[12.5px] text-warning leading-relaxed">
+                  <strong>Late enrollment</strong> — enables strict video watch-time tracking for lecture catch-up.
+                </span>
+              </label>
+
+              <div className="pt-3 border-t border-neutral-100">
+                <p className="text-[11.5px] font-semibold text-neutral-400 uppercase tracking-wider mb-4">Academic Background <span className="text-neutral-400 font-normal normal-case">(optional)</span></p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[12px] font-semibold text-neutral-700 mb-1.5">School / college</label>
+                    <input value={editPreviousSchool} onChange={e => setEditPreviousSchool(e.target.value)} placeholder="e.g. City Public School" className="w-full text-[13px] border border-neutral-200 rounded-xl px-4 py-3 text-neutral-800 focus:outline-none focus:ring-2 focus:ring-ink-200" />
+                  </div>
+                  <div>
+                    <label className="block text-[12px] font-semibold text-neutral-700 mb-1.5">Last qualification</label>
+                    <input value={editLastQualification} onChange={e => setEditLastQualification(e.target.value)} placeholder="e.g. Grade 8 · Distinction" className="w-full text-[13px] border border-neutral-200 rounded-xl px-4 py-3 text-neutral-800 focus:outline-none focus:ring-2 focus:ring-ink-200" />
+                  </div>
                 </div>
               </div>
-              <div className="flex items-center gap-3 pt-1">
-                <button onClick={() => setEditStudent(null)} className="flex-1 py-3 text-[13px] font-medium text-neutral-600 bg-neutral-100 hover:bg-neutral-200 rounded-xl transition-colors">Cancel</button>
-                <button onClick={saveEdit} disabled={saving} className="flex-1 py-3 text-[13px] font-semibold text-white bg-ink-700 hover:bg-ink-800 rounded-xl transition-colors disabled:opacity-60">{saving ? 'Saving…' : 'Save Changes'}</button>
+
+              <div className="pt-3 border-t border-neutral-100">
+                <p className="text-[11.5px] font-semibold text-neutral-400 uppercase tracking-wider mb-4">Parent / Guardian</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[12px] font-semibold text-neutral-700 mb-1.5">Parent&apos;s name</label>
+                    <input
+                      value={editParentName}
+                      onChange={e => setEditParentName(e.target.value)}
+                      readOnly={!editStudent.parentId}
+                      className={`w-full text-[13px] border border-neutral-200 rounded-xl px-4 py-3 focus:outline-none ${!editStudent.parentId ? 'text-neutral-500 bg-neutral-50 cursor-not-allowed' : 'text-neutral-800 focus:ring-2 focus:ring-ink-200'}`}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[12px] font-semibold text-neutral-700 mb-1.5">WhatsApp No.</label>
+                    <input
+                      value={editParentPhone}
+                      onChange={e => setEditParentPhone(e.target.value)}
+                      readOnly={!editStudent.parentId}
+                      className={`w-full text-[13px] border border-neutral-200 rounded-xl px-4 py-3 focus:outline-none ${!editStudent.parentId ? 'text-neutral-500 bg-neutral-50 cursor-not-allowed' : 'text-neutral-800 focus:ring-2 focus:ring-ink-200'}`}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[12px] font-semibold text-neutral-700 mb-1.5">Phone No. <span className="text-neutral-400 font-normal">(optional)</span></label>
+                    <input
+                      value={editParentSecondaryPhone}
+                      onChange={e => setEditParentSecondaryPhone(e.target.value)}
+                      readOnly={!editStudent.parentId}
+                      className={`w-full text-[13px] border border-neutral-200 rounded-xl px-4 py-3 focus:outline-none ${!editStudent.parentId ? 'text-neutral-500 bg-neutral-50 cursor-not-allowed' : 'text-neutral-800 focus:ring-2 focus:ring-ink-200'}`}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[12px] font-semibold text-neutral-700 mb-1.5">WhatsApp 2 <span className="text-neutral-400 font-normal">(optional)</span></label>
+                    <input
+                      value={editParentWhatsapp2}
+                      onChange={e => setEditParentWhatsapp2(e.target.value)}
+                      readOnly={!editStudent.parentId}
+                      className={`w-full text-[13px] border border-neutral-200 rounded-xl px-4 py-3 focus:outline-none ${!editStudent.parentId ? 'text-neutral-500 bg-neutral-50 cursor-not-allowed' : 'text-neutral-800 focus:ring-2 focus:ring-ink-200'}`}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[12px] font-semibold text-neutral-700 mb-1.5">Profession <span className="text-neutral-400 font-normal">(optional)</span></label>
+                    <input value={editGuardianProfession} onChange={e => setEditGuardianProfession(e.target.value)} placeholder="e.g. Engineer" className="w-full text-[13px] border border-neutral-200 rounded-xl px-4 py-3 text-neutral-800 focus:outline-none focus:ring-2 focus:ring-ink-200" />
+                  </div>
+                  <div>
+                    <label className="block text-[12px] font-semibold text-neutral-700 mb-1.5">Address <span className="text-neutral-400 font-normal">(optional)</span></label>
+                    <input value={editAddress} onChange={e => setEditAddress(e.target.value)} placeholder="House / street / area" className="w-full text-[13px] border border-neutral-200 rounded-xl px-4 py-3 text-neutral-800 focus:outline-none focus:ring-2 focus:ring-ink-200" />
+                  </div>
+                </div>
+                {!editStudent.parentId && (
+                  <p className="text-[11.5px] text-neutral-400 mt-2">No parent account linked — contact details can&apos;t be edited here.</p>
+                )}
               </div>
+
+              <div className="pt-3 border-t border-neutral-100">
+                <p className="text-[11.5px] font-semibold text-neutral-400 uppercase tracking-wider mb-4">Office Use <span className="text-neutral-400 font-normal normal-case">(optional)</span></p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[12px] font-semibold text-neutral-700 mb-1.5">Registration fee</label>
+                    <input type="number" min="0" value={editRegistrationFee} onChange={e => setEditRegistrationFee(e.target.value)} placeholder="PKR" className="w-full text-[13px] border border-neutral-200 rounded-xl px-4 py-3 text-neutral-800 focus:outline-none focus:ring-2 focus:ring-ink-200" />
+                  </div>
+                  <div>
+                    <label className="block text-[12px] font-semibold text-neutral-700 mb-1.5">Tuition fee</label>
+                    <input type="number" min="0" value={editTuitionFee} onChange={e => setEditTuitionFee(e.target.value)} placeholder="PKR" className="w-full text-[13px] border border-neutral-200 rounded-xl px-4 py-3 text-neutral-800 focus:outline-none focus:ring-2 focus:ring-ink-200" />
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 px-6 py-5 border-t border-neutral-100 shrink-0">
+              <button onClick={() => setEditStudent(null)} className="flex-1 py-3 text-[13px] font-medium text-neutral-600 bg-neutral-100 hover:bg-neutral-200 rounded-xl transition-colors">Cancel</button>
+              <button onClick={saveEdit} disabled={saving} className="flex-1 py-3 text-[13px] font-semibold text-white bg-ink-700 hover:bg-ink-800 rounded-xl transition-colors disabled:opacity-60">{saving ? 'Saving…' : 'Save Changes'}</button>
             </div>
           </div>
         </div>

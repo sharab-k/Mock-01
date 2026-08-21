@@ -77,7 +77,7 @@ export async function fetchStudentDirectory(): Promise<DirectoryStudent[]> {
     .from('students')
     .select('id, roll_number, full_name, grade_level, section, status')
     .is('deleted_at', null)
-    .order('created_at', { ascending: false });
+    .order('gr_number', { ascending: true });
 
   return (rows ?? []).map((s) => ({
     id: s.id,
