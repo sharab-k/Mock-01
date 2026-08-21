@@ -28,7 +28,7 @@ const UpdateStudentSchema = z.object({
   fullName: z.string().min(1).max(200),
   // The programme choice IS the grade choice (SSC-1/2 = grade 9/10, HSC-1/2 =
   // grade 11/12) — same as at enrolment.
-  program: z.enum(['SSC-1', 'SSC-2', 'HSC-1', 'HSC-2']),
+  program: z.enum(['SSC-1', 'SSC-2', 'HSC-1', 'HSC-2', 'ICOM-1', 'ICOM-2']),
   // Grades 9-10 are Girls G1-G3 / Boys B1-B3, 11-12 (Intermediate) are co-ed
   // A-E — the pairing is enforced below via superRefine, this just accepts
   // any valid code across both schemes.

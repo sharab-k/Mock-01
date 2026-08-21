@@ -8,7 +8,8 @@ import {
   MessageSquare, CalendarCheck, AlertCircle, X,
 } from 'lucide-react'
 import { markAttendanceAction } from '@/lib/actions/attendance'
-import { sectionsForGrade, type Grade, type Section } from '@/lib/students/constants'
+import { GRADES, sectionsForGrade, type Grade, type Section } from '@/lib/students/constants'
+import { lateCutoffLabel } from '@/lib/attendance/late-policy'
 
 export type Status = 'unmarked' | 'present' | 'absent' | 'late'
 
@@ -35,8 +36,6 @@ const STATUS_ORDER: Record<Status, number> = { unmarked: 0, absent: 1, late: 2, 
 const NEXT_STATUS: Record<Status, 'present' | 'absent'> = { unmarked: 'present', present: 'absent', absent: 'present', late: 'present' }
 const INITIALS = (name: string) => name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
 
-const VALID_GRADES = ['9', '10', '11', '12']
-
 type Props = {
   grade: string
   section: string
@@ -51,7 +50,7 @@ export default function AttendanceClassDetailContent({ grade, section, basePath 
   const [pending, setPending] = useState<Record<string, boolean>>({})
   const [selectedId, setSelectedId] = useState<string | null>(null)
 
-  const isValid = VALID_GRADES.includes(grade) && sectionsForGrade(grade as Grade).includes(section as Section)
+  const isValid = GRADES.includes(grade as Grade) && sectionsForGrade(grade as Grade).includes(section as Section)
 
   if (!isValid) {
     return (
@@ -93,7 +92,7 @@ export default function AttendanceClassDetailContent({ grade, section, basePath 
   const STATS = [
     { label: 'Present',         value: String(presentCount), icon: <UserCheck size={22} />, iconBg: 'bg-success-bg', iconColor: 'text-success', sub: `of ${total} in class`, subUp: true },
     { label: 'Absent',          value: String(absentCount),  icon: <UserX size={22} />,     iconBg: 'bg-danger-bg',  iconColor: 'text-danger',  sub: 'Absence alerts sent automatically' },
-    { label: 'Late',            value: String(lateCount),    icon: <Clock size={22} />,     iconBg: 'bg-warning-bg', iconColor: 'text-warning', sub: 'After 8:30 AM' },
+    { label: 'Late',            value: String(lateCount),    icon: <Clock size={22} />,     iconBg: 'bg-warning-bg', iconColor: 'text-warning', sub: lateCutoffLabel(grade, section) },
     { label: 'Attendance Rate', value: `${rate}%`,           icon: <Percent size={22} />,   iconBg: 'bg-ink-100',    iconColor: 'text-ink-600', sub: `Grade ${grade} · Section ${section}` },
   ]
 

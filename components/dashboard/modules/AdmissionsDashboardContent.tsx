@@ -7,7 +7,7 @@ import {
   Users, UserPlus, Inbox, KeyRound, Copy, Check,
   ChevronDown, ChevronUp, ArrowUpCircle, X, ChevronRight, AlertTriangle,
 } from 'lucide-react'
-import { sectionsForGrade } from '@/lib/students/constants'
+import { GRADES, sectionsForGrade } from '@/lib/students/constants'
 
 // ── Data ──────────────────────────────────────────────────────────────────────
 const INITIALS = (name: string) => name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
@@ -111,7 +111,7 @@ export default function AdmissionsDashboardContent({
         </div>
 
         <div className="p-5 space-y-5">
-          {(['9', '10', '11', '12'] as const).map(grade => (
+          {GRADES.map(grade => (
             <div key={grade}>
               {/* Grade row label */}
               <div className="flex items-center gap-2 mb-3">
@@ -230,7 +230,7 @@ export default function AdmissionsDashboardContent({
               <div>
                 <label className="block text-[12px] font-semibold text-neutral-700 mb-2">Promote students from</label>
                 <select value={promoteFrom} onChange={e => setPromoteFrom(e.target.value)} className="w-full text-[13px] border border-neutral-200 rounded-xl px-4 py-3 text-neutral-800 bg-white focus:outline-none focus:ring-2 focus:ring-ink-200 cursor-pointer">
-                  {['9', '10', '11', '12'].map(g => <option key={g} value={g}>Grade {g}</option>)}
+                  {GRADES.map(g => <option key={g} value={g}>Grade {g}</option>)}
                 </select>
               </div>
               <div className="bg-ink-50 border border-ink-100 rounded-2xl p-4">

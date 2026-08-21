@@ -11,14 +11,15 @@ import type { Database } from '@/types/supabase'
 
 const EnrolInputSchema = z.object({
   studentName: z.string().min(1).max(200),
-  grade: z.enum(['9', '10', '11', '12']),
-  // Grades 9-10 are Girls G1-G3 / Boys B1-B3, 11-12 (Intermediate) are co-ed
+  grade: z.enum(['9', '10', '11', '12', 'ICOM-1', 'ICOM-2']),
+  // Grades 9-10 are Girls G1-G3 / Boys B1-B3, 11-12 and ICOM-1/2 are co-ed
   // A-E — the pairing is enforced below via superRefine, this just accepts
   // any valid code across both schemes.
   section: z.enum(['A', 'B', 'C', 'D', 'E', 'G1', 'G2', 'G3', 'B1', 'B2', 'B3']),
   // The programme choice IS the grade choice (SSC-1/2 = grade 9/10, HSC-1/2 =
-  // grade 11/12) — the pairing is enforced below via superRefine.
-  program: z.enum(['SSC-1', 'SSC-2', 'HSC-1', 'HSC-2']),
+  // grade 11/12, ICOM-1/2 = the same-named grade) — the pairing is enforced
+  // below via superRefine.
+  program: z.enum(['SSC-1', 'SSC-2', 'HSC-1', 'HSC-2', 'ICOM-1', 'ICOM-2']),
   isLate: z.boolean(),
   parentName: z.string().min(1).max(200),
   // Primary WhatsApp number — required, used for login-account lookup,

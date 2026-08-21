@@ -5,10 +5,9 @@ import Link from 'next/link'
 import StatCard from '@/components/dashboard/StatCard'
 import { ArrowLeft, PenLine, BookOpen, CheckCircle, Users, Upload, X } from 'lucide-react'
 import { letterGrade } from '@/lib/marks/letter-grade'
-import { sectionsForGrade, type Grade, type Section } from '@/lib/students/constants'
+import { GRADES, sectionsForGrade, type Grade, type Section } from '@/lib/students/constants'
 
 // ── Types & constants ─────────────────────────────────────────────────────────
-const VALID_GRADES = ['9', '10', '11', '12']
 
 const INITIALS = (name: string) => name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
 
@@ -62,7 +61,7 @@ export default function MarksClassDetailContent({ grade, section, basePath = '/m
   const [examFilter,     setExamFilter]     = useState('All Exams')
   const [showBulkHint,   setShowBulkHint]   = useState(false)
 
-  const isValid = VALID_GRADES.includes(grade) && sectionsForGrade(grade as Grade).includes(section as Section)
+  const isValid = GRADES.includes(grade as Grade) && sectionsForGrade(grade as Grade).includes(section as Section)
 
   const filtered = useMemo(() =>
     classMarks.filter(m => {

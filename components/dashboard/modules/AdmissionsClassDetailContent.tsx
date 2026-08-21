@@ -9,7 +9,7 @@ import {
 } from 'lucide-react'
 import { updateStudentAction, deleteStudentAction } from '@/lib/actions/students'
 import { updateParentContactAction } from '@/lib/actions/parents'
-import { sectionsForGrade, PROGRAM_GRADE, PROGRAMS, type Grade, type Section, type Program } from '@/lib/students/constants'
+import { GRADES, sectionsForGrade, PROGRAM_GRADE, PROGRAMS, type Grade, type Section, type Program } from '@/lib/students/constants'
 
 const STREAMS = ['Pre-Engineering', 'Pre-Medical', 'Computer Science', 'Commerce'] as const
 
@@ -40,8 +40,6 @@ export type ClassDetailStudent = {
 }
 
 const INITIALS = (name: string) => name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
-
-const VALID_GRADES = ['9', '10', '11', '12']
 
 type Props = {
   grade: string
@@ -184,7 +182,7 @@ export default function AdmissionsClassDetailContent({ grade, section, basePath 
   }
 
   // Handle invalid route params gracefully
-  const isValid = VALID_GRADES.includes(grade) && sectionsForGrade(grade as Grade).includes(section as Section)
+  const isValid = GRADES.includes(grade as Grade) && sectionsForGrade(grade as Grade).includes(section as Section)
 
   const enrolledTotal  = students.length
   const credSent       = students.filter(s => s.credentialSent).length

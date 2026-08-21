@@ -4,10 +4,10 @@ import { authenticateBearerRequest } from '@/lib/supabase/bearer'
 import { fetchClassRoster } from '@/lib/attendance/roster'
 
 const QuerySchema = z.object({
-  grade: z.enum(['9', '10', '11', '12']),
+  grade: z.enum(['9', '10', '11', '12', 'ICOM-1', 'ICOM-2']),
   // Reads an existing class — accepts any valid code across both schemes
-  // (A-E for 11-12, G1-G3/B1-B3 for 9-10) without re-validating the pairing,
-  // which is an enrolment-time rule.
+  // (A-E for 11-12/ICOM-1/ICOM-2, G1-G3/B1-B3 for 9-10) without re-validating
+  // the pairing, which is an enrolment-time rule.
   section: z.enum(['A', 'B', 'C', 'D', 'E', 'G1', 'G2', 'G3', 'B1', 'B2', 'B3']),
 })
 

@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useState } from 'react'
 import StatCard from '@/components/dashboard/StatCard'
 import { UserCheck, UserX, Clock, Percent, MessageSquare, TrendingUp, Clock3 } from 'lucide-react'
-import { sectionsForGrade } from '@/lib/students/constants'
+import { GRADES, sectionsForGrade } from '@/lib/students/constants'
 
 export type ClassAttendanceStat = { present: number; absent: number; late: number; total: number }
 export type DayAttendanceStat = { day: string; date: string; present: number; absent: number; late: number; total: number; isToday: boolean }
@@ -105,7 +105,7 @@ export default function AttendanceDashboardContent({ basePath = '/attendance', t
           <span className="text-[12px] font-mono text-neutral-400 shrink-0">{totalAll} students</span>
         </div>
         <div className="p-5 space-y-5">
-          {(['9', '10', '11', '12'] as const).map(grade => (
+          {GRADES.map(grade => (
             <div key={grade}>
               <div className="flex items-center gap-2 mb-3">
                 <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Grade {grade}</span>
