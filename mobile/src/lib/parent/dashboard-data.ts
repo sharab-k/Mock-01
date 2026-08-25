@@ -20,6 +20,8 @@ export type ParentChild = {
   marks: { subject: string; exam: string; score: number; max: number; grade: string }[];
   attendance: { day: string; date: string; status: AttStatus }[];
   monthlyTrend: { month: string; attendance: number; avgScore: number }[];
+  /** Current calendar month's fee status — absence of a fee_payments row means unpaid. */
+  feeStatus: 'paid' | 'unpaid';
 };
 
 // Ported from the web's lib/parent/dashboard-data.ts — the single most
@@ -39,9 +41,17 @@ export async function fetchParentChildren(): Promise<ParentChild[]> {
     .map((l) => l.students)
     .filter((s): s is NonNullable<typeof s> => !!s);
 
+  const now = new Date();
   const children: ParentChild[] = [];
   for (const s of students) {
     const academic = await fetchChildAcademicData(supabase, s.id);
+    const { data: payment } = await supabase
+      .from('fee_payments')
+      .select('status')
+      .eq('student_id', s.id)
+      .eq('year', now.getFullYear())
+      .eq('month', now.getMonth() + 1)
+      .maybeSingle();
     children.push({
       id: s.id,
       name: s.full_name,
@@ -50,6 +60,7 @@ export async function fetchParentChildren(): Promise<ParentChild[]> {
       section: s.section,
       initials: INITIALS(s.full_name),
       ...academic,
+      feeStatus: payment?.status ?? 'unpaid',
     });
   }
 

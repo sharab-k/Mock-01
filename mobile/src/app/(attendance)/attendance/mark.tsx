@@ -11,6 +11,7 @@ import { Ink, Radius, Semantic, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { submitClassAttendanceAction } from '@/lib/actions/attendance';
 import { fetchMarkerClasses, type MarkerClass } from '@/lib/attendance/marker-classes';
+import { lateCutoffLabel } from '@/lib/attendance/late-policy';
 
 type Status = 'present' | 'absent' | 'late';
 
@@ -105,7 +106,7 @@ export default function AttendanceMarkScreen() {
         <View style={styles.header}>
           <View>
             <ThemedText variant="title" style={{ fontSize: 20, lineHeight: 26 }}>Mark Attendance</ThemedText>
-            <ThemedText variant="small" color="textSecondary">Today</ThemedText>
+            <ThemedText variant="small" color="textSecondary">Late: {lateCutoffLabel(activeClass.grade, activeClass.section)}</ThemedText>
           </View>
           <Pressable onPress={() => setPickerOpen(true)} style={[styles.classPicker, { borderColor: theme.border, backgroundColor: theme.surfaceElement }]}>
             <ThemedText variant="small">{activeClass.label}</ThemedText>

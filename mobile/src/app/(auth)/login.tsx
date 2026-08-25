@@ -101,6 +101,12 @@ export default function LoginScreen() {
                 autoComplete="current-password"
                 placeholder="••••••••"
               />
+              <ThemedText
+                variant="small"
+                onPress={() => router.push('/forgot-password')}
+                style={{ color: theme.accent, alignSelf: 'flex-end', marginTop: -8 }}>
+                Forgot password?
+              </ThemedText>
 
               <Button
                 label="Sign in"

@@ -1,7 +1,7 @@
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { AlertTriangle, ChevronRight, ShieldAlert, Users2 } from 'lucide-react-native';
+import { AlertTriangle, ChevronRight, ShieldAlert, Users2, Wallet, UsersRound, GraduationCap } from 'lucide-react-native';
 
 import { ErrorState } from '@/components/error-state';
 import { ThemedText } from '@/components/themed-text';
@@ -124,6 +124,30 @@ export default function SuperAdminDashboard() {
               delta={data.attendanceDelta !== null ? { value: `${data.attendanceDelta >= 0 ? '+' : ''}${data.attendanceDelta}%`, direction: data.attendanceDelta >= 0 ? 'up' : 'down' } : undefined}
             />
           </View>
+
+          <Pressable onPress={() => router.push('/students')}>
+            <Card style={styles.linkRow}>
+              <GraduationCap size={18} color={theme.textMuted} />
+              <ThemedText variant="bodyMedium" style={{ flex: 1 }}>Student Directory</ThemedText>
+              <ChevronRight size={16} color={theme.textMuted} />
+            </Card>
+          </Pressable>
+
+          <Pressable onPress={() => router.push('/parents')}>
+            <Card style={styles.linkRow}>
+              <UsersRound size={18} color={theme.textMuted} />
+              <ThemedText variant="bodyMedium" style={{ flex: 1 }}>Parent Directory</ThemedText>
+              <ChevronRight size={16} color={theme.textMuted} />
+            </Card>
+          </Pressable>
+
+          <Pressable onPress={() => router.push('/fees')}>
+            <Card style={styles.linkRow}>
+              <Wallet size={18} color={theme.textMuted} />
+              <ThemedText variant="bodyMedium" style={{ flex: 1 }}>Fees</ThemedText>
+              <ChevronRight size={16} color={theme.textMuted} />
+            </Card>
+          </Pressable>
 
           <Pressable onPress={() => router.push('/audit')}>
             <Card style={styles.linkRow}>

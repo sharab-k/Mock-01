@@ -13,3 +13,8 @@ export async function setStaffActiveAction(input: { id: string; active: boolean 
   const { id, ...body } = input;
   return callMobileApi(`/api/mobile/staff/${id}/active`, body);
 }
+
+export async function setStaffPasswordAction(input: { id: string; newPassword: string }) {
+  const { id, ...body } = input;
+  return callMobileApi(`/api/mobile/staff/${id}/password`, body);
+}

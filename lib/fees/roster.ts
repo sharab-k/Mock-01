@@ -1,4 +1,6 @@
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/server'
+import type { Database } from '@/types/supabase'
 
 export type FeeRosterRow = {
   id: string
@@ -14,8 +16,15 @@ export type FeeRosterRow = {
 // rows only get created once a status is actually set (see
 // lib/actions/fees.ts's setFeeStatusAction), so a fresh month starts with
 // every active student defaulting to unpaid rather than needing a seed job.
-export async function fetchFeeRoster(year: number, month: number): Promise<FeeRosterRow[]> {
-  const supabase = await createClient()
+// Accepts an optional bearer-scoped client override so the mobile API route
+// (no cookies, only a bearer token) can reuse this instead of the cookie
+// client, same pattern as fetchClassRoster/enrolStudentAction.
+export async function fetchFeeRoster(
+  year: number,
+  month: number,
+  supabaseOverride?: SupabaseClient<Database>,
+): Promise<FeeRosterRow[]> {
+  const supabase = supabaseOverride ?? await createClient()
 
   const [studentsRes, paymentsRes] = await Promise.all([
     supabase

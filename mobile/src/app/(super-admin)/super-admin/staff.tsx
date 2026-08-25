@@ -12,9 +12,10 @@ import { Card } from '@/components/ui/card';
 import { ChipSelect } from '@/components/ui/chip-select';
 import { StatusPill } from '@/components/ui/status-pill';
 import { TextField } from '@/components/ui/text-field';
+import { SetPasswordModal } from '@/components/set-password-modal';
 import { Ink, Radius, Semantic, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { createStaffAction, setStaffActiveAction } from '@/lib/actions/staff';
+import { createStaffAction, setStaffActiveAction, setStaffPasswordAction } from '@/lib/actions/staff';
 import { fetchStaffDirectory, type StaffMember } from '@/lib/staff/fetch';
 import { STAFF_ROLES, STAFF_ROLE_LABEL, type StaffRole } from '@/lib/staff/roles';
 
@@ -30,6 +31,7 @@ export default function SuperAdminStaffScreen() {
   const [formError, setFormError] = useState('');
   const [issued, setIssued] = useState<{ email: string; tempPassword: string } | null>(null);
   const [copied, setCopied] = useState(false);
+  const [passwordTarget, setPasswordTarget] = useState<StaffMember | null>(null);
 
   function load() {
     fetchStaffDirectory().then((result) => {
@@ -143,11 +145,16 @@ export default function SuperAdminStaffScreen() {
               </View>
               <View style={styles.rowBetween}>
                 <ThemedText variant="small" color="textMuted">{s.email}</ThemedText>
-                <Pressable onPress={() => toggleActive(s)}>
-                  <ThemedText variant="small" style={{ color: s.status === 'Active' ? Semantic.danger : Ink[600] }}>
-                    {s.status === 'Active' ? 'Deactivate' : 'Reactivate'}
-                  </ThemedText>
-                </Pressable>
+                <View style={{ flexDirection: 'row', gap: Spacing.three }}>
+                  <Pressable onPress={() => setPasswordTarget(s)}>
+                    <ThemedText variant="small" style={{ color: Ink[600] }}>Reset password</ThemedText>
+                  </Pressable>
+                  <Pressable onPress={() => toggleActive(s)}>
+                    <ThemedText variant="small" style={{ color: s.status === 'Active' ? Semantic.danger : Ink[600] }}>
+                      {s.status === 'Active' ? 'Deactivate' : 'Reactivate'}
+                    </ThemedText>
+                  </Pressable>
+                </View>
               </View>
             </Card>
           ))}
@@ -182,6 +189,14 @@ export default function SuperAdminStaffScreen() {
             </SafeAreaView>
           </ThemedView>
         </Modal>
+
+        <SetPasswordModal
+          visible={!!passwordTarget}
+          targetName={passwordTarget?.name ?? ''}
+          username={passwordTarget?.email ?? ''}
+          onClose={() => setPasswordTarget(null)}
+          onSubmit={(newPassword) => setStaffPasswordAction({ id: passwordTarget!.id, newPassword })}
+        />
       </SafeAreaView>
     </ThemedView>
   );

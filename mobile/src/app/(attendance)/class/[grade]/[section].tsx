@@ -12,6 +12,7 @@ import { StatusPill } from '@/components/ui/status-pill';
 import { Semantic, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { fetchClassRoster, type RosterStudent } from '@/lib/attendance/class-roster';
+import { lateCutoffLabel } from '@/lib/attendance/late-policy';
 
 const STATUS_TONE = { unmarked: 'neutral', present: 'success', absent: 'danger', late: 'warning' } as const;
 
@@ -40,7 +41,7 @@ export default function ClassDetailScreen() {
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.header}>
-          <ScreenHeader title={`Grade ${grade} · Section ${section}`} subtitle="Today" onBack={() => router.back()} />
+          <ScreenHeader title={`Grade ${grade} · Section ${section}`} subtitle={`Today · Late: ${lateCutoffLabel(grade, section)}`} onBack={() => router.back()} />
         </View>
 
         {error && (

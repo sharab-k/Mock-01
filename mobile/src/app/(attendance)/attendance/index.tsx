@@ -88,6 +88,27 @@ export default function AttendanceDashboard() {
           </View>
 
           <View style={{ gap: Spacing.two }}>
+            <ThemedText variant="subtitle">Class Timings &amp; Late Policy</ThemedText>
+            <Card style={{ gap: Spacing.two }}>
+              <View style={styles.timingRow}>
+                <ThemedText variant="small" color="textSecondary" style={{ flex: 1 }}>Class IX &amp; X — Girls</ThemedText>
+                <ThemedText variant="mono" style={{ fontSize: 12 }}>4:00–6:30 PM</ThemedText>
+              </View>
+              <ThemedText variant="small" style={{ color: Semantic.warning }}>Late after 4:15 PM</ThemedText>
+              <View style={[styles.timingRow, { marginTop: 4 }]}>
+                <ThemedText variant="small" color="textSecondary" style={{ flex: 1 }}>Class IX &amp; X — Boys</ThemedText>
+                <ThemedText variant="mono" style={{ fontSize: 12 }}>6:30–9:00 PM</ThemedText>
+              </View>
+              <ThemedText variant="small" style={{ color: Semantic.warning }}>Late after 6:45 PM</ThemedText>
+              <View style={[styles.timingRow, { marginTop: 4 }]}>
+                <ThemedText variant="small" color="textSecondary" style={{ flex: 1 }}>Class XI, XII &amp; ICOM</ThemedText>
+                <ThemedText variant="mono" style={{ fontSize: 12 }}>Per schedule</ThemedText>
+              </View>
+              <ThemedText variant="small" style={{ color: Semantic.warning }}>Late 15 mins after class starts</ThemedText>
+            </Card>
+          </View>
+
+          <View style={{ gap: Spacing.two }}>
             <ThemedText variant="subtitle">Classes</ThemedText>
             {GRADES.map((grade) => (
               <View key={grade} style={{ gap: 8 }}>
@@ -131,4 +152,5 @@ const styles = StyleSheet.create({
   dayCard: { width: 76, alignItems: 'center', gap: 4 },
   dayCounts: { flexDirection: 'row', gap: 6, marginTop: 4 },
   classRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
+  timingRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
 });

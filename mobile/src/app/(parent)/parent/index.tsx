@@ -132,6 +132,11 @@ export default function ParentDashboard() {
                 </Card>
               </Pressable>
 
+              <StatusPill
+                tone={selected.feeStatus === 'paid' ? 'success' : 'danger'}
+                label={selected.feeStatus === 'paid' ? "This month's fee: Paid" : "This month's fee: Unpaid"}
+              />
+
               <View style={styles.row}>
                 <StatCard icon={CalendarCheck} label="Attendance" value={`${selected.attendancePct}%`} />
                 <StatCard icon={TrendingUp} label="Average score" value={`${selected.avgScore}%`} />
