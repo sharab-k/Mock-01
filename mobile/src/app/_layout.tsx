@@ -6,6 +6,7 @@ import { StatusBar } from 'expo-status-bar';
 
 import { FontsToLoad } from '@/constants/fonts';
 import { AuthProvider } from '@/lib/auth/auth-context';
+import { ErrorBoundary } from '@/components/error-boundary';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -15,7 +16,9 @@ function RootLayoutInner() {
   return (
     <ThemeProvider value={DefaultTheme}>
       <StatusBar style="dark" />
-      <Stack screenOptions={{ headerShown: false }} />
+      <ErrorBoundary>
+        <Stack screenOptions={{ headerShown: false }} />
+      </ErrorBoundary>
     </ThemeProvider>
   );
 }

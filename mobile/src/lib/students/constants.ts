@@ -35,4 +35,4 @@ export const GRADE_SECTION_PAIRS: { grade: Grade; section: Section }[] =
   GRADES.flatMap((g) => sectionsForGrade(g).map((section) => ({ grade: g, section })));
 
 export const INITIALS = (name: string) =>
-  name.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase();
+  (name ?? '').split(' ').filter(Boolean).map((w) => w[0]).join('').slice(0, 2).toUpperCase();
