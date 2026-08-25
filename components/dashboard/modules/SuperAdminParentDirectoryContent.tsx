@@ -49,6 +49,7 @@ export default function SuperAdminParentDirectoryContent({ parents }: { parents:
             <thead>
               <tr className="bg-neutral-50 text-left">
                 <th className="px-5 py-3 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">Parent / Guardian</th>
+                <th className="px-3 py-3 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider hidden md:table-cell">Username</th>
                 <th className="px-3 py-3 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider hidden sm:table-cell">Phone</th>
                 <th className="px-3 py-3 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">Linked Children</th>
                 <th className="px-3 py-3 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">Action</th>
@@ -63,6 +64,7 @@ export default function SuperAdminParentDirectoryContent({ parents }: { parents:
                       <span className="font-medium text-neutral-900">{p.name}</span>
                     </div>
                   </td>
+                  <td className="px-3 py-3.5 font-mono text-[11.5px] text-neutral-500 hidden md:table-cell truncate max-w-[180px]">{p.email}</td>
                   <td className="px-3 py-3.5 font-mono text-[12px] text-neutral-500 hidden sm:table-cell">{p.phone}</td>
                   <td className="px-3 py-3.5">
                     <div className="flex flex-wrap gap-1.5">
@@ -86,7 +88,7 @@ export default function SuperAdminParentDirectoryContent({ parents }: { parents:
                 </tr>
               ))}
               {filtered.length === 0 && (
-                <tr><td colSpan={4} className="px-5 py-10 text-center text-[13px] text-neutral-400">No parents match this search.</td></tr>
+                <tr><td colSpan={5} className="px-5 py-10 text-center text-[13px] text-neutral-400">No parents match this search.</td></tr>
               )}
             </tbody>
           </table>
@@ -96,6 +98,7 @@ export default function SuperAdminParentDirectoryContent({ parents }: { parents:
       {passwordTarget && (
         <SetPasswordModal
           targetName={passwordTarget.name}
+          username={passwordTarget.email}
           onClose={() => setPasswordTarget(null)}
           onSubmit={(newPassword) => setParentPasswordAction({ id: passwordTarget.key, newPassword })}
         />

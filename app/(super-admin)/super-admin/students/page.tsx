@@ -1,6 +1,6 @@
 import SuperAdminStudentDirectoryContent, { type DirectoryStudent } from '@/components/dashboard/modules/SuperAdminStudentDirectoryContent'
 import { createClient } from '@/lib/supabase/server'
-import { fetchParentContactsByStudentId } from '@/lib/admissions/parent-lookup'
+import { fetchParentEditContactsByStudentId } from '@/lib/admissions/parent-lookup'
 import { GRADES } from '@/lib/students/constants'
 
 export default async function SuperAdminStudentsPage() {
@@ -11,7 +11,7 @@ export default async function SuperAdminStudentsPage() {
     .is('deleted_at', null)
     .order('gr_number', { ascending: true })
 
-  const contactByStudent = await fetchParentContactsByStudentId((rows ?? []).map((s) => s.id))
+  const contactByStudent = await fetchParentEditContactsByStudentId((rows ?? []).map((s) => s.id))
 
   // Current month's fee status, for the directory's "Fee Status" filter —
   // absence of a row means unpaid, same convention as lib/fees/roster.ts.
@@ -34,7 +34,9 @@ export default async function SuperAdminStudentsPage() {
     status: s.status === 'active' ? 'Active' : 'Inactive',
     enrollment_date: new Date(s.enrollment_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
     is_late_enrollment: s.is_late_enrollment,
+    parent_id: contactByStudent.get(s.id)?.id ?? null,
     parent_name: contactByStudent.get(s.id)?.name ?? '—',
+    parent_email: contactByStudent.get(s.id)?.email ?? null,
     parent_phone: contactByStudent.get(s.id)?.phone ?? '—',
     guardian_profession: s.guardian_profession,
     previous_school: s.previous_school,

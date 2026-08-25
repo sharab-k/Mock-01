@@ -163,6 +163,7 @@ export default function SuperAdminStaffContent({ initialStaff }: { initialStaff:
       {passwordTarget && (
         <SetPasswordModal
           targetName={passwordTarget.name}
+          username={passwordTarget.email}
           onClose={() => setPasswordTarget(null)}
           onSubmit={(newPassword) => setStaffPasswordAction({ id: passwordTarget.id, newPassword })}
         />

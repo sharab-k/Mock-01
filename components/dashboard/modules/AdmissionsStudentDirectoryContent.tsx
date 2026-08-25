@@ -16,6 +16,7 @@ export type DirectoryStudent = {
   section: string
   parent_id: string | null
   parent_name: string | null
+  parent_email: string | null
   status: 'Active' | 'Inactive'
 }
 
@@ -130,6 +131,7 @@ export default function AdmissionsStudentDirectoryContent({ initialStudents }: {
       {passwordTarget && passwordTarget.parent_id && (
         <SetPasswordModal
           targetName={passwordTarget.parent_name ?? 'this parent'}
+          username={passwordTarget.parent_email ?? '—'}
           onClose={() => setPasswordTarget(null)}
           onSubmit={(newPassword) => setParentPasswordAction({ id: passwordTarget.parent_id!, newPassword })}
         />

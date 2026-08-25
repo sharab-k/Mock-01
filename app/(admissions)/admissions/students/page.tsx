@@ -1,6 +1,6 @@
 import AdmissionsStudentDirectoryContent, { type DirectoryStudent } from '@/components/dashboard/modules/AdmissionsStudentDirectoryContent'
 import { createClient } from '@/lib/supabase/server'
-import { fetchParentNamesByStudentId, fetchParentIdsByStudentId } from '@/lib/admissions/parent-lookup'
+import { fetchParentEditContactsByStudentId } from '@/lib/admissions/parent-lookup'
 
 export default async function AdmissionsStudentsPage() {
   const supabase = await createClient()
@@ -11,10 +11,7 @@ export default async function AdmissionsStudentsPage() {
     .order('gr_number', { ascending: true })
 
   const studentIds = (rows ?? []).map((s) => s.id)
-  const [parentByStudent, parentIdByStudent] = await Promise.all([
-    fetchParentNamesByStudentId(studentIds),
-    fetchParentIdsByStudentId(studentIds),
-  ])
+  const parentByStudent = await fetchParentEditContactsByStudentId(studentIds)
 
   const students: DirectoryStudent[] = (rows ?? []).map((s) => ({
     id: s.id,
@@ -22,8 +19,9 @@ export default async function AdmissionsStudentsPage() {
     roll_number: s.roll_number,
     grade: s.grade_level,
     section: s.section,
-    parent_id: parentIdByStudent.get(s.id) ?? null,
-    parent_name: parentByStudent.get(s.id) ?? null,
+    parent_id: parentByStudent.get(s.id)?.id ?? null,
+    parent_name: parentByStudent.get(s.id)?.name ?? null,
+    parent_email: parentByStudent.get(s.id)?.email ?? null,
     status: s.status === 'active' ? 'Active' : 'Inactive',
   }))
 

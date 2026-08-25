@@ -1,72 +1,15 @@
 import 'server-only'
 import { createAdminClient } from '@/lib/supabase/admin'
 
+export type ParentEditContact = { id: string; name: string; email: string; phone: string; secondaryPhone: string | null; whatsapp2: string | null }
+
 // profiles has no RLS policy letting one user read another's row, by design
-// (see lib/supabase/admin.ts) — so resolving "which parent is linked to this
-// student" for a staff-facing list view needs the service-role client, same
-// as enrolStudentAction's existing parent lookup/creation.
-export async function fetchParentNamesByStudentId(studentIds: string[]): Promise<Map<string, string | null>> {
-  const parentByStudent = new Map<string, string | null>()
-  if (studentIds.length === 0) return parentByStudent
-
-  const admin = createAdminClient()
-  const { data: links } = await admin
-    .from('parent_student_links')
-    .select('student_id, profiles(full_name)')
-    .in('student_id', studentIds)
-
-  for (const link of links ?? []) parentByStudent.set(link.student_id, link.profiles?.full_name ?? null)
-  return parentByStudent
-}
-
-// Same rationale as fetchParentNamesByStudentId — needed by Admissions
-// Admin's student directory to target a "reset parent password" action at a
-// specific parent_id (Admissions Admin has no separate parent directory
-// page, unlike Super Admin's fetchParentDirectory() below).
-export async function fetchParentIdsByStudentId(studentIds: string[]): Promise<Map<string, string>> {
-  const parentIdByStudent = new Map<string, string>()
-  if (studentIds.length === 0) return parentIdByStudent
-
-  const admin = createAdminClient()
-  const { data: links } = await admin
-    .from('parent_student_links')
-    .select('student_id, parent_id')
-    .in('student_id', studentIds)
-
-  for (const link of links ?? []) parentIdByStudent.set(link.student_id, link.parent_id)
-  return parentIdByStudent
-}
-
-export type ParentContact = { name: string; phone: string }
-
-// Same rationale as fetchParentNamesByStudentId — service-role client needed
-// to cross a profiles row that isn't the caller's own — but also carries
-// phone, for staff-facing views (Super Admin student/parent directories)
-// that need to show contact info, not just a name.
-export async function fetchParentContactsByStudentId(studentIds: string[]): Promise<Map<string, ParentContact>> {
-  const contactByStudent = new Map<string, ParentContact>()
-  if (studentIds.length === 0) return contactByStudent
-
-  const admin = createAdminClient()
-  const { data: links } = await admin
-    .from('parent_student_links')
-    .select('student_id, profiles(full_name, phone)')
-    .in('student_id', studentIds)
-
-  for (const link of links ?? []) {
-    if (link.profiles) {
-      contactByStudent.set(link.student_id, { name: link.profiles.full_name ?? '—', phone: link.profiles.phone ?? '—' })
-    }
-  }
-  return contactByStudent
-}
-
-export type ParentEditContact = { id: string; name: string; phone: string; secondaryPhone: string | null; whatsapp2: string | null }
-
-// Same rationale as fetchParentContactsByStudentId — carries the parent's
-// id and every contact field, for the student edit form's "Parent /
-// Guardian" section (updateParentContactAction needs the parent's id to
-// target the right profiles row).
+// (see lib/supabase/admin.ts) — so resolving a linked student's parent for a
+// staff-facing view needs the service-role client. Carries the parent's id,
+// login email, and every contact field, for the student edit form's
+// "Parent / Guardian" section and the directory drawer's "Login
+// Credentials" block (both need the parent's id — the former to target
+// updateParentContactAction, the latter setParentPasswordAction).
 export async function fetchParentEditContactsByStudentId(studentIds: string[]): Promise<Map<string, ParentEditContact>> {
   const contactByStudent = new Map<string, ParentEditContact>()
   if (studentIds.length === 0) return contactByStudent
@@ -74,7 +17,7 @@ export async function fetchParentEditContactsByStudentId(studentIds: string[]): 
   const admin = createAdminClient()
   const { data: links } = await admin
     .from('parent_student_links')
-    .select('student_id, profiles(id, full_name, phone, secondary_phone, whatsapp_number_2)')
+    .select('student_id, profiles(id, full_name, email, phone, secondary_phone, whatsapp_number_2)')
     .in('student_id', studentIds)
 
   for (const link of links ?? []) {
@@ -82,6 +25,7 @@ export async function fetchParentEditContactsByStudentId(studentIds: string[]): 
       contactByStudent.set(link.student_id, {
         id: link.profiles.id,
         name: link.profiles.full_name ?? '—',
+        email: link.profiles.email,
         phone: link.profiles.phone ?? '',
         secondaryPhone: link.profiles.secondary_phone,
         whatsapp2: link.profiles.whatsapp_number_2,
@@ -94,6 +38,7 @@ export async function fetchParentEditContactsByStudentId(studentIds: string[]): 
 export type ParentDirectoryRow = {
   key: string
   name: string
+  email: string
   phone: string
   children: { name: string; roll: string; grade: string; section: string }[]
 }
@@ -105,7 +50,7 @@ export async function fetchParentDirectory(): Promise<ParentDirectoryRow[]> {
   const admin = createAdminClient()
   const { data: links } = await admin
     .from('parent_student_links')
-    .select('parent_id, profiles(full_name, phone), students(full_name, roll_number, grade_level, section)')
+    .select('parent_id, profiles(full_name, email, phone), students(full_name, roll_number, grade_level, section)')
 
   const byParent = new Map<string, ParentDirectoryRow>()
   for (const link of links ?? []) {
@@ -114,6 +59,7 @@ export async function fetchParentDirectory(): Promise<ParentDirectoryRow[]> {
       byParent.set(link.parent_id, {
         key: link.parent_id,
         name: link.profiles.full_name ?? '—',
+        email: link.profiles.email,
         phone: link.profiles.phone ?? '—',
         children: [],
       })

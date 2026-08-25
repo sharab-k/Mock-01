@@ -2,9 +2,11 @@
 
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Search, X, CalendarCheck, BookOpen, Clock3, Loader2, Trash2, AlertTriangle, UserPlus } from 'lucide-react'
+import { ArrowLeft, Search, X, CalendarCheck, BookOpen, Clock3, Loader2, Trash2, AlertTriangle, UserPlus, KeyRound } from 'lucide-react'
 import { fetchStudentAcademicSummaryAction, type StudentAcademicSummary } from '@/lib/actions/student-summary'
 import { deleteStudentAction } from '@/lib/actions/students'
+import { setParentPasswordAction } from '@/lib/actions/parents'
+import SetPasswordModal from '@/components/dashboard/SetPasswordModal'
 
 export type DirectoryStudent = {
   id: string
@@ -17,7 +19,9 @@ export type DirectoryStudent = {
   status: 'Active' | 'Inactive'
   enrollment_date: string
   is_late_enrollment: boolean
+  parent_id: string | null
   parent_name: string
+  parent_email: string | null
   parent_phone: string
   guardian_profession: string | null
   previous_school: string | null
@@ -55,6 +59,7 @@ export default function SuperAdminStudentDirectoryContent({ students: initialStu
   const [deleteTarget, setDeleteTarget] = useState<DirectoryStudent | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState('')
+  const [passwordTarget, setPasswordTarget] = useState<DirectoryStudent | null>(null)
 
   const filtered = useMemo(() => {
     return students.filter((s) => {
@@ -318,6 +323,28 @@ export default function SuperAdminStudentDirectoryContent({ students: initialStu
                 )}
               </div>
 
+              {selected.parent_id && (
+                <div className="space-y-3 pt-4 border-t border-neutral-100">
+                  <p className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider">Login Credentials</p>
+                  <p className="text-[11.5px] text-neutral-400 leading-relaxed -mt-1">
+                    {selected.full_name} has no separate student login — access is through this parent account.
+                  </p>
+                  <div className="flex items-center justify-between text-[13px]">
+                    <span className="text-neutral-400">Username</span>
+                    <span className="font-mono text-neutral-800 text-right break-all">{selected.parent_email ?? '—'}</span>
+                  </div>
+                  <p className="text-[11.5px] text-neutral-400 leading-relaxed">
+                    Passwords can&apos;t be viewed once set — if they&apos;ve forgotten it, reset it below and copy the new one to send them.
+                  </p>
+                  <button
+                    onClick={() => setPasswordTarget(selected)}
+                    className="w-full flex items-center justify-center gap-2 text-[12.5px] font-semibold text-ink-700 bg-ink-50 border border-ink-100 py-2.5 rounded-xl hover:bg-ink-100/50 transition-colors"
+                  >
+                    <KeyRound size={13} /> Reset Password
+                  </button>
+                </div>
+              )}
+
               <div className="pt-4 border-t border-neutral-100">
                 <button
                   onClick={() => { setDeleteError(''); setDeleteTarget(selected) }}
@@ -359,6 +386,15 @@ export default function SuperAdminStudentDirectoryContent({ students: initialStu
             </div>
           </div>
         </div>
+      )}
+
+      {passwordTarget && passwordTarget.parent_id && (
+        <SetPasswordModal
+          targetName={passwordTarget.parent_name}
+          username={passwordTarget.parent_email ?? '—'}
+          onClose={() => setPasswordTarget(null)}
+          onSubmit={(newPassword) => setParentPasswordAction({ id: passwordTarget.parent_id!, newPassword })}
+        />
       )}
     </>
   )
