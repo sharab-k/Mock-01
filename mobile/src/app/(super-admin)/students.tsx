@@ -87,7 +87,7 @@ export default function StudentDirectoryScreen() {
             {filtered.length === 0 && (
               <ThemedText color="textSecondary" style={{ textAlign: 'center', marginTop: Spacing.four }}>No students match this filter.</ThemedText>
             )}
-            {filtered.map((s) => (
+            {filtered.filter(Boolean).map((s) => (
               <Pressable key={s.id} onPress={() => setEditTarget(s)}>
                 <Card style={{ gap: 6 }}>
                   <View style={styles.row}>

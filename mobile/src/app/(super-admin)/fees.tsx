@@ -106,7 +106,7 @@ export default function FeesScreen() {
             {filtered.length === 0 && (
               <ThemedText color="textSecondary" style={{ textAlign: 'center', marginTop: Spacing.four }}>No students match this filter.</ThemedText>
             )}
-            {filtered.map((s) => (
+            {filtered.filter(Boolean).map((s) => (
               <Card key={s.id} style={{ gap: Spacing.two }}>
                 <View style={styles.row}>
                   <Avatar name={s.full_name} size={32} />

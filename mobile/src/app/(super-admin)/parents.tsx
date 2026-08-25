@@ -59,7 +59,7 @@ export default function ParentDirectoryScreen() {
             {filtered.length === 0 && (
               <ThemedText color="textSecondary" style={{ textAlign: 'center', marginTop: Spacing.four }}>No parents match this search.</ThemedText>
             )}
-            {filtered.map((p) => (
+            {filtered.filter(Boolean).map((p) => (
               <Card key={p.key} style={{ gap: Spacing.two }}>
                 <View style={styles.row}>
                   <Avatar name={p.name} size={36} />

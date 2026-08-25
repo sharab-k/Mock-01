@@ -133,7 +133,7 @@ export default function SuperAdminStaffScreen() {
             </Card>
           )}
 
-          {staff.map((s) => (
+          {staff.filter(Boolean).map((s) => (
             <Card key={s.id} style={{ gap: 8 }}>
               <View style={styles.row}>
                 <Avatar name={s.name} size={36} />

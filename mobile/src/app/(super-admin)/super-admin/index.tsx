@@ -176,7 +176,7 @@ export default function SuperAdminDashboard() {
                 {data.subAdminCount} total{data.inactiveSubAdminCount > 0 ? ` · ${data.inactiveSubAdminCount} inactive` : ''}
               </ThemedText>
             </View>
-            {data.staffPreview.map((s) => (
+            {data.staffPreview.filter(Boolean).map((s) => (
               <Card key={s.id} style={styles.staffRow}>
                 <Avatar name={s.name} size={32} />
                 <View style={{ flex: 1 }}>
