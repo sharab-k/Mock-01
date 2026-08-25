@@ -41,6 +41,13 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "87d44163-d016-4e13-bfa1-c472e17d3a98"
+      }
+    },
+    "owner": "umar_siddiqui"
   }
 }

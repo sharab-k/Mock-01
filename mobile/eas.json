@@ -1,0 +1,25 @@
+{
+  "cli": {
+    "version": ">= 13.0.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "preview": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://adxjmfeebkbajtqzvhdu.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFkeGptZmVlYmtiYWp0cXp2aGR1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ3NDE4NjEsImV4cCI6MjEwMDMxNzg2MX0.1z5EbaFiXrNNmPHBqXAjNuZbfOpQdJwyOBfxThxFa_k",
+        "EXPO_PUBLIC_API_BASE_URL": "https://www.je-academy.com"
+      }
+    },
+    "production": {
+      "autoIncrement": true
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}

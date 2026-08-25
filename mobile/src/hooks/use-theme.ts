@@ -1,9 +1,13 @@
 import { Colors, type ThemeColorScheme } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
 
+// The web app is explicitly light-only (CLAUDE.md §6 design system) — no
+// dark mode exists there at all. Mobile previously followed the device's
+// system dark/light setting, which meant the two apps visually diverged on
+// any phone with dark mode on. Forcing light here keeps mobile matching the
+// website's actual design system rather than inventing a second look for
+// itself.
 export function useThemeScheme(): ThemeColorScheme {
-  const scheme = useColorScheme();
-  return scheme === 'dark' ? 'dark' : 'light';
+  return 'light';
 }
 
 export function useTheme() {

@@ -1,21 +1,20 @@
 import { useEffect } from 'react';
-import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
+import { DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useFonts } from 'expo-font';
 import { StatusBar } from 'expo-status-bar';
 
 import { FontsToLoad } from '@/constants/fonts';
-import { useThemeScheme } from '@/hooks/use-theme';
 import { AuthProvider } from '@/lib/auth/auth-context';
 
 SplashScreen.preventAutoHideAsync();
 
+// Web is light-only (CLAUDE.md §6) — mobile matches it exactly, always,
+// regardless of the device's system theme setting (see hooks/use-theme.ts).
 function RootLayoutInner() {
-  const scheme = useThemeScheme();
-
   return (
-    <ThemeProvider value={scheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
+    <ThemeProvider value={DefaultTheme}>
+      <StatusBar style="dark" />
       <Stack screenOptions={{ headerShown: false }} />
     </ThemeProvider>
   );
