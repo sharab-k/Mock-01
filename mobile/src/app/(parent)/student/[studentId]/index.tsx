@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams } from 'expo-router';
 import { BookOpen, CalendarCheck } from 'lucide-react-native';
 
+import { ErrorState } from '@/components/error-state';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Button } from '@/components/ui/button';
@@ -12,7 +13,8 @@ import { StatCard } from '@/components/ui/stat-card';
 import { StatusPill } from '@/components/ui/status-pill';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { fetchStudentDashboardData, type StudentDashboardData } from '@/lib/student/dashboard-data';
+import { fetchStudentDashboardData } from '@/lib/student/dashboard-data';
+import { useAsyncData } from '@/lib/use-async-data';
 import { useLinkedChild } from '@/lib/parent/use-linked-child';
 import { downloadProgressReport } from '@/lib/reports/download';
 
@@ -23,17 +25,31 @@ export default function StudentOverview() {
   const { studentId } = useLocalSearchParams<{ studentId: string }>();
   const theme = useTheme();
   const childState = useLinkedChild(studentId);
+  const dataState = useAsyncData(() => fetchStudentDashboardData(studentId), [studentId]);
 
-  const [data, setData] = useState<StudentDashboardData | null>(null);
   const [downloading, setDownloading] = useState(false);
 
-  useEffect(() => {
-    let mounted = true;
-    fetchStudentDashboardData(studentId).then((d) => { if (mounted) setData(d); });
-    return () => { mounted = false; };
-  }, [studentId]);
+  if (childState.status === 'error') {
+    return (
+      <ThemedView style={styles.container}>
+        <SafeAreaView style={styles.safeArea}>
+          <ErrorState message={childState.error} onRetry={childState.reload} />
+        </SafeAreaView>
+      </ThemedView>
+    );
+  }
 
-  if (!data || childState.status !== 'ready') {
+  if (dataState.status === 'error') {
+    return (
+      <ThemedView style={styles.container}>
+        <SafeAreaView style={styles.safeArea}>
+          <ErrorState message={dataState.error} onRetry={dataState.reload} />
+        </SafeAreaView>
+      </ThemedView>
+    );
+  }
+
+  if (dataState.status !== 'ready' || childState.status !== 'ready') {
     return (
       <ThemedView style={styles.container}>
         <SafeAreaView style={[styles.safeArea, styles.centered]}>
@@ -43,6 +59,7 @@ export default function StudentOverview() {
     );
   }
 
+  const data = dataState.data;
   const child = childState.child;
 
   async function handleDownload() {

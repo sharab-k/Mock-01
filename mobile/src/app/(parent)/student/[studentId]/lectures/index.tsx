@@ -1,17 +1,19 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { PlayCircle } from 'lucide-react-native';
 
+import { ErrorState } from '@/components/error-state';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Card } from '@/components/ui/card';
 import { ProgressBar } from '@/components/ui/progress-bar';
 import { StatusPill } from '@/components/ui/status-pill';
-import { Ink, Radius, Semantic, Spacing } from '@/constants/theme';
+import { Ink, Radius, Semantic, Shadow, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { fetchStudentLectures, type LectureProgress } from '@/lib/student/lectures';
+import { fetchStudentLectures } from '@/lib/student/lectures';
+import { useAsyncData } from '@/lib/use-async-data';
 import { useLinkedChild } from '@/lib/parent/use-linked-child';
 
 function fmt(seconds: number): string {
@@ -24,20 +26,35 @@ export default function LecturesListScreen() {
   const { studentId } = useLocalSearchParams<{ studentId: string }>();
   const theme = useTheme();
   const childState = useLinkedChild(studentId);
-  const [lectures, setLectures] = useState<LectureProgress[] | null>(null);
+  const lecturesState = useAsyncData(() => fetchStudentLectures(studentId), [studentId]);
   const [subjectFilter, setSubjectFilter] = useState('All Subjects');
 
-  useEffect(() => {
-    let mounted = true;
-    fetchStudentLectures(studentId).then((data) => { if (mounted) setLectures(data); });
-    return () => { mounted = false; };
-  }, [studentId]);
-
+  const lectures = lecturesState.status === 'ready' ? lecturesState.data : null;
   const subjects = useMemo(
     () => ['All Subjects', ...Array.from(new Set((lectures ?? []).map((l) => l.subject)))],
     [lectures],
   );
   const filtered = (lectures ?? []).filter((l) => subjectFilter === 'All Subjects' || l.subject === subjectFilter);
+
+  if (childState.status === 'error') {
+    return (
+      <ThemedView style={styles.container}>
+        <SafeAreaView style={styles.safeArea}>
+          <ErrorState message={childState.error} onRetry={childState.reload} />
+        </SafeAreaView>
+      </ThemedView>
+    );
+  }
+
+  if (lecturesState.status === 'error') {
+    return (
+      <ThemedView style={styles.container}>
+        <SafeAreaView style={styles.safeArea}>
+          <ErrorState message={lecturesState.error} onRetry={lecturesState.reload} />
+        </SafeAreaView>
+      </ThemedView>
+    );
+  }
 
   if (!lectures || childState.status !== 'ready') {
     return (
@@ -73,7 +90,12 @@ export default function LecturesListScreen() {
 
         <ScrollView contentContainerStyle={styles.content}>
           {filtered.length === 0 ? (
-            <ThemedText color="textSecondary">No lectures match this filter.</ThemedText>
+            <View style={styles.emptyWrap}>
+              <View style={[styles.emptyIconWrap, { backgroundColor: theme.surfaceElement }]}>
+                <PlayCircle size={22} color={theme.textMuted} />
+              </View>
+              <ThemedText color="textSecondary" style={{ textAlign: 'center' }}>No lectures match this filter.</ThemedText>
+            </View>
           ) : (
             filtered.map((l) => {
               const pct = Math.round((l.watchedSeconds / l.durationSeconds) * 100);
@@ -91,10 +113,11 @@ export default function LecturesListScreen() {
                       watchedSeconds: String(l.watchedSeconds),
                       completed: String(l.completed),
                     },
-                  })}>
-                  <Card style={styles.lectureRow}>
+                  })}
+                  style={({ pressed }) => [pressed && styles.pressed]}>
+                  <Card style={[styles.lectureRow, Shadow[2]]}>
                     <View style={[styles.iconWrap, { backgroundColor: l.completed ? Semantic.successBg : Ink[50] }]}>
-                      <PlayCircle size={18} color={l.completed ? Semantic.success : Ink[600]} />
+                      <PlayCircle size={20} color={l.completed ? Semantic.success : Ink[600]} />
                     </View>
                     <View style={{ flex: 1, gap: 4 }}>
                       <ThemedText variant="bodyMedium" numberOfLines={1}>{l.title}</ThemedText>
@@ -117,10 +140,13 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   safeArea: { flex: 1 },
   centered: { alignItems: 'center', justifyContent: 'center' },
-  header: { paddingHorizontal: Spacing.four, paddingTop: Spacing.four },
+  header: { paddingHorizontal: Spacing.four, paddingTop: Spacing.four, gap: 2 },
   filterRow: { gap: Spacing.two, paddingHorizontal: Spacing.four, paddingVertical: Spacing.three },
-  filterChip: { borderWidth: 1, borderRadius: Radius.pill, paddingVertical: 6, paddingHorizontal: 12 },
-  content: { padding: Spacing.four, paddingTop: 0, gap: Spacing.three, paddingBottom: Spacing.six },
-  lectureRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
-  iconWrap: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  filterChip: { borderWidth: 1, borderRadius: Radius.pill, paddingVertical: 7, paddingHorizontal: 14 },
+  content: { padding: Spacing.four, paddingTop: Spacing.one, gap: Spacing.three, paddingBottom: Spacing.six },
+  lectureRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, paddingVertical: 4 },
+  iconWrap: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  pressed: { opacity: 0.8, transform: [{ scale: 0.98 }] },
+  emptyWrap: { alignItems: 'center', justifyContent: 'center', gap: Spacing.two, paddingVertical: Spacing.six },
+  emptyIconWrap: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
 });

@@ -13,6 +13,7 @@ export type LinkedChild = {
 type LinkedChildState =
   | { status: 'loading' }
   | { status: 'denied' }
+  | { status: 'error'; error: string; reload: () => void }
   | { status: 'ready'; child: LinkedChild };
 
 // Client-side equivalent of the web's requireParentAccessToChild
@@ -23,21 +24,32 @@ type LinkedChildState =
 // enforces the boundary — this only decides what the UI shows meanwhile.
 export function useLinkedChild(studentId: string): LinkedChildState {
   const [state, setState] = useState<LinkedChildState>({ status: 'loading' });
+  const [tick, setTick] = useState(0);
 
   useEffect(() => {
     let mounted = true;
     // Deliberate: resets to 'loading' whenever studentId changes (e.g.
-    // switching siblings) so a stale 'ready'/'denied' from the previous
-    // child never flashes before this fetch resolves.
+    // switching siblings) or reload() is called, so a stale
+    // 'ready'/'denied'/'error' from the previous attempt never flashes
+    // before this fetch resolves.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setState({ status: 'loading' });
 
-    supabase
-      .from('students')
-      .select('id, full_name, roll_number, grade_level, section, is_late_enrollment')
-      .eq('id', studentId)
-      .maybeSingle()
-      .then(({ data }) => {
+    // Wrapped in an async IIFE + try/catch rather than a .then() chain —
+    // the postgrest-js query builder's thenable only implements `.then`,
+    // not the full Promise interface, so `.catch()` isn't chainable on it
+    // directly. Without a catch of some form, a rejected request (offline,
+    // timeout, a genuine backend outage) left `state` stuck at 'loading'
+    // forever — the screen this gates would spin indefinitely with no way
+    // out.
+    (async () => {
+      try {
+        const { data } = await supabase
+          .from('students')
+          .select('id, full_name, roll_number, grade_level, section, is_late_enrollment')
+          .eq('id', studentId)
+          .maybeSingle();
+
         if (!mounted) return;
         if (!data) {
           setState({ status: 'denied' });
@@ -54,10 +66,13 @@ export function useLinkedChild(studentId: string): LinkedChildState {
             isLateEnrollment: data.is_late_enrollment,
           },
         });
-      });
+      } catch {
+        if (mounted) setState({ status: 'error', error: 'Could not load this. Check your connection and try again.', reload: () => setTick((t) => t + 1) });
+      }
+    })();
 
     return () => { mounted = false; };
-  }, [studentId]);
+  }, [studentId, tick]);
 
   return state;
 }

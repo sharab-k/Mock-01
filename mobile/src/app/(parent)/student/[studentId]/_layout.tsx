@@ -2,7 +2,8 @@ import { ActivityIndicator, View } from 'react-native';
 import { Redirect, Tabs, useLocalSearchParams } from 'expo-router';
 import { BookOpen, CalendarCheck, LayoutDashboard, Megaphone, PlayCircle } from 'lucide-react-native';
 
-import { FontFamily } from '@/constants/theme';
+import { ErrorState } from '@/components/error-state';
+import { FontFamily, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useLinkedChild } from '@/lib/parent/use-linked-child';
 
@@ -25,6 +26,14 @@ export default function StudentTabsLayout() {
   }
 
   if (state.status === 'denied') return <Redirect href="/parent" />;
+
+  if (state.status === 'error') {
+    return (
+      <View style={{ flex: 1, backgroundColor: theme.background, padding: Spacing.four }}>
+        <ErrorState message={state.error} onRetry={state.reload} />
+      </View>
+    );
+  }
 
   return (
     <Tabs

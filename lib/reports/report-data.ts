@@ -1,7 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { currentTerm } from '@/lib/marks/term'
 import type { Tier } from '@/lib/marks/tier'
-import { groupMarksByExam, computeOverallAverage, computeTier, computeAttendanceSummary, type MarksByExamGroup } from './aggregate'
+import { groupMarksByExam, computeOverallAverage, computeTier, computeAttendanceSummary, buildAttendanceLog, type MarksByExamGroup, type AttendanceLogMonth } from './aggregate'
 
 export type { ReportMark } from './aggregate'
 
@@ -12,6 +12,7 @@ export type ReportData = {
   attendancePct: number | null
   presentDays: number
   totalDays: number
+  attendanceLog: AttendanceLogMonth[]
   marksByExam: MarksByExamGroup[]
   overallAverage: number | null
   tier: Tier | null
@@ -39,10 +40,11 @@ export async function fetchReportData(studentId: string): Promise<ReportData | n
   if (!student) return null
 
   const [attendanceRes, marksRes] = await Promise.all([
-    admin.from('attendance_records').select('status').eq('student_id', studentId),
+    admin.from('attendance_records').select('status, class_date').eq('student_id', studentId),
     admin.from('marks').select('subject, exam_type, score, max_score').eq('student_id', studentId).eq('term', term),
   ])
 
+  const attRows = attendanceRes.data ?? []
   const markRows = marksRes.data ?? []
   const overallAverage = computeOverallAverage(markRows)
 
@@ -56,7 +58,8 @@ export async function fetchReportData(studentId: string): Promise<ReportData | n
     },
     term,
     generatedAt: new Date().toISOString(),
-    ...computeAttendanceSummary(attendanceRes.data ?? []),
+    ...computeAttendanceSummary(attRows),
+    attendanceLog: buildAttendanceLog(attRows),
     marksByExam: groupMarksByExam(markRows),
     overallAverage,
     tier: computeTier(overallAverage),

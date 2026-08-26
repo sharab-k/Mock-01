@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { groupMarksByExam, computeOverallAverage, computeTier, computeAttendanceSummary } from '../aggregate'
+import { groupMarksByExam, computeOverallAverage, computeTier, computeAttendanceSummary, buildAttendanceLog } from '../aggregate'
 
 // Phase 7 step 5 (BACKEND-IMPLEMENTATION-PLAN.md): empty state (no marks
 // entered yet) must not crash, and full aggregation across all three exam
@@ -41,5 +41,23 @@ describe('report aggregation', () => {
   it('computes attendance percentage counting late as attended, matching the rest of the app\'s convention', () => {
     const rows = [{ status: 'present' }, { status: 'late' }, { status: 'absent' }, { status: 'present' }]
     expect(computeAttendanceSummary(rows)).toEqual({ attendancePct: 75, presentDays: 3, totalDays: 4 })
+  })
+
+  it('groups the full attendance log by calendar month, newest month and newest day first', () => {
+    const rows = [
+      { status: 'present', class_date: '2026-01-05' },
+      { status: 'late', class_date: '2026-01-20' },
+      { status: 'absent', class_date: '2026-02-03' },
+    ]
+    const log = buildAttendanceLog(rows)
+    expect(log).toHaveLength(2)
+    expect(log[0].label).toBe('February 2026')
+    expect(log[0].rows).toEqual([{ date: '2026-02-03', status: 'absent' }])
+    expect(log[1].label).toBe('January 2026')
+    expect(log[1].rows).toEqual([{ date: '2026-01-20', status: 'late' }, { date: '2026-01-05', status: 'present' }])
+  })
+
+  it('empty attendance log produces no months, not a crash', () => {
+    expect(buildAttendanceLog([])).toEqual([])
   })
 })
