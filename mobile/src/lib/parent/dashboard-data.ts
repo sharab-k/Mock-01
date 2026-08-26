@@ -42,17 +42,24 @@ export async function fetchParentChildren(): Promise<ParentChild[]> {
     .filter((s): s is NonNullable<typeof s> => !!s);
 
   const now = new Date();
-  const children: ParentChild[] = [];
-  for (const s of students) {
-    const academic = await fetchChildAcademicData(supabase, s.id);
-    const { data: payment } = await supabase
-      .from('fee_payments')
-      .select('status')
-      .eq('student_id', s.id)
-      .eq('year', now.getFullYear())
-      .eq('month', now.getMonth() + 1)
-      .maybeSingle();
-    children.push({
+  // Every child's data (and each child's own attendance/marks/fee queries)
+  // was previously fetched one child at a time in a serial loop — for a
+  // multi-sibling family that's N sequential round trips instead of one
+  // parallel batch, and was the main cause of the parent dashboard feeling
+  // slow to load. Promise.all across children fixes that without changing
+  // any RLS scoping (each query still runs on the caller's own session).
+  const children = await Promise.all(students.map(async (s) => {
+    const [academic, paymentRes] = await Promise.all([
+      fetchChildAcademicData(supabase, s.id),
+      supabase
+        .from('fee_payments')
+        .select('status')
+        .eq('student_id', s.id)
+        .eq('year', now.getFullYear())
+        .eq('month', now.getMonth() + 1)
+        .maybeSingle(),
+    ]);
+    return {
       id: s.id,
       name: s.full_name,
       roll: s.roll_number,
@@ -60,9 +67,9 @@ export async function fetchParentChildren(): Promise<ParentChild[]> {
       section: s.section,
       initials: INITIALS(s.full_name),
       ...academic,
-      feeStatus: payment?.status ?? 'unpaid',
-    });
-  }
+      feeStatus: paymentRes.data?.status ?? 'unpaid',
+    };
+  }));
 
   return children;
 }
