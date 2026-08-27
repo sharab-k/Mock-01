@@ -22,6 +22,10 @@ const styles = StyleSheet.create({
     borderRadius: Radius.lg,
     borderWidth: 1,
     padding: 16,
-    ...Shadow[1],
+    // Shadow[2] instead of the previous Shadow[1] — every Card in the app
+    // (every list row, stat tile, form section) picks this up automatically,
+    // so the "premium" depth read is consistent everywhere at once rather
+    // than only on the screens touched directly.
+    ...Shadow[2],
   },
 });

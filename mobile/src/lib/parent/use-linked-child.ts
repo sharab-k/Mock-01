@@ -44,11 +44,19 @@ export function useLinkedChild(studentId: string): LinkedChildState {
     // out.
     (async () => {
       try {
-        const { data } = await supabase
-          .from('students')
-          .select('id, full_name, roll_number, grade_level, section, is_late_enrollment')
-          .eq('id', studentId)
-          .maybeSingle();
+        // A second, independent safety net: a request that never settles at
+        // all (a hung connection, not a rejection) would still leave `state`
+        // at 'loading' forever without this — racing against a hard 15s
+        // timer means the screen can never spin indefinitely either way.
+        const timeout = new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Timed out.')), 15_000));
+        const { data } = await Promise.race([
+          supabase
+            .from('students')
+            .select('id, full_name, roll_number, grade_level, section, is_late_enrollment')
+            .eq('id', studentId)
+            .maybeSingle(),
+          timeout,
+        ]);
 
         if (!mounted) return;
         if (!data) {
