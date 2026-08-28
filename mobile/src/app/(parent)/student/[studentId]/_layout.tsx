@@ -3,6 +3,7 @@ import { Redirect, Tabs, useLocalSearchParams } from 'expo-router';
 import { BookOpen, CalendarCheck, LayoutDashboard, Megaphone, PlayCircle } from 'lucide-react-native';
 
 import { ErrorState } from '@/components/error-state';
+import { ThemedText } from '@/components/themed-text';
 import { FontFamily, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useLinkedChild } from '@/lib/parent/use-linked-child';
@@ -21,6 +22,10 @@ export default function StudentTabsLayout() {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.background }}>
         <ActivityIndicator color={theme.accent} />
+        {/* Temporary diagnostic, see lectures/index.tsx for why. */}
+        <ThemedText variant="mono" color="textMuted" style={{ marginTop: Spacing.three, fontSize: 11 }}>
+          DEBUG layout build 2026-08-28-3
+        </ThemedText>
       </View>
     );
   }

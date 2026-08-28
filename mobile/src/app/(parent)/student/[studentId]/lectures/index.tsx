@@ -61,6 +61,14 @@ export default function LecturesListScreen() {
       <ThemedView style={styles.container}>
         <SafeAreaView style={[styles.safeArea, styles.centered]}>
           <ActivityIndicator color={theme.accent} />
+          {/* Temporary diagnostic — a prior fix (timeout + retry) tested
+              correct via two independent methods but was still reported
+              stuck on-device. This makes the actual live state visible in a
+              screenshot instead of guessing blind again. Remove once the
+              real cause on-device is confirmed. */}
+          <ThemedText variant="mono" color="textMuted" style={{ marginTop: Spacing.three, fontSize: 11, textAlign: 'center' }}>
+            DEBUG build 2026-08-28-3{'\n'}child: {childState.status} · lectures: {lecturesState.status}
+          </ThemedText>
         </SafeAreaView>
       </ThemedView>
     );
