@@ -14,7 +14,6 @@ import { Ink, Radius, Semantic, Shadow, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { fetchStudentLectures } from '@/lib/student/lectures';
 import { useAsyncData } from '@/lib/use-async-data';
-import { useLinkedChild } from '@/lib/parent/use-linked-child';
 
 function fmt(seconds: number): string {
   const m = Math.floor(seconds / 60);
@@ -25,7 +24,6 @@ function fmt(seconds: number): string {
 export default function LecturesListScreen() {
   const { studentId } = useLocalSearchParams<{ studentId: string }>();
   const theme = useTheme();
-  const childState = useLinkedChild(studentId);
   const lecturesState = useAsyncData(() => fetchStudentLectures(studentId), [studentId]);
   const [subjectFilter, setSubjectFilter] = useState('All Subjects');
 
@@ -35,16 +33,6 @@ export default function LecturesListScreen() {
     [lectures],
   );
   const filtered = (lectures ?? []).filter((l) => subjectFilter === 'All Subjects' || l.subject === subjectFilter);
-
-  if (childState.status === 'error') {
-    return (
-      <ThemedView style={styles.container}>
-        <SafeAreaView style={styles.safeArea}>
-          <ErrorState message={childState.error} onRetry={childState.reload} />
-        </SafeAreaView>
-      </ThemedView>
-    );
-  }
 
   if (lecturesState.status === 'error') {
     return (
@@ -56,19 +44,11 @@ export default function LecturesListScreen() {
     );
   }
 
-  if (!lectures || childState.status !== 'ready') {
+  if (!lectures) {
     return (
       <ThemedView style={styles.container}>
         <SafeAreaView style={[styles.safeArea, styles.centered]}>
           <ActivityIndicator color={theme.accent} />
-          {/* Temporary diagnostic — a prior fix (timeout + retry) tested
-              correct via two independent methods but was still reported
-              stuck on-device. This makes the actual live state visible in a
-              screenshot instead of guessing blind again. Remove once the
-              real cause on-device is confirmed. */}
-          <ThemedText variant="mono" color="textMuted" style={{ marginTop: Spacing.three, fontSize: 11, textAlign: 'center' }}>
-            DEBUG build 2026-08-28-3{'\n'}child: {childState.status} · lectures: {lecturesState.status}
-          </ThemedText>
         </SafeAreaView>
       </ThemedView>
     );

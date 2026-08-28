@@ -10,7 +10,7 @@ import { ThemedView } from '@/components/themed-view';
 import { ProgressBar } from '@/components/ui/progress-bar';
 import { StatusPill } from '@/components/ui/status-pill';
 import { Ink, Radius, Semantic, Spacing } from '@/constants/theme';
-import { useLinkedChild } from '@/lib/parent/use-linked-child';
+import { useLinkedChildContext } from '@/lib/parent/linked-child-context';
 import { useVideoHeartbeat } from '@/lib/video/use-heartbeat';
 
 function fmt(seconds: number): string {
@@ -34,7 +34,7 @@ export default function LecturePlayerScreen() {
     watchedSeconds: string;
     completed: string;
   }>();
-  const childState = useLinkedChild(params.studentId);
+  const child = useLinkedChildContext();
 
   const durationSeconds = Number(params.durationSeconds);
   const [watchedSeconds, setWatchedSeconds] = useState(Number(params.watchedSeconds));
@@ -53,7 +53,7 @@ export default function LecturePlayerScreen() {
   });
 
   const pct = durationSeconds > 0 ? Math.round((watchedSeconds / durationSeconds) * 100) : 0;
-  const isLateEnrollment = childState.status === 'ready' && childState.child.isLateEnrollment;
+  const isLateEnrollment = child.isLateEnrollment;
   const fullyWatched = watchedSeconds >= durationSeconds;
 
   return (

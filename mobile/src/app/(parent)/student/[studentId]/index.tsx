@@ -15,7 +15,7 @@ import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { fetchStudentDashboardData } from '@/lib/student/dashboard-data';
 import { useAsyncData } from '@/lib/use-async-data';
-import { useLinkedChild } from '@/lib/parent/use-linked-child';
+import { useLinkedChildContext } from '@/lib/parent/linked-child-context';
 import { downloadProgressReport } from '@/lib/reports/download';
 
 const TIER_TONE = { Distinction: 'success', Merit: 'ink', Pass: 'warning', 'Below Pass': 'danger' } as const;
@@ -24,20 +24,10 @@ const STATUS_TONE = { Present: 'success', Late: 'warning', Absent: 'danger' } as
 export default function StudentOverview() {
   const { studentId } = useLocalSearchParams<{ studentId: string }>();
   const theme = useTheme();
-  const childState = useLinkedChild(studentId);
+  const child = useLinkedChildContext();
   const dataState = useAsyncData(() => fetchStudentDashboardData(studentId), [studentId]);
 
   const [downloading, setDownloading] = useState(false);
-
-  if (childState.status === 'error') {
-    return (
-      <ThemedView style={styles.container}>
-        <SafeAreaView style={styles.safeArea}>
-          <ErrorState message={childState.error} onRetry={childState.reload} />
-        </SafeAreaView>
-      </ThemedView>
-    );
-  }
 
   if (dataState.status === 'error') {
     return (
@@ -49,7 +39,7 @@ export default function StudentOverview() {
     );
   }
 
-  if (dataState.status !== 'ready' || childState.status !== 'ready') {
+  if (dataState.status !== 'ready') {
     return (
       <ThemedView style={styles.container}>
         <SafeAreaView style={[styles.safeArea, styles.centered]}>
@@ -60,7 +50,6 @@ export default function StudentOverview() {
   }
 
   const data = dataState.data;
-  const child = childState.child;
 
   async function handleDownload() {
     setDownloading(true);
