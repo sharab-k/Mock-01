@@ -149,7 +149,10 @@ const styles = StyleSheet.create({
   content: { padding: Spacing.four, gap: Spacing.four, paddingBottom: Spacing.six },
   headerRow: { flexDirection: 'row', alignItems: 'flex-start' },
   alertCard: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
-  dayCard: { width: 76, alignItems: 'center', gap: 4 },
+  // flexShrink: 0 — see lectures/index.tsx's filterChip comment; without it
+  // React Native Web can still shrink a fixed-width row item below its set
+  // width inside a horizontal ScrollView instead of scrolling.
+  dayCard: { width: 76, alignItems: 'center', gap: 4, flexShrink: 0 },
   dayCounts: { flexDirection: 'row', gap: 6, marginTop: 4 },
   classRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
   timingRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },

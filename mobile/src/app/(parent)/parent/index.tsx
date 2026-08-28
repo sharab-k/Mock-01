@@ -180,6 +180,10 @@ const styles = StyleSheet.create({
     borderRadius: Radius.pill,
     paddingVertical: 6,
     paddingHorizontal: 10,
+    // See lectures/index.tsx's filterChip comment — without this, React
+    // Native Web's horizontal ScrollView shrinks these chips to fit instead
+    // of scrolling, clipping the sibling names to invisible.
+    flexShrink: 0,
   },
   selectedCard: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
   row: { flexDirection: 'row', gap: Spacing.three },
