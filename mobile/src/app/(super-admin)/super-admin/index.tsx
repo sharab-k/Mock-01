@@ -1,7 +1,7 @@
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
-import { AlertTriangle, ChevronRight, ShieldAlert, Users2, Wallet, UsersRound, GraduationCap } from 'lucide-react-native';
+import { router, type Href } from 'expo-router';
+import { AlertTriangle, BookOpen, ChevronRight, ShieldAlert, Users2, Wallet, UsersRound, GraduationCap } from 'lucide-react-native';
 
 import { ErrorState } from '@/components/error-state';
 import { ThemedText } from '@/components/themed-text';
@@ -137,6 +137,14 @@ export default function SuperAdminDashboard() {
             <Card style={styles.linkRow}>
               <UsersRound size={18} color={theme.textMuted} />
               <ThemedText variant="bodyMedium" style={{ flex: 1 }}>Parent Directory</ThemedText>
+              <ChevronRight size={16} color={theme.textMuted} />
+            </Card>
+          </Pressable>
+
+          <Pressable onPress={() => router.push('/subjects' as Href)}>
+            <Card style={styles.linkRow}>
+              <BookOpen size={18} color={theme.textMuted} />
+              <ThemedText variant="bodyMedium" style={{ flex: 1 }}>Subjects</ThemedText>
               <ChevronRight size={16} color={theme.textMuted} />
             </Card>
           </Pressable>

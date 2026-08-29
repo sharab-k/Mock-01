@@ -118,3 +118,98 @@ export async function bulkSaveMarksAction(
 
   return { ok: true as const, inserted, updated, notified }
 }
+
+const BulkSaveTestMarksSchema = z.object({
+  testId: z.string().uuid(),
+  entries: z.array(z.object({
+    studentId: z.string().uuid(),
+    studentName: z.string().min(1),
+    score: z.number().int().min(0),
+  })).min(1),
+})
+
+// The custom-test counterpart to bulkSaveMarksAction above — same
+// insert-or-update-with-history shape, same notification-on-change
+// behaviour, just keyed by test_id (public.tests) instead of
+// subject+examType+term. Subject name, exam label, max score, and term all
+// come from the test row itself rather than being passed in, since a test
+// already pins all of that down at creation time.
+export async function bulkSaveTestMarksAction(
+  input: z.infer<typeof BulkSaveTestMarksSchema>,
+  supabaseOverride?: SupabaseClient<Database>,
+) {
+  const parsed = BulkSaveTestMarksSchema.safeParse(input)
+  if (!parsed.success) return { ok: false as const, error: 'Invalid marks batch.' }
+
+  const { supabase, user, authorized } = await requireMarksCaller(supabaseOverride)
+  if (!authorized || !user) return { ok: false as const, error: 'Not authorized.' }
+
+  const { testId, entries } = parsed.data
+
+  const { data: test } = await supabase.from('tests').select('title, max_score, grade_level, section, subjects(name)').eq('id', testId).single()
+  if (!test) return { ok: false as const, error: 'Test not found.' }
+
+  for (const entry of entries) {
+    if (entry.score > test.max_score) return { ok: false as const, error: `${entry.studentName}'s score exceeds the maximum.` }
+  }
+
+  const term = currentTerm()
+  const subjectName = test.subjects?.name ?? '—'
+  let inserted = 0
+  let updated = 0
+  let notified = 0
+
+  for (const entry of entries) {
+    const { data: existing } = await supabase
+      .from('marks')
+      .select('id, score')
+      .eq('student_id', entry.studentId)
+      .eq('test_id', testId)
+      .maybeSingle()
+
+    let shouldNotify = false
+
+    if (!existing) {
+      const { error } = await supabase.from('marks').insert({
+        student_id: entry.studentId,
+        subject: subjectName,
+        exam_type: 'custom',
+        test_id: testId,
+        score: entry.score,
+        max_score: test.max_score,
+        term,
+        recorded_by: user.id,
+      })
+      if (error) return { ok: false as const, error: `Could not save ${entry.studentName}'s score.` }
+      inserted++
+      shouldNotify = true
+    } else if (existing.score !== entry.score) {
+      const { error: updateError } = await supabase.from('marks').update({ score: entry.score }).eq('id', existing.id)
+      if (updateError) return { ok: false as const, error: `Could not update ${entry.studentName}'s score.` }
+
+      const { error: historyError } = await supabase.from('marks_edit_history').insert({
+        mark_id: existing.id,
+        previous_score: existing.score,
+        new_score: entry.score,
+        edited_by: user.id,
+      })
+      if (historyError) return { ok: false as const, error: `Could not log the edit for ${entry.studentName}.` }
+      updated++
+      shouldNotify = true
+    }
+
+    if (shouldNotify) {
+      const phones = await getLinkedParentPhones(entry.studentId)
+      await Promise.all(phones.map((phone) =>
+        sendGradeAlert(entry.studentName, phone, subjectName, test.title, entry.score, test.max_score),
+      ))
+      if (phones.length > 0) notified++
+    }
+  }
+
+  if (inserted + updated > 0) {
+    await logAction(supabase, user.id, `Bulk marks upload — ${subjectName} "${test.title}" · Grade ${test.grade_level}-${test.section} · ${inserted + updated} students`)
+  }
+
+  return { ok: true as const, inserted, updated, notified }
+}

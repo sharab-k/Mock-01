@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import { BarChart2, LayoutDashboard, PenLine } from 'lucide-react-native';
+import { BarChart2, ClipboardList, LayoutDashboard, PenLine } from 'lucide-react-native';
 
 import { FontFamily } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -18,6 +18,7 @@ export default function MarksTabsLayout() {
       }}>
       <Tabs.Screen name="index" options={{ title: 'Dashboard', tabBarIcon: ({ color, size }) => <LayoutDashboard color={color} size={size} /> }} />
       <Tabs.Screen name="enter" options={{ title: 'Enter', tabBarIcon: ({ color, size }) => <PenLine color={color} size={size} /> }} />
+      <Tabs.Screen name="tests" options={{ title: 'Tests', tabBarIcon: ({ color, size }) => <ClipboardList color={color} size={size} /> }} />
       <Tabs.Screen name="reports" options={{ title: 'Reports', tabBarIcon: ({ color, size }) => <BarChart2 color={color} size={size} /> }} />
     </Tabs>
   );

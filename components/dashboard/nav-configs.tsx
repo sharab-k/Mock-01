@@ -25,6 +25,7 @@ export const NAV_CONFIGS: Record<string, NavSection[]> = {
         { label: 'Admissions', href: '/super-admin/admissions', icon: Inbox,        badge: 14 },
         { label: 'Attendance', href: '/super-admin/attendance', icon: CalendarCheck           },
         { label: 'Marks',      href: '/super-admin/marks',      icon: BookOpen                },
+        { label: 'Subjects',   href: '/super-admin/subjects',   icon: ClipboardList           },
         { label: 'Fees',       href: '/super-admin/fees',       icon: Wallet                  },
       ],
     },
@@ -82,6 +83,7 @@ export const NAV_CONFIGS: Record<string, NavSection[]> = {
       title: 'Marks',
       items: [
         { label: 'Enter Marks', href: '/marks/enter',    icon: PenLine   },
+        { label: 'Tests',       href: '/marks/tests',    icon: ClipboardList },
         { label: 'Subjects',    href: '/marks/subjects', icon: BookOpen  },
         { label: 'Reports',     href: '/marks/reports',  icon: BarChart2 },
       ],

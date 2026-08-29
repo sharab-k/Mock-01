@@ -208,6 +208,7 @@ export type Database = {
           student_id: string
           subject: string
           term: string
+          test_id: string | null
           updated_at: string
         }
         Insert: {
@@ -220,6 +221,7 @@ export type Database = {
           student_id: string
           subject: string
           term: string
+          test_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -232,6 +234,7 @@ export type Database = {
           student_id?: string
           subject?: string
           term?: string
+          test_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -247,6 +250,13 @@ export type Database = {
             columns: ["student_id"]
             isOneToOne: false
             referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marks_test_id_fkey"
+            columns: ["test_id"]
+            isOneToOne: false
+            referencedRelation: "tests"
             referencedColumns: ["id"]
           },
         ]
@@ -449,6 +459,49 @@ export type Database = {
         }
         Relationships: []
       }
+      student_subject_enrollments: {
+        Row: {
+          created_at: string
+          enrolled_by: string | null
+          student_id: string
+          subject_id: string
+        }
+        Insert: {
+          created_at?: string
+          enrolled_by?: string | null
+          student_id: string
+          subject_id: string
+        }
+        Update: {
+          created_at?: string
+          enrolled_by?: string | null
+          student_id?: string
+          subject_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_subject_enrollments_enrolled_by_fkey"
+            columns: ["enrolled_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_subject_enrollments_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_subject_enrollments_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       students: {
         Row: {
           academic_year: number
@@ -524,6 +577,44 @@ export type Database = {
         }
         Relationships: []
       }
+      subjects: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          grade_level: string
+          id: string
+          name: string
+          type: Database["public"]["Enums"]["subject_type"]
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          grade_level: string
+          id?: string
+          name: string
+          type: Database["public"]["Enums"]["subject_type"]
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          grade_level?: string
+          id?: string
+          name?: string
+          type?: Database["public"]["Enums"]["subject_type"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subjects_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       teachers: {
         Row: {
           classes: string[]
@@ -556,6 +647,57 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      tests: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          grade_level: string
+          id: string
+          max_score: number
+          section: string
+          subject_id: string
+          test_date: string
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          grade_level: string
+          id?: string
+          max_score?: number
+          section: string
+          subject_id: string
+          test_date?: string
+          title: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          grade_level?: string
+          id?: string
+          max_score?: number
+          section?: string
+          subject_id?: string
+          test_date?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tests_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tests_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       video_lectures: {
         Row: {
@@ -702,13 +844,14 @@ export type Database = {
         | "awaiting_visit"
         | "enrolled"
         | "declined"
-      exam_type: "monthly" | "half_yearly" | "final"
+      exam_type: "monthly" | "half_yearly" | "final" | "custom"
       fee_status: "paid" | "unpaid"
       notice_audience: "All" | "Students" | "Parents" | "Staff"
       notice_category: "Academic" | "Event" | "Holiday" | "Admissions"
       notification_channel: "whatsapp" | "sms"
       notification_status: "sent" | "failed"
       student_status: "active" | "inactive"
+      subject_type: "compulsory" | "elected"
       user_role:
         | "super_admin"
         | "admissions_admin"
@@ -854,13 +997,14 @@ export const Constants = {
         "enrolled",
         "declined",
       ],
-      exam_type: ["monthly", "half_yearly", "final"],
+      exam_type: ["monthly", "half_yearly", "final", "custom"],
       fee_status: ["paid", "unpaid"],
       notice_audience: ["All", "Students", "Parents", "Staff"],
       notice_category: ["Academic", "Event", "Holiday", "Admissions"],
       notification_channel: ["whatsapp", "sms"],
       notification_status: ["sent", "failed"],
       student_status: ["active", "inactive"],
+      subject_type: ["compulsory", "elected"],
       user_role: [
         "super_admin",
         "admissions_admin",

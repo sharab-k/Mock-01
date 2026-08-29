@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useState } from 'react'
 import StatCard from '@/components/dashboard/StatCard'
-import { PenLine, BookOpen, CheckCircle, Users, Upload, X } from 'lucide-react'
+import { PenLine, BookOpen, CheckCircle, Users, Upload, X, ClipboardList } from 'lucide-react'
 import { TIER_ORDER, TIER_RANGE, TIER_STYLE, type Tier } from '@/lib/marks/tier'
 import { GRADES, sectionsForGrade } from '@/lib/students/constants'
 import type { ClassMarksStat, SubjectStat } from '@/lib/marks/dashboard-data'
@@ -76,6 +76,9 @@ export default function MarksDashboardContent({
               </div>
             )}
           </div>
+          <Link href={`${basePath}/tests`} className="flex items-center gap-2 px-3.5 py-2 bg-white border border-neutral-200 text-neutral-700 text-[13px] font-medium rounded-xl hover:bg-neutral-50 transition-colors no-underline">
+            <ClipboardList size={14} /> Tests
+          </Link>
           <Link href={`${basePath}/enter`} className="flex items-center gap-2 px-3.5 py-2 bg-white border border-neutral-200 text-neutral-700 text-[13px] font-medium rounded-xl hover:bg-neutral-50 transition-colors no-underline">
             <PenLine size={14} /> Enter Marks
           </Link>
