@@ -122,9 +122,14 @@ const styles = StyleSheet.create({
   centered: { alignItems: 'center', justifyContent: 'center' },
   header: { padding: Spacing.four, paddingBottom: Spacing.two },
   filterRow: { gap: Spacing.two, paddingHorizontal: Spacing.four, paddingBottom: Spacing.three },
-  // flexShrink: 0 — see lectures/index.tsx's filterChip comment; without it
-  // React Native Web shrinks these to fit instead of scrolling the row.
-  filterChip: { borderWidth: 1, borderRadius: Radius.pill, paddingVertical: 6, paddingHorizontal: 12, flexShrink: 0 },
+  // See lectures/index.tsx's filterChip comment — flexShrink stops the row
+  // from shrinking these instead of scrolling; alignSelf/alignItems/
+  // justifyContent stop the row's cross-axis stretch from blowing each chip
+  // up to the row's full height with its label stuck at the top.
+  filterChip: {
+    borderWidth: 1, borderRadius: Radius.pill, paddingVertical: 6, paddingHorizontal: 12,
+    flexShrink: 0, alignSelf: 'flex-start', alignItems: 'center', justifyContent: 'center',
+  },
   list: { padding: Spacing.four, paddingTop: 0, gap: Spacing.three, paddingBottom: Spacing.six },
   rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   actionsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 },

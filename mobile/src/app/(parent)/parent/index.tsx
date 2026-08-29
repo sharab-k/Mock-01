@@ -175,15 +175,18 @@ const styles = StyleSheet.create({
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 8,
     borderWidth: 1,
     borderRadius: Radius.pill,
     paddingVertical: 6,
     paddingHorizontal: 10,
-    // See lectures/index.tsx's filterChip comment — without this, React
-    // Native Web's horizontal ScrollView shrinks these chips to fit instead
-    // of scrolling, clipping the sibling names to invisible.
+    // See lectures/index.tsx's filterChip comment — flexShrink stops React
+    // Native Web's horizontal ScrollView from shrinking these to fit instead
+    // of scrolling; alignSelf stops the row's cross-axis stretch from
+    // blowing each chip up to the row's full height.
     flexShrink: 0,
+    alignSelf: 'flex-start',
   },
   selectedCard: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
   row: { flexDirection: 'row', gap: Spacing.three },

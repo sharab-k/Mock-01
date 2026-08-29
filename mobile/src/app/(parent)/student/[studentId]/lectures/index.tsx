@@ -130,13 +130,19 @@ const styles = StyleSheet.create({
   centered: { alignItems: 'center', justifyContent: 'center' },
   header: { paddingHorizontal: Spacing.four, paddingTop: Spacing.four, gap: 2 },
   filterRow: { gap: Spacing.two, paddingHorizontal: Spacing.four, paddingVertical: Spacing.three },
-  // flexShrink: 0 is load-bearing here — without it, React Native Web's
-  // horizontal ScrollView treats these as regular flex children and shrinks
-  // them to fit the container instead of letting the row overflow and
-  // scroll, which squashed every chip down to a sliver with its label
-  // clipped to invisible (exactly what showed up in testing: empty oval
-  // pills instead of "Mathematics", "Physics", etc.).
-  filterChip: { borderWidth: 1, borderRadius: Radius.pill, paddingVertical: 7, paddingHorizontal: 14, flexShrink: 0 },
+  // flexShrink: 0 stops React Native Web's horizontal ScrollView from
+  // treating these as regular flex children and shrinking them to fit
+  // instead of scrolling. alignSelf: 'flex-start' stops the row's default
+  // cross-axis stretch from separately blowing each chip up to the row's
+  // full height — without it every chip stretched to ~200px tall with its
+  // label stuck at the top instead of centered (the second, different bug
+  // that produced empty-looking oval pills after the shrink fix). center
+  // alignItems/justifyContent is a belt-and-suspenders fallback so the
+  // label still centers even if something re-stretches the box.
+  filterChip: {
+    borderWidth: 1, borderRadius: Radius.pill, paddingVertical: 7, paddingHorizontal: 14,
+    flexShrink: 0, alignSelf: 'flex-start', alignItems: 'center', justifyContent: 'center',
+  },
   content: { padding: Spacing.four, paddingTop: Spacing.one, gap: Spacing.three, paddingBottom: Spacing.six },
   lectureRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, paddingVertical: 4 },
   iconWrap: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
