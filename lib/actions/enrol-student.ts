@@ -105,18 +105,36 @@ export async function enrolStudentAction(
     parentId = existingParent.id
     username = existingParent.email
   } else {
-    username = generateUsername(data.parentName)
     tempPassword = generateTempPassword()
 
-    const { data: createdUser, error: createError } = await admin.auth.admin.createUser({
-      email: username,
+    // generateUsername's slug is derived only from the parent's name, so any
+    // two unrelated families sharing a common name (routine with names like
+    // "Muhammad Ahmed") collide on the exact same generated email — this was
+    // the actual cause of "Could not create the parent account" firing
+    // "a lot of times": createUser rejects the duplicate and the whole
+    // enrolment failed with no retry, even though generateUsername already
+    // accepts a `suffix` to disambiguate — it was just never called with one.
+    // Retries with an incrementing suffix on a genuine email_exists conflict
+    // specifically, up to a sane bound; any other failure still surfaces
+    // immediately rather than retrying blindly.
+    const MAX_ATTEMPTS = 25
+    let result = await admin.auth.admin.createUser({
+      email: (username = generateUsername(data.parentName)),
       password: tempPassword,
       email_confirm: true,
     })
-    if (createError || !createdUser.user) {
+    for (let attempt = 2; result.error?.code === 'email_exists' && attempt <= MAX_ATTEMPTS; attempt++) {
+      result = await admin.auth.admin.createUser({
+        email: (username = generateUsername(data.parentName, attempt)),
+        password: tempPassword,
+        email_confirm: true,
+      })
+    }
+
+    if (result.error || !result.data.user) {
       return { ok: false, error: 'Could not create the parent account. Please try again.' }
     }
-    parentId = createdUser.user.id
+    parentId = result.data.user.id
     createdNewParentId = parentId
 
     const { error: profileError } = await admin.from('profiles').insert({
