@@ -29,8 +29,14 @@ export async function POST(request: Request) {
   const parsed = BodySchema.safeParse(await request.json().catch(() => null))
   if (!parsed.success) return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 })
 
-  const phones = await getLinkedParentPhones(parsed.data.studentId)
-  await Promise.all(phones.map((phone) => sendAbsenceAlert(parsed.data.studentName, phone, parsed.data.classDate)))
+  const [phones, { data: student }] = await Promise.all([
+    getLinkedParentPhones(parsed.data.studentId),
+    supabase.from('students').select('roll_number').eq('id', parsed.data.studentId).single(),
+  ])
+  if (phones.length === 0) return NextResponse.json({ ok: true, notified: 0, sent: false })
 
-  return NextResponse.json({ ok: true, notified: phones.length })
+  const rollNumber = student?.roll_number ?? ''
+  const results = await Promise.all(phones.map((phone) => sendAbsenceAlert(parsed.data.studentName, rollNumber, phone, parsed.data.classDate)))
+
+  return NextResponse.json({ ok: true, notified: phones.length, sent: results.some(Boolean) })
 }

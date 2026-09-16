@@ -49,6 +49,7 @@ export default function AttendanceClassDetailContent({ grade, section, basePath 
   const [roster, setRoster] = useState<RosterStudent[]>(initialStudents)
   const [pending, setPending] = useState<Record<string, boolean>>({})
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [alertPending, setAlertPending] = useState<Record<string, boolean>>({})
 
   const isValid = GRADES.includes(grade as Grade) && sectionsForGrade(grade as Grade).includes(section as Section)
 
@@ -78,6 +79,21 @@ export default function AttendanceClassDetailContent({ grade, section, basePath 
     const student = roster.find(s => s.id === id)
     if (!student) return
     setStatus(id, NEXT_STATUS[student.status])
+  }
+
+  const sendAlert = async (id: string) => {
+    const student = roster.find(s => s.id === id)
+    if (!student || alertPending[id]) return
+    setAlertPending(p => ({ ...p, [id]: true }))
+    const res = await fetch('/api/notifications', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ studentId: id, studentName: student.name, classDate: new Date().toISOString().slice(0, 10) }),
+    }).then(r => r.json()).catch(() => null)
+    setAlertPending(p => ({ ...p, [id]: false }))
+    if (res?.ok && res.notified > 0) {
+      setRoster(prev => prev.map(s => s.id === id ? { ...s, alertStatus: res.sent ? 'sent' : 'failed' } : s))
+    }
   }
 
   const sorted = [...roster].sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status])
@@ -177,13 +193,28 @@ export default function AttendanceClassDetailContent({ grade, section, basePath 
                       </button>
                     </td>
                     <td className="px-3 py-3 hidden md:table-cell">
-                      {s.status === 'absent' && s.alertStatus === 'sent' && (
-                        <span className="flex items-center gap-1 text-[11px] text-success font-semibold"><MessageSquare size={11} /> Notified</span>
-                      )}
-                      {s.status === 'absent' && s.alertStatus === 'failed' && (
-                        <span className="flex items-center gap-1 text-[11px] text-danger font-semibold" title="WhatsApp/SMS alert failed — contact the parent directly"><MessageSquare size={11} /> Alert failed</span>
-                      )}
-                      {(s.status !== 'absent' || s.alertStatus === null) && (
+                      {s.status === 'absent' ? (
+                        <div className="flex items-center gap-2">
+                          {s.alertStatus === 'sent' && (
+                            <span className="flex items-center gap-1 text-[11px] text-success font-semibold"><MessageSquare size={11} /> Notified</span>
+                          )}
+                          {s.alertStatus === 'failed' && (
+                            <span className="flex items-center gap-1 text-[11px] text-danger font-semibold" title="WhatsApp/SMS alert failed — contact the parent directly"><MessageSquare size={11} /> Alert failed</span>
+                          )}
+                          {s.alertStatus === null && (
+                            <span className="text-[11px] text-neutral-300">Not sent</span>
+                          )}
+                          {s.parentPhone && (
+                            <button
+                              onClick={() => sendAlert(s.id)}
+                              disabled={alertPending[s.id]}
+                              className="text-[11px] font-medium text-ink-600 hover:text-ink-800 bg-ink-50 hover:bg-ink-100 px-2 py-1 rounded-lg transition-colors disabled:opacity-50"
+                            >
+                              {alertPending[s.id] ? 'Sending…' : s.alertStatus ? 'Resend' : 'Send Alert'}
+                            </button>
+                          )}
+                        </div>
+                      ) : (
                         <span className="text-[11px] text-neutral-300">—</span>
                       )}
                     </td>

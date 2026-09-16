@@ -21,27 +21,29 @@ async function logResult(channel: NotificationChannel, recipient: string, payloa
 // channel attempted. A Twilio failure here must NEVER throw: the caller
 // (the attendance/marks Server Action) has already committed the academic
 // record, and a notification hiccup must not roll that back or bubble up.
-async function dispatch(message: string, parentPhone: string): Promise<void> {
+async function dispatch(message: string, parentPhone: string): Promise<boolean> {
   try {
     const whatsapp = await provider.send('whatsapp', parentPhone, message)
     await logResult('whatsapp', parentPhone, message, whatsapp.ok)
-    if (whatsapp.ok) return
+    if (whatsapp.ok) return true
 
     const sms = await provider.send('sms', parentPhone, message)
     await logResult('sms', parentPhone, message, sms.ok)
+    return sms.ok
   } catch {
     // Both provider.send and logResult already catch/report their own
     // failures — this is a last-resort guard so a bug in the pipeline itself
     // can never propagate back into the attendance/marks write path.
+    return false
   }
 }
 
-export async function sendAbsenceAlert(studentName: string, parentPhone: string, classDate: string): Promise<void> {
-  await dispatch(absenceAlertMessage(studentName, classDate), parentPhone)
+export async function sendAbsenceAlert(studentName: string, rollNumber: string, parentPhone: string, classDate: string): Promise<boolean> {
+  return dispatch(absenceAlertMessage(studentName, rollNumber, classDate), parentPhone)
 }
 
-export async function sendGradeAlert(studentName: string, parentPhone: string, subject: string, examType: string, score: number, maxScore: number): Promise<void> {
-  await dispatch(gradeAlertMessage(studentName, subject, examType, score, maxScore), parentPhone)
+export async function sendGradeAlert(studentName: string, parentPhone: string, subject: string, examType: string, score: number, maxScore: number): Promise<boolean> {
+  return dispatch(gradeAlertMessage(studentName, subject, examType, score, maxScore), parentPhone)
 }
 
 // Resolves every parent phone linked to a student. Uses the service-role

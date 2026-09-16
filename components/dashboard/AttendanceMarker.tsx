@@ -50,7 +50,7 @@ const STATUS_CONFIG: Record<Status, {
 }
 
 function initRecord(students: MarkerStudent[]): Record<string, Status> {
-  return Object.fromEntries(students.map(s => [s.roll, 'present' as Status]))
+  return Object.fromEntries(students.map(s => [s.id, 'present' as Status]))
 }
 
 type Props = {
@@ -85,16 +85,16 @@ export default function AttendanceMarker({ classes, onSubmitted }: Props) {
     late:    Object.values(classRecord).filter(s => s === 'late').length,
   }
 
-  function setStatus(roll: string, status: Status) {
+  function setStatus(id: string, status: Status) {
     setRecords(prev => ({
       ...prev,
-      [activeClass.id]: { ...prev[activeClass.id], [roll]: status },
+      [activeClass.id]: { ...prev[activeClass.id], [id]: status },
     }))
     setSubmitted(prev => ({ ...prev, [activeClass.id]: false }))
   }
 
   function markAll(status: Status) {
-    const all = Object.fromEntries(activeClass.students.map(s => [s.roll, status]))
+    const all = Object.fromEntries(activeClass.students.map(s => [s.id, status]))
     setRecords(prev => ({ ...prev, [activeClass.id]: all }))
     setSubmitted(prev => ({ ...prev, [activeClass.id]: false }))
   }
@@ -103,7 +103,7 @@ export default function AttendanceMarker({ classes, onSubmitted }: Props) {
     setSubmitting(true)
     const outcome = await submitClassAttendanceAction({
       classLabel: activeClass.label,
-      records: activeClass.students.map(s => ({ studentId: s.id, studentName: s.name, status: classRecord[s.roll] })),
+      records: activeClass.students.map(s => ({ studentId: s.id, studentName: s.name, status: classRecord[s.id] })),
     })
     setSubmitting(false)
 
@@ -203,12 +203,18 @@ export default function AttendanceMarker({ classes, onSubmitted }: Props) {
       </div>
 
       {/* Student rows */}
+      {activeClass.students.length === 0 && (
+        <div className="px-6 py-10 text-center">
+          <p className="text-[13px] font-medium text-neutral-500">No students enrolled in this class yet</p>
+          <p className="text-[12px] text-neutral-400 mt-1">Enrol students in Admissions before marking attendance here.</p>
+        </div>
+      )}
       <div className="divide-y divide-neutral-100">
         {activeClass.students.map((student) => {
-          const current = classRecord[student.roll]
+          const current = classRecord[student.id]
           return (
             <div
-              key={student.roll}
+              key={student.id}
               className="flex items-center gap-4 px-6 py-3.5 hover:bg-neutral-50/60 transition-colors"
             >
               {/* Avatar + name */}
@@ -236,7 +242,7 @@ export default function AttendanceMarker({ classes, onSubmitted }: Props) {
                   return (
                     <button
                       key={status}
-                      onClick={() => setStatus(student.roll, status)}
+                      onClick={() => setStatus(student.id, status)}
                       disabled={isSubmitted}
                       className={[
                         'flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-[12px] font-semibold transition-all',
@@ -274,7 +280,7 @@ export default function AttendanceMarker({ classes, onSubmitted }: Props) {
         ) : (
           <button
             onClick={handleSubmit}
-            disabled={submitting}
+            disabled={submitting || activeClass.students.length === 0}
             className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-ink-700 text-white text-[13px] font-semibold hover:bg-ink-800 transition-colors disabled:opacity-60"
           >
             <Send size={13} />

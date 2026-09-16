@@ -135,6 +135,14 @@ export default function AttendanceMarkScreen() {
           </Pressable>
         </View>
 
+        {activeClass.students.length === 0 && (
+          <View style={[styles.centered, { paddingHorizontal: Spacing.four }]}>
+            <ThemedText variant="bodyMedium" style={{ textAlign: 'center' }}>No students enrolled in this class yet</ThemedText>
+            <ThemedText variant="small" color="textMuted" style={{ textAlign: 'center', marginTop: 4 }}>
+              Enrol students in Admissions before marking attendance here.
+            </ThemedText>
+          </View>
+        )}
         <ScrollView contentContainerStyle={styles.list}>
           {activeClass.students.map((student) => {
             const current = classRecord[student.id];
@@ -182,7 +190,7 @@ export default function AttendanceMarkScreen() {
               <ThemedText variant="bodyMedium" style={{ color: Semantic.success }}>Attendance submitted</ThemedText>
             </View>
           ) : (
-            <Button label={submitting ? 'Submitting…' : 'Submit Attendance'} loading={submitting} onPress={handleSubmit} fullWidth />
+            <Button label={submitting ? 'Submitting…' : 'Submit Attendance'} loading={submitting} disabled={activeClass.students.length === 0} onPress={handleSubmit} fullWidth />
           )}
         </View>
 

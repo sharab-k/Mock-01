@@ -4,11 +4,15 @@
 // siblings can share a parent phone). Keeping the prefix in one place avoids
 // the two call sites drifting out of sync.
 export function absenceAlertPrefix(studentName: string): string {
-  return `JE Academy: ${studentName} was marked absent on `
+  return `Notification of Absence.\n\nDear Parents,\n${studentName}, `
 }
 
-export function absenceAlertMessage(studentName: string, classDate: string): string {
-  return `${absenceAlertPrefix(studentName)}${classDate}. Please contact the school if this is unexpected.`
+function absenceDateLabel(classDate: string): string {
+  return new Date(`${classDate}T00:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })
+}
+
+export function absenceAlertMessage(studentName: string, rollNumber: string, classDate: string): string {
+  return `${absenceAlertPrefix(studentName)}having GR# ${rollNumber}, is absent today (${absenceDateLabel(classDate)}). Kindly ensure they cover the missed work.\n\nRegards,\nJ.E Academy.`
 }
 
 export function gradeAlertPrefix(studentName: string, subject: string): string {

@@ -44,12 +44,17 @@ async function markOneAttendance(
 
   const { data: existing } = await supabase
     .from('attendance_records')
-    .select('id')
+    .select('id, status')
     .eq('student_id', input.studentId)
     .eq('class_date', classDate)
     .maybeSingle()
 
-  const isNewRecord = !existing
+  // Fires whenever a mark newly becomes 'absent' for the day — a fresh
+  // insert, or a correction from present/late — but never re-fires on a
+  // second click that leaves the student absent (CLAUDE.md §7's "not on
+  // every update" is about not spamming re-marks, not about missing every
+  // absence that wasn't the very first write of the day).
+  const becameAbsent = input.status === 'absent' && existing?.status !== 'absent'
 
   const { error } = await supabase
     .from('attendance_records')
@@ -61,9 +66,13 @@ async function markOneAttendance(
   if (error) return { ok: false, error: 'Could not save attendance.' }
 
   let notified = false
-  if (isNewRecord && input.status === 'absent') {
-    const phones = await getLinkedParentPhones(input.studentId)
-    await Promise.all(phones.map((phone) => sendAbsenceAlert(input.studentName, phone, classDate)))
+  if (becameAbsent) {
+    const [phones, { data: student }] = await Promise.all([
+      getLinkedParentPhones(input.studentId),
+      supabase.from('students').select('roll_number').eq('id', input.studentId).single(),
+    ])
+    const rollNumber = student?.roll_number ?? ''
+    await Promise.all(phones.map((phone) => sendAbsenceAlert(input.studentName, rollNumber, phone, classDate)))
     notified = phones.length > 0
   }
 
