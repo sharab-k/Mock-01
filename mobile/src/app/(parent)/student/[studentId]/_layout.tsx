@@ -61,6 +61,11 @@ export default function StudentTabsLayout() {
         <Tabs.Screen name="attendance" options={{ title: 'Attendance', tabBarIcon: ({ color, size }) => <CalendarCheck color={color} size={size} /> }} />
         <Tabs.Screen name="marks" options={{ title: 'Marks', tabBarIcon: ({ color, size }) => <BookOpen color={color} size={size} /> }} />
         <Tabs.Screen name="notices" options={{ title: 'Notices', tabBarIcon: ({ color, size }) => <Megaphone color={color} size={size} /> }} />
+        {/* Reachable via the Overview screen's nav cards, not their own tab
+            bar button — five tabs is already the practical max for a phone
+            width; href: null keeps them in the navigator without a slot. */}
+        <Tabs.Screen name="assignments" options={{ href: null }} />
+        <Tabs.Screen name="guides" options={{ href: null }} />
       </Tabs>
     </LinkedChildProvider>
   );

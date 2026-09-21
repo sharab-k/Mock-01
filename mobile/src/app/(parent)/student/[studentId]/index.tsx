@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useLocalSearchParams } from 'expo-router';
-import { BookOpen, CalendarCheck } from 'lucide-react-native';
+import { router, useLocalSearchParams } from 'expo-router';
+import { BookOpen, CalendarCheck, ChevronRight, ClipboardList, LibraryBig } from 'lucide-react-native';
 
 import { ErrorState } from '@/components/error-state';
 import { ThemedText } from '@/components/themed-text';
@@ -87,6 +87,23 @@ export default function StudentOverview() {
           )}
 
           <View style={{ gap: Spacing.two }}>
+            <Pressable onPress={() => router.push(`/student/${studentId}/assignments`)}>
+              <Card style={styles.linkRow}>
+                <ClipboardList size={18} color={theme.textMuted} />
+                <ThemedText variant="bodyMedium" style={{ flex: 1 }}>Assignments</ThemedText>
+                <ChevronRight size={16} color={theme.textMuted} />
+              </Card>
+            </Pressable>
+            <Pressable onPress={() => router.push(`/student/${studentId}/guides`)}>
+              <Card style={styles.linkRow}>
+                <LibraryBig size={18} color={theme.textMuted} />
+                <ThemedText variant="bodyMedium" style={{ flex: 1 }}>Study Guides</ThemedText>
+                <ChevronRight size={16} color={theme.textMuted} />
+              </Card>
+            </Pressable>
+          </View>
+
+          <View style={{ gap: Spacing.two }}>
             <ThemedText variant="subtitle">Recent attendance</ThemedText>
             <Card style={{ gap: 10 }}>
               {data.attendance.length === 0 ? (
@@ -142,4 +159,5 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', gap: Spacing.three },
   tierRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   listRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
+  linkRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
 });

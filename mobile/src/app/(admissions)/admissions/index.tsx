@@ -1,7 +1,7 @@
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { GraduationCap, Inbox } from 'lucide-react-native';
+import { ChevronRight, GraduationCap, Inbox, Megaphone, Users } from 'lucide-react-native';
 
 import { ErrorState } from '@/components/error-state';
 import { ThemedText } from '@/components/themed-text';
@@ -65,6 +65,22 @@ export default function AdmissionsDashboard() {
 
           <Button label="Enrol Student" onPress={() => router.push('/students/new')} fullWidth />
 
+          <Pressable onPress={() => router.push('/students')}>
+            <Card style={styles.linkRow}>
+              <Users size={18} color={theme.textMuted} />
+              <ThemedText variant="bodyMedium" style={{ flex: 1 }}>All Students</ThemedText>
+              <ChevronRight size={16} color={theme.textMuted} />
+            </Card>
+          </Pressable>
+
+          <Pressable onPress={() => router.push('/notices')}>
+            <Card style={styles.linkRow}>
+              <Megaphone size={18} color={theme.textMuted} />
+              <ThemedText variant="bodyMedium" style={{ flex: 1 }}>Notices</ThemedText>
+              <ChevronRight size={16} color={theme.textMuted} />
+            </Card>
+          </Pressable>
+
           <View style={{ gap: Spacing.two }}>
             <ThemedText variant="subtitle">Recent enquiries</ThemedText>
             {data.recentEnquiries.length === 0 ? (
@@ -97,4 +113,5 @@ const styles = StyleSheet.create({
   headerRow: { flexDirection: 'row', alignItems: 'flex-start' },
   row: { flexDirection: 'row', gap: Spacing.three },
   enquiryHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  linkRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
 });
