@@ -1,7 +1,7 @@
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, type Href } from 'expo-router';
-import { AlertTriangle, BookOpen, CalendarClock, ChevronRight, ShieldAlert, Users2, Wallet, UsersRound, GraduationCap } from 'lucide-react-native';
+import { AlertTriangle, BellRing, BookOpen, CalendarClock, ChevronRight, ShieldAlert, Users2, Wallet, UsersRound, GraduationCap } from 'lucide-react-native';
 
 import { ErrorState } from '@/components/error-state';
 import { ThemedText } from '@/components/themed-text';
@@ -153,6 +153,14 @@ export default function SuperAdminDashboard() {
             <Card style={styles.linkRow}>
               <CalendarClock size={18} color={theme.textMuted} />
               <ThemedText variant="bodyMedium" style={{ flex: 1 }}>Timetable</ThemedText>
+              <ChevronRight size={16} color={theme.textMuted} />
+            </Card>
+          </Pressable>
+
+          <Pressable onPress={() => router.push('/super-admin/notifications' as Href)}>
+            <Card style={styles.linkRow}>
+              <BellRing size={18} color={theme.textMuted} />
+              <ThemedText variant="bodyMedium" style={{ flex: 1 }}>Sent Alerts</ThemedText>
               <ChevronRight size={16} color={theme.textMuted} />
             </Card>
           </Pressable>

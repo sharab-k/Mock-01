@@ -3,7 +3,7 @@
 import { z } from 'zod'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/server'
-import { deferTask, getLinkedParentPhones, sendAbsenceAlert } from '@/lib/notifications/send-notification'
+import { notifyAbsence } from '@/lib/notifications/send-notification'
 import { logAction } from '@/lib/audit/log'
 import type { Database } from '@/types/supabase'
 
@@ -33,7 +33,7 @@ const MarkOneSchema = z.object({
 // Shared core: upserts one attendance row and fires the absence pipeline only
 // when this is a genuine first-time mark for the day (an INSERT), never on a
 // same-day correction (an UPDATE) — CLAUDE.md §7's "not on every update" rule.
-// A Twilio failure inside sendAbsenceAlert never throws, so it can never roll
+// A Twilio failure inside notifyAbsence never throws, so it can never roll
 // back the attendance write that already committed above it.
 async function markOneAttendance(
   supabase: SupabaseClient<Database>,
@@ -67,13 +67,15 @@ async function markOneAttendance(
 
   let notified = false
   if (becameAbsent) {
-    const [phones, { data: student }] = await Promise.all([
-      getLinkedParentPhones(input.studentId),
-      supabase.from('students').select('roll_number').eq('id', input.studentId).single(),
-    ])
-    const rollNumber = student?.roll_number ?? ''
-    await deferTask(() => Promise.all(phones.map((phone) => sendAbsenceAlert(input.studentName, rollNumber, phone, classDate))))
-    notified = phones.length > 0
+    const { data: student } = await supabase.from('students').select('roll_number').eq('id', input.studentId).single()
+    const { parents } = await notifyAbsence({
+      studentId: input.studentId,
+      studentName: input.studentName,
+      rollNumber: student?.roll_number ?? '',
+      classDate,
+      createdBy: markedBy,
+    })
+    notified = parents > 0
   }
 
   return { ok: true, notified }

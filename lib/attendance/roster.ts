@@ -42,6 +42,20 @@ export async function fetchClassRoster(grade: string, section: string, supabaseO
   const { data: links } = await admin.from('parent_student_links').select('student_id, profiles(phone)').in('student_id', studentIds)
   const phoneByStudent = new Map<string, string | null>()
   for (const link of links ?? []) phoneByStudent.set(link.student_id, link.profiles?.phone ?? null)
+  const hasParent = new Set((links ?? []).map((l) => l.student_id))
+
+  // The parent-portal copy of today's absence alert — exact (it carries a
+  // student_id) and independent of whether WhatsApp/SMS got through, so it's
+  // what decides "Notified". notification_log below still tells us whether the
+  // external channel failed for a student with no portal copy.
+  const { data: portalToday } = await admin
+    .from('portal_notifications')
+    .select('student_id')
+    .eq('kind', 'absence')
+    .in('student_id', studentIds)
+    .gte('created_at', `${classDate}T00:00:00.000Z`)
+    .lt('created_at', `${classDate}T23:59:59.999Z`)
+  const notifiedInPortal = new Set((portalToday ?? []).map((r) => r.student_id))
 
   // Today's alert outcome, surfaced so the admin knows to call a parent
   // directly if Twilio failed. notification_log has no student_id column
@@ -89,7 +103,8 @@ export async function fetchClassRoster(grade: string, section: string, supabaseO
       section: s.section,
       status: statusByStudent.get(s.id) ?? 'unmarked',
       parentPhone: phone,
-      alertStatus: alertStatusFor(phone, s.full_name),
+      hasParent: hasParent.has(s.id),
+      alertStatus: notifiedInPortal.has(s.id) ? 'sent' : alertStatusFor(phone, s.full_name),
       termAttendance: termStatsByStudent.get(s.id) ?? { present: 0, absent: 0, late: 0, total: 0 },
     }
   })

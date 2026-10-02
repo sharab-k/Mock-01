@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
-import { CalendarCheck, ChevronRight, TrendingUp } from 'lucide-react-native';
+import { router, type Href } from 'expo-router';
+import { Bell, CalendarCheck, ChevronRight, TrendingUp } from 'lucide-react-native';
 
 import { ErrorState } from '@/components/error-state';
 import { ThemedText } from '@/components/themed-text';
@@ -19,17 +19,18 @@ import { useAuth } from '@/lib/auth/auth-context';
 import { useAsyncData } from '@/lib/use-async-data';
 import { fetchParentChildren, type ParentChild } from '@/lib/parent/dashboard-data';
 import { fetchVisibleNotices } from '@/lib/notices/fetch';
+import { fetchUnreadCount } from '@/lib/notifications/inbox';
 import type { Notice } from '@/lib/notices/types';
 import { downloadProgressReport } from '@/lib/reports/download';
 
 const TIER_TONE = { Distinction: 'success', Merit: 'ink', Pass: 'warning', 'Below Pass': 'danger' } as const;
 
-async function loadDashboard(): Promise<{ children: ParentChild[]; notices: Notice[] }> {
-  const [kids, allNotices] = await Promise.all([fetchParentChildren(), fetchVisibleNotices()]);
+async function loadDashboard(): Promise<{ children: ParentChild[]; notices: Notice[]; unread: number }> {
+  const [kids, allNotices, unread] = await Promise.all([fetchParentChildren(), fetchVisibleNotices(), fetchUnreadCount()]);
   // Parent's own dashboard wants the All/Parents subset — the
   // Students-audience notices show on the student-view notices screen.
   const notices = allNotices.filter((n) => n.audience === 'All' || n.audience === 'Parents');
-  return { children: kids, notices };
+  return { children: kids, notices, unread };
 }
 
 export default function ParentDashboard() {
@@ -62,7 +63,7 @@ export default function ParentDashboard() {
     );
   }
 
-  const { children, notices } = state.data;
+  const { children, notices, unread } = state.data;
   const selectedId = explicitSelectedId ?? children[0]?.id ?? null;
   const selected = children.find((c) => c.id === selectedId) ?? null;
 
@@ -90,6 +91,16 @@ export default function ParentDashboard() {
               <ThemedText variant="small" style={{ color: theme.accent }}>Log out</ThemedText>
             </Pressable>
           </View>
+
+          <Pressable onPress={() => router.push('/parent/notifications' as Href)}>
+            <Card style={[styles.notifyRow, unread > 0 && { backgroundColor: Ink[50], borderColor: Ink[100] }]}>
+              <Bell size={18} color={unread > 0 ? Ink[700] : theme.textMuted} />
+              <ThemedText variant="bodyMedium" style={{ flex: 1 }}>
+                {unread > 0 ? `${unread} new notification${unread === 1 ? '' : 's'} from the school` : 'Notifications'}
+              </ThemedText>
+              <ChevronRight size={16} color={theme.textMuted} />
+            </Card>
+          </Pressable>
 
           {children.length === 0 && (
             <Card>
@@ -166,6 +177,7 @@ export default function ParentDashboard() {
 }
 
 const styles = StyleSheet.create({
+  notifyRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
   container: { flex: 1 },
   safeArea: { flex: 1 },
   centered: { alignItems: 'center', justifyContent: 'center' },

@@ -27,7 +27,7 @@ const scoreBar = (s: number, m: number) => {
 const gradeColor = (g: string) =>
   g.startsWith('A') ? 'text-success' : g.startsWith('B') ? 'text-ink-700' : 'text-warning'
 
-export default function ParentDashboardContent({ kids, notices }: { kids: ParentChild[]; notices: Notice[] }) {
+export default function ParentDashboardContent({ kids, notices, unreadNotifications = 0 }: { kids: ParentChild[]; notices: Notice[]; unreadNotifications?: number }) {
   const [activeIdx,       setActiveIdx]       = useState(0)
   const [activeView,      setActiveView]      = useState<View>(null)
   const [expandedNotice,  setExpandedNotice]  = useState<string | null>(null)
@@ -70,6 +70,16 @@ export default function ParentDashboardContent({ kids, notices }: { kids: Parent
 
   return (
     <>
+      {unreadNotifications > 0 && (
+        <Link href="/parent/notifications" className="flex items-center gap-3 bg-ink-50 border border-ink-100 rounded-2xl px-5 py-3.5 no-underline hover:bg-ink-100/60 transition-colors">
+          <div className="w-8 h-8 rounded-xl bg-ink-700 text-white flex items-center justify-center shrink-0"><Bell size={15} /></div>
+          <p className="flex-1 text-[13px] font-semibold text-ink-800">
+            You have {unreadNotifications} new notification{unreadNotifications === 1 ? '' : 's'} from the school
+          </p>
+          <ChevronRight size={16} className="text-ink-500" />
+        </Link>
+      )}
+
       {/* ── Page header ──────────────────────────────────────────────────── */}
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>

@@ -9,20 +9,20 @@ import { Avatar } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ChipSelect } from '@/components/ui/chip-select';
+import { TextField } from '@/components/ui/text-field';
 import { FontFamily, Radius, Semantic, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { bulkSaveMarksAction } from '@/lib/actions/marks';
 import { fetchMarksEntryData, type EnterRosterStudent, type ExistingMark } from '@/lib/marks/enter-data';
 import { GRADES, sectionsForGrade } from '@/lib/students/constants';
+import { fetchSubjects, type Subject } from '@/lib/subjects/fetch';
 
-const SUBJECTS = ['Mathematics', 'English', 'Physics', 'Chemistry', 'Biology', 'Urdu'] as const;
 const EXAM_TYPES = [
   { value: 'monthly' as const, label: 'Monthly' },
   { value: 'half_yearly' as const, label: 'Half-Yearly' },
   { value: 'final' as const, label: 'Final' },
 ];
 const EXAM_TYPE_LABELS = EXAM_TYPES.map((e) => e.label);
-const MAX_SCORE = 100;
 
 export default function MarksEnterScreen() {
   const theme = useTheme();
@@ -30,7 +30,9 @@ export default function MarksEnterScreen() {
   const [existingMarks, setExistingMarks] = useState<ExistingMark[]>([]);
   const [grade, setGrade] = useState(GRADES[0]);
   const [section, setSection] = useState(sectionsForGrade(GRADES[0])[0]);
-  const [subject, setSubject] = useState<typeof SUBJECTS[number]>(SUBJECTS[0]);
+  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [subjectChoice, setSubjectChoice] = useState('');
+  const [maxScore, setMaxScore] = useState('100');
   const [examType, setExamType] = useState<'monthly' | 'half_yearly' | 'final'>('monthly');
   const [scores, setScores] = useState<Record<string, string>>({});
   const [status, setStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
@@ -47,13 +49,20 @@ export default function MarksEnterScreen() {
 
   useEffect(() => {
     let mounted = true;
-    fetchMarksEntryData().then(({ roster, existingMarks }) => {
+    Promise.all([fetchMarksEntryData(), fetchSubjects()]).then(([{ roster, existingMarks }, subjectList]) => {
       if (!mounted) return;
       setFullRoster(roster);
       setExistingMarks(existingMarks);
+      setSubjects(subjectList);
     });
     return () => { mounted = false; };
   }, []);
+
+  // The grade's real subject list (set up under Subjects) — derived rather than
+  // synced via an effect, so a grade change can never leave a stale choice.
+  const gradeSubjects = useMemo(() => subjects.filter((s) => s.gradeLevel === grade).map((s) => s.name), [subjects, grade]);
+  const subject = gradeSubjects.includes(subjectChoice) ? subjectChoice : (gradeSubjects[0] ?? '');
+  const maxScoreNum = Number(maxScore) || 0;
 
   const roster = useMemo(
     () => (fullRoster ?? []).filter((s) => s.grade === grade && s.section === section),
@@ -62,9 +71,13 @@ export default function MarksEnterScreen() {
 
   useEffect(() => {
     const prefill: Record<string, string> = {};
+    let recordedMax: number | null = null;
     for (const s of roster) {
       const existing = existingMarks.find((m) => m.student_id === s.id && m.subject === subject && m.exam_type === examType);
-      if (existing) prefill[s.id] = String(existing.score);
+      if (existing) {
+        prefill[s.id] = String(existing.score);
+        recordedMax = existing.max_score;
+      }
     }
     // Deliberate: re-derives the entered-scores state whenever the
     // class/subject/exam selection changes, prefilling from any existing
@@ -72,11 +85,12 @@ export default function MarksEnterScreen() {
     // MarksEnterContent.tsx.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setScores(prefill);
+    setMaxScore(String(recordedMax ?? 100));
     setStatus('idle');
   }, [roster, existingMarks, subject, examType]);
 
   function setScore(studentId: string, value: string) {
-    if (value !== '' && (!/^\d{1,3}$/.test(value) || Number(value) > MAX_SCORE)) return;
+    if (value !== '' && (!/^\d{1,4}$/.test(value) || Number(value) > maxScoreNum)) return;
     setScores((prev) => ({ ...prev, [studentId]: value }));
     setStatus('idle');
   }
@@ -91,7 +105,14 @@ export default function MarksEnterScreen() {
       .filter((s) => scores[s.id] !== undefined && scores[s.id] !== '')
       .map((s) => ({ studentId: s.id, studentName: s.full_name, score: Number(scores[s.id]) }));
 
-    const outcome = await bulkSaveMarksAction({ subject, examType, maxScore: MAX_SCORE, classLabel: `Grade ${grade}-${section}`, entries });
+    const over = entries.find((e) => e.score > maxScoreNum);
+    if (over) {
+      setError(`${over.studentName}'s score is above the total of ${maxScoreNum}. Raise the total or correct the score.`);
+      setStatus('error');
+      return;
+    }
+
+    const outcome = await bulkSaveMarksAction({ subject, examType, maxScore: maxScoreNum, classLabel: `Grade ${grade}-${section}`, entries });
 
     if (!outcome.ok) {
       setError(outcome.error);
@@ -124,13 +145,18 @@ export default function MarksEnterScreen() {
           <View style={{ gap: Spacing.three }}>
             <ChipSelect label="Grade" options={GRADES} value={grade} onChange={handleGradeChange} />
             <ChipSelect label="Section" options={sectionsForGrade(grade)} value={section} onChange={setSection} />
-            <ChipSelect label="Subject" options={SUBJECTS} value={subject} onChange={setSubject} />
+            {gradeSubjects.length === 0 ? (
+              <ThemedText variant="small" color="textMuted">No subjects set up for Grade {grade} yet — add them under Manage subjects.</ThemedText>
+            ) : (
+              <ChipSelect label="Subject" options={gradeSubjects} value={subject} onChange={setSubjectChoice} />
+            )}
             <ChipSelect
               label="Exam type"
               options={EXAM_TYPE_LABELS}
               value={EXAM_TYPES.find((e) => e.value === examType)!.label}
               onChange={(label) => setExamType(EXAM_TYPES.find((e) => e.label === label)!.value)}
             />
+            <TextField label="Total marks" value={maxScore} onChangeText={(v) => setMaxScore(v.replace(/D/g, '').slice(0, 4))} keyboardType="number-pad" />
           </View>
 
           {status === 'error' && (
@@ -152,7 +178,7 @@ export default function MarksEnterScreen() {
                 label={status === 'saved' ? 'Saved' : status === 'saving' ? 'Saving…' : 'Save All'}
                 variant={status === 'saved' ? 'secondary' : 'primary'}
                 loading={status === 'saving'}
-                disabled={enteredCount === 0}
+                disabled={enteredCount === 0 || !subject || maxScoreNum < 1}
                 onPress={handleSave}
                 size="sm"
               />
@@ -179,7 +205,7 @@ export default function MarksEnterScreen() {
                       style={[styles.scoreInput, { borderColor: theme.border, color: theme.text, fontFamily: FontFamily.mono }]}
                       placeholderTextColor={theme.textMuted}
                     />
-                    <ThemedText variant="mono" color="textMuted" style={{ fontSize: 12 }}>/ {MAX_SCORE}</ThemedText>
+                    <ThemedText variant="mono" color="textMuted" style={{ fontSize: 12 }}>/ {maxScoreNum}</ThemedText>
                   </View>
                 ))
               )}

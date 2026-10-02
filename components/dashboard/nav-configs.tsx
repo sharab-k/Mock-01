@@ -2,7 +2,7 @@ import {
   LayoutDashboard, Users, UserPlus, Inbox,
   CalendarCheck, BookOpen, Megaphone, Settings2, UserCog,
   ClipboardList, BarChart2, PenLine, PlayCircle,
-  GraduationCap, UsersRound, Wallet, CalendarClock,
+  GraduationCap, UsersRound, Wallet, CalendarClock, Bell,
 } from 'lucide-react'
 import type { NavSection } from './types'
 
@@ -27,6 +27,7 @@ export const NAV_CONFIGS: Record<string, NavSection[]> = {
         { label: 'Marks',      href: '/super-admin/marks',      icon: BookOpen                },
         { label: 'Subjects',   href: '/super-admin/subjects',   icon: ClipboardList           },
         { label: 'Timetable',  href: '/super-admin/timetable',  icon: CalendarClock            },
+        { label: 'Sent Alerts', href: '/super-admin/notifications', icon: Bell                },
         { label: 'Fees',       href: '/super-admin/fees',       icon: Wallet                  },
       ],
     },
@@ -97,7 +98,10 @@ export const NAV_CONFIGS: Record<string, NavSection[]> = {
 
   parent: [
     {
-      items: [{ label: 'Dashboard', href: '/parent', icon: LayoutDashboard }],
+      items: [
+        { label: 'Dashboard',     href: '/parent',               icon: LayoutDashboard },
+        { label: 'Notifications', href: '/parent/notifications', icon: Bell            },
+      ],
     },
   ],
 }

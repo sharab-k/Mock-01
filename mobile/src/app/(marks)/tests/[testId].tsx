@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
-import { AlertCircle } from 'lucide-react-native';
+import { AlertCircle, Pencil, X } from 'lucide-react-native';
 
 import { ErrorState } from '@/components/error-state';
 import { ScreenHeader } from '@/components/screen-header';
@@ -11,9 +11,10 @@ import { ThemedView } from '@/components/themed-view';
 import { Avatar } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { TextField } from '@/components/ui/text-field';
 import { FontFamily, Radius, Semantic, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { fetchTestRoster, bulkSaveTestMarksAction, type TestSummary, type TestRosterStudent } from '@/lib/tests/fetch';
+import { fetchTestRoster, bulkSaveTestMarksAction, updateTestAction, type TestSummary, type TestRosterStudent } from '@/lib/tests/fetch';
 
 export default function TestEntryScreen() {
   const { testId } = useLocalSearchParams<{ testId: string }>();
@@ -24,6 +25,12 @@ export default function TestEntryScreen() {
   const [scores, setScores] = useState<Record<string, string>>({});
   const [status, setStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [saveError, setSaveError] = useState('');
+  const [editing, setEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState('');
+  const [editMax, setEditMax] = useState('');
+  const [editDate, setEditDate] = useState('');
+  const [editSaving, setEditSaving] = useState(false);
+  const [editError, setEditError] = useState('');
 
   function load() {
     fetchTestRoster(testId).then((result) => {
@@ -41,6 +48,27 @@ export default function TestEntryScreen() {
     if (value !== '' && (!/^\d{1,4}$/.test(value) || Number(value) > test.maxScore)) return;
     setScores((prev) => ({ ...prev, [studentId]: value }));
     setStatus('idle');
+  }
+
+  function openEdit() {
+    if (!test) return;
+    setEditTitle(test.title);
+    setEditMax(String(test.maxScore));
+    setEditDate(test.testDate);
+    setEditError('');
+    setEditing(true);
+  }
+
+  async function saveEdit() {
+    if (!test) return;
+    setEditSaving(true);
+    setEditError('');
+    const maxScore = Number(editMax);
+    const outcome = await updateTestAction(testId, { title: editTitle.trim(), maxScore, testDate: editDate });
+    setEditSaving(false);
+    if (!outcome.ok) { setEditError(outcome.error); return; }
+    setTest({ ...test, title: editTitle.trim(), maxScore, testDate: editDate });
+    setEditing(false);
   }
 
   const enteredCount = (roster ?? []).filter((s) => scores[s.id] !== undefined && scores[s.id] !== '').length;
@@ -87,7 +115,11 @@ export default function TestEntryScreen() {
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.header}>
-          <ScreenHeader title={test.title} subtitle={`${test.subjectName} · Grade ${test.gradeLevel}-${test.section}`} onBack={() => router.back()} />
+          <ScreenHeader title={test.title} subtitle={`${test.subjectName} · Grade ${test.gradeLevel}-${test.section} · out of ${test.maxScore}`} onBack={() => router.back()} />
+          <Pressable onPress={openEdit} style={styles.editLink} hitSlop={8}>
+            <Pencil size={13} color={theme.accent} />
+            <ThemedText variant="small" style={{ color: theme.accent }}>Edit test (title, total marks, date)</ThemedText>
+          </Pressable>
         </View>
 
         <ScrollView contentContainerStyle={styles.content}>
@@ -137,6 +169,25 @@ export default function TestEntryScreen() {
             )}
           </Card>
         </ScrollView>
+
+        <Modal visible={editing} animationType="slide" onRequestClose={() => setEditing(false)}>
+          <ThemedView style={{ flex: 1 }}>
+            <SafeAreaView style={{ flex: 1 }}>
+              <View style={styles.modalHeader}>
+                <ThemedText variant="title" style={{ fontSize: 18, flex: 1 }}>Edit test</ThemedText>
+                <Pressable onPress={() => setEditing(false)} hitSlop={8}><X size={20} color={theme.textSecondary} /></Pressable>
+              </View>
+              <ScrollView contentContainerStyle={styles.modalContent}>
+                {!!editError && <ThemedText variant="small" style={{ color: Semantic.danger }}>{editError}</ThemedText>}
+                <TextField label="Test title" value={editTitle} onChangeText={setEditTitle} />
+                <TextField label="Total marks" value={editMax} onChangeText={(v) => setEditMax(v.replace(/D/g, ''))} keyboardType="number-pad" />
+                <TextField label="Date (YYYY-MM-DD)" value={editDate} onChangeText={setEditDate} />
+                <ThemedText variant="small" color="textMuted">Changing the total re-bases scores already entered for this test.</ThemedText>
+                <Button label={editSaving ? 'Saving…' : 'Save changes'} loading={editSaving} disabled={!editTitle.trim() || !Number(editMax)} onPress={saveEdit} fullWidth />
+              </ScrollView>
+            </SafeAreaView>
+          </ThemedView>
+        </Modal>
       </SafeAreaView>
     </ThemedView>
   );
@@ -147,6 +198,9 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1 },
   centered: { alignItems: 'center', justifyContent: 'center' },
   header: { padding: Spacing.four, paddingBottom: Spacing.two },
+  editLink: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: Spacing.two },
+  modalHeader: { flexDirection: 'row', alignItems: 'center', padding: Spacing.four },
+  modalContent: { padding: Spacing.four, paddingTop: 0, gap: Spacing.three, paddingBottom: Spacing.six },
   content: { padding: Spacing.four, paddingTop: 0, gap: Spacing.three, paddingBottom: Spacing.six },
   errorBanner: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, borderRadius: Radius.md, padding: 12 },
   listHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },

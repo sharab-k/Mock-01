@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { resolveRequestClient } from '@/lib/supabase/session'
-import { getLinkedParentPhones, sendAbsenceAlert } from '@/lib/notifications/send-notification'
+import { notifyAbsence } from '@/lib/notifications/send-notification'
 
 const BodySchema = z.object({
   studentId: z.string().uuid(),
@@ -29,14 +29,17 @@ export async function POST(request: Request) {
   const parsed = BodySchema.safeParse(await request.json().catch(() => null))
   if (!parsed.success) return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 })
 
-  const [phones, { data: student }] = await Promise.all([
-    getLinkedParentPhones(parsed.data.studentId),
-    supabase.from('students').select('roll_number').eq('id', parsed.data.studentId).single(),
-  ])
-  if (phones.length === 0) return NextResponse.json({ ok: true, notified: 0, sent: false })
+  const { data: student } = await supabase.from('students').select('roll_number').eq('id', parsed.data.studentId).single()
+  const { parents } = await notifyAbsence({
+    studentId: parsed.data.studentId,
+    studentName: parsed.data.studentName,
+    rollNumber: student?.roll_number ?? '',
+    classDate: parsed.data.classDate,
+    createdBy: user.id,
+  })
 
-  const rollNumber = student?.roll_number ?? ''
-  const results = await Promise.all(phones.map((phone) => sendAbsenceAlert(parsed.data.studentName, rollNumber, phone, parsed.data.classDate)))
-
-  return NextResponse.json({ ok: true, notified: phones.length, sent: results.some(Boolean) })
+  // `sent` means delivered to the parent portal(s); WhatsApp/SMS is attempted
+  // in the background on top of that and may fail independently (see
+  // notification_log).
+  return NextResponse.json({ ok: true, notified: parents, sent: parents > 0 })
 }

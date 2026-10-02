@@ -6,14 +6,13 @@ import { ArrowLeft, Save, CheckCircle2, AlertCircle } from 'lucide-react'
 import { GRADES, sectionsForGrade, INITIALS } from '@/lib/students/constants'
 import { bulkSaveMarksAction } from '@/lib/actions/marks'
 import type { EnterRosterStudent, ExistingMark } from '@/lib/marks/enter-data'
+import type { Subject } from '@/lib/actions/subjects'
 
-const SUBJECTS = ['Mathematics', 'English', 'Physics', 'Chemistry', 'Biology', 'Urdu']
 const EXAM_TYPES: { value: 'monthly' | 'half_yearly' | 'final'; label: string }[] = [
   { value: 'monthly', label: 'Monthly' },
   { value: 'half_yearly', label: 'Half-Yearly' },
   { value: 'final', label: 'Final' },
 ]
-const MAX_SCORE = 100
 
 type Props = {
   /** Route prefix for this dashboard's own links — lets Super Admin render the
@@ -21,12 +20,15 @@ type Props = {
   basePath?: string
   roster: EnterRosterStudent[]
   existingMarks: ExistingMark[]
+  /** Every grade's real subject list — the subject picker follows the selected grade. */
+  subjects: Subject[]
 }
 
-export default function MarksEnterContent({ basePath = '/marks', roster: fullRoster, existingMarks }: Props) {
+export default function MarksEnterContent({ basePath = '/marks', roster: fullRoster, existingMarks, subjects }: Props) {
   const [grade, setGrade] = useState(GRADES[0])
   const [section, setSection] = useState(sectionsForGrade(GRADES[0])[0])
-  const [subject, setSubject] = useState(SUBJECTS[0])
+  const [subject, setSubject] = useState('')
+  const [maxScore, setMaxScore] = useState('100')
   const [examType, setExamType] = useState<'monthly' | 'half_yearly' | 'final'>(EXAM_TYPES[0].value)
   const [scores, setScores] = useState<Record<string, string>>({})
   const [status, setStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
@@ -39,6 +41,12 @@ export default function MarksEnterContent({ basePath = '/marks', roster: fullRos
 
   // Section options depend on grade (9-10 are Boys/Girls, 11-12 are A-D) —
   // reset to the first valid option whenever grade changes.
+  const gradeSubjects = useMemo(() => subjects.filter((s) => s.gradeLevel === grade).map((s) => s.name), [subjects, grade])
+
+  useEffect(() => {
+    if (!gradeSubjects.includes(subject)) setSubject(gradeSubjects[0] ?? '')
+  }, [gradeSubjects, subject])
+
   useEffect(() => {
     const valid = sectionsForGrade(grade)
     if (!valid.includes(section)) setSection(valid[0])
@@ -46,20 +54,26 @@ export default function MarksEnterContent({ basePath = '/marks', roster: fullRos
 
   useEffect(() => {
     const prefill: Record<string, string> = {}
+    let recordedMax: number | null = null
     for (const s of roster) {
       const existing = existingMarks.find((m) => m.student_id === s.id && m.subject === subject && m.exam_type === examType)
-      if (existing) prefill[s.id] = String(existing.score)
+      if (existing) {
+        prefill[s.id] = String(existing.score)
+        recordedMax = existing.max_score
+      }
     }
     setScores(prefill)
+    setMaxScore(String(recordedMax ?? 100))
     setStatus('idle')
   }, [roster, existingMarks, subject, examType])
 
   const setScore = (studentId: string, value: string) => {
-    if (value !== '' && (!/^\d{1,3}$/.test(value) || Number(value) > MAX_SCORE)) return
+    if (value !== '' && (!/^\d{1,4}$/.test(value) || Number(value) > maxScoreNum)) return
     setScores((prev) => ({ ...prev, [studentId]: value }))
     setStatus('idle')
   }
 
+  const maxScoreNum = Number(maxScore) || 0
   const enteredCount = roster.filter((s) => scores[s.id] !== undefined && scores[s.id] !== '').length
 
   const handleSave = async () => {
@@ -70,7 +84,14 @@ export default function MarksEnterContent({ basePath = '/marks', roster: fullRos
       .filter((s) => scores[s.id] !== undefined && scores[s.id] !== '')
       .map((s) => ({ studentId: s.id, studentName: s.full_name, score: Number(scores[s.id]) }))
 
-    const outcome = await bulkSaveMarksAction({ subject, examType, maxScore: MAX_SCORE, classLabel: `Grade ${grade}-${section}`, entries })
+    const over = entries.find((e) => e.score > maxScoreNum)
+    if (over) {
+      setError(`${over.studentName}'s score is above the total of ${maxScoreNum}. Raise the total or correct the score.`)
+      setStatus('error')
+      return
+    }
+
+    const outcome = await bulkSaveMarksAction({ subject, examType, maxScore: maxScoreNum, classLabel: `Grade ${grade}-${section}`, entries })
 
     if (!outcome.ok) {
       setError(outcome.error)
@@ -92,7 +113,7 @@ export default function MarksEnterContent({ basePath = '/marks', roster: fullRos
         <p className="text-[13px] text-neutral-500 mt-0.5">Bulk entry for one class, subject, and exam at a time</p>
       </div>
 
-      <div className="bg-white rounded-2xl border border-neutral-200 shadow-1 p-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="bg-white rounded-2xl border border-neutral-200 shadow-1 p-4 grid grid-cols-2 sm:grid-cols-5 gap-3">
         <div>
           <label className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5">Grade</label>
           <select value={grade} onChange={(e) => setGrade(e.target.value as typeof grade)} className="w-full text-[13px] border border-neutral-200 rounded-xl px-3 py-2.5 text-neutral-700 bg-white focus:outline-none focus:ring-1 focus:ring-ink-300 cursor-pointer">
@@ -108,7 +129,8 @@ export default function MarksEnterContent({ basePath = '/marks', roster: fullRos
         <div>
           <label className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5">Subject</label>
           <select value={subject} onChange={(e) => setSubject(e.target.value)} className="w-full text-[13px] border border-neutral-200 rounded-xl px-3 py-2.5 text-neutral-700 bg-white focus:outline-none focus:ring-1 focus:ring-ink-300 cursor-pointer">
-            {SUBJECTS.map((s) => <option key={s}>{s}</option>)}
+            {gradeSubjects.length === 0 && <option value="">No subjects for this grade</option>}
+            {gradeSubjects.map((s) => <option key={s}>{s}</option>)}
           </select>
         </div>
         <div>
@@ -116,6 +138,10 @@ export default function MarksEnterContent({ basePath = '/marks', roster: fullRos
           <select value={examType} onChange={(e) => setExamType(e.target.value as typeof examType)} className="w-full text-[13px] border border-neutral-200 rounded-xl px-3 py-2.5 text-neutral-700 bg-white focus:outline-none focus:ring-1 focus:ring-ink-300 cursor-pointer">
             {EXAM_TYPES.map((e) => <option key={e.value} value={e.value}>{e.label}</option>)}
           </select>
+        </div>
+        <div>
+          <label className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5">Total Marks</label>
+          <input value={maxScore} onChange={(e) => setMaxScore(e.target.value.replace(/D/g, '').slice(0, 4))} inputMode="numeric" className="w-full text-[13px] font-mono border border-neutral-200 rounded-xl px-3 py-2.5 text-neutral-700 bg-white focus:outline-none focus:ring-1 focus:ring-ink-300" />
         </div>
       </div>
 
@@ -134,7 +160,7 @@ export default function MarksEnterContent({ basePath = '/marks', roster: fullRos
           </div>
           <button
             onClick={handleSave}
-            disabled={enteredCount === 0 || status === 'saving'}
+            disabled={enteredCount === 0 || !subject || maxScoreNum < 1 || status === 'saving'}
             className={`flex items-center gap-2 text-[13px] font-semibold px-3.5 py-2 rounded-xl transition-all disabled:opacity-40 disabled:cursor-not-allowed ${
               status === 'saved' ? 'bg-success-bg text-success' : 'bg-ink-700 text-white hover:bg-ink-800'
             }`}
@@ -159,7 +185,7 @@ export default function MarksEnterContent({ basePath = '/marks', roster: fullRos
                   inputMode="numeric"
                   className="w-16 text-center px-2 py-2 border border-neutral-200 rounded-xl text-[13px] font-mono focus:outline-none focus:border-ink-400 focus:ring-2 focus:ring-ink-400/10 transition-all"
                 />
-                <span className="text-[12px] text-neutral-400 font-mono">/ {MAX_SCORE}</span>
+                <span className="text-[12px] text-neutral-400 font-mono">/ {maxScoreNum}</span>
               </div>
             </div>
           ))}

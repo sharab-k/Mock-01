@@ -37,12 +37,12 @@ async function persistMarkBatch(
   supabase: SupabaseClient<Database>,
   userId: string,
   entries: MarkEntry[],
-  existing: { id: string; student_id: string; score: number }[],
+  existing: { id: string; student_id: string; score: number; max_score: number }[],
   base: MarkBase,
 ) {
   const existingByStudent = new Map(existing.map((r) => [r.student_id, r]))
   const toInsert: MarkInsert[] = []
-  const toUpdate: { row: { id: string; score: number }; entry: MarkEntry }[] = []
+  const toUpdate: { row: { id: string; score: number }; entry: MarkEntry; scoreChanged: boolean }[] = []
   const changed: MarkEntry[] = []
 
   for (const entry of entries) {
@@ -50,9 +50,13 @@ async function persistMarkBatch(
     if (!row) {
       toInsert.push({ ...base, student_id: entry.studentId, score: entry.score })
       changed.push(entry)
-    } else if (row.score !== entry.score) {
-      toUpdate.push({ row, entry })
-      changed.push(entry)
+    } else if (row.score !== entry.score || row.max_score !== base.max_score) {
+      // A changed total re-bases the existing score even when the student's
+      // own number is untouched; only a changed score is history-logged and
+      // re-notified.
+      const scoreChanged = row.score !== entry.score
+      toUpdate.push({ row, entry, scoreChanged })
+      if (scoreChanged) changed.push(entry)
     }
   }
 
@@ -63,13 +67,14 @@ async function persistMarkBatch(
 
   if (toUpdate.length > 0) {
     const results = await Promise.all(
-      toUpdate.map(({ row, entry }) => supabase.from('marks').update({ score: entry.score }).eq('id', row.id)),
+      toUpdate.map(({ row, entry }) => supabase.from('marks').update({ score: entry.score, max_score: base.max_score }).eq('id', row.id)),
     )
     const failed = results.findIndex((r) => r.error)
     if (failed !== -1) return { ok: false as const, error: `Could not update ${toUpdate[failed].entry.studentName}'s score.` }
 
-    const { error: historyError } = await supabase.from('marks_edit_history').insert(
-      toUpdate.map(({ row, entry }) => ({ mark_id: row.id, previous_score: row.score, new_score: entry.score, edited_by: userId })),
+    const edited = toUpdate.filter((u) => u.scoreChanged)
+    const { error: historyError } = edited.length === 0 ? { error: null } : await supabase.from('marks_edit_history').insert(
+      edited.map(({ row, entry }) => ({ mark_id: row.id, previous_score: row.score, new_score: entry.score, edited_by: userId })),
     )
     if (historyError) return { ok: false as const, error: 'Could not log the score edits. Please try again.' }
   }
@@ -108,7 +113,7 @@ export async function bulkSaveMarksAction(
 
   const { data: existing } = await supabase
     .from('marks')
-    .select('id, student_id, score')
+    .select('id, student_id, score, max_score')
     .eq('subject', subject)
     .eq('exam_type', examType)
     .eq('term', term)
@@ -124,7 +129,7 @@ export async function bulkSaveMarksAction(
   const alerts: GradeAlertJob[] = batch.changed.map((e) => ({
     studentId: e.studentId, studentName: e.studentName, subject, examLabel: EXAM_TYPE_LABEL[examType], score: e.score, maxScore,
   }))
-  const notified = await queueGradeAlerts(alerts)
+  const notified = await queueGradeAlerts(alerts, user.id)
 
   if (inserted + updated > 0) {
     const label = updated > 0 && inserted === 0 ? 'Edited marks' : 'Bulk marks upload'
@@ -173,7 +178,7 @@ export async function bulkSaveTestMarksAction(
 
   const { data: existing } = await supabase
     .from('marks')
-    .select('id, student_id, score')
+    .select('id, student_id, score, max_score')
     .eq('test_id', testId)
     .in('student_id', entries.map((e) => e.studentId))
 
@@ -186,7 +191,7 @@ export async function bulkSaveTestMarksAction(
   const alerts: GradeAlertJob[] = batch.changed.map((e) => ({
     studentId: e.studentId, studentName: e.studentName, subject: subjectName, examLabel: test.title, score: e.score, maxScore: test.max_score,
   }))
-  const notified = await queueGradeAlerts(alerts)
+  const notified = await queueGradeAlerts(alerts, user.id)
 
   if (inserted + updated > 0) {
     await logAction(supabase, user.id, `Bulk marks upload — ${subjectName} "${test.title}" · Grade ${test.grade_level}-${test.section} · ${inserted + updated} students`)

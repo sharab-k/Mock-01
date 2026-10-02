@@ -456,6 +456,67 @@ export type Database = {
           },
         ]
       }
+      portal_notifications: {
+        Row: {
+          body: string
+          created_at: string
+          created_by: string | null
+          id: string
+          kind: string
+          parent_id: string
+          parent_name: string
+          read_at: string | null
+          student_id: string
+          title: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          kind: string
+          parent_id: string
+          parent_name?: string
+          read_at?: string | null
+          student_id: string
+          title: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          kind?: string
+          parent_id?: string
+          parent_name?: string
+          read_at?: string | null
+          student_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portal_notifications_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portal_notifications_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portal_notifications_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string

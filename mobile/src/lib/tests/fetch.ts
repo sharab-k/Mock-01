@@ -109,3 +109,7 @@ export async function createTestAction(input: {
 export async function bulkSaveTestMarksAction(testId: string, entries: { studentId: string; studentName: string; score: number }[]) {
   return callMobileApi<{ inserted: number; updated: number; notified: number }>(`/api/mobile/tests/${testId}/marks`, { entries });
 }
+
+export async function updateTestAction(id: string, input: { title: string; maxScore: number; testDate: string }) {
+  return callMobileApi(`/api/mobile/tests/${id}`, { ...input }, 'PATCH');
+}

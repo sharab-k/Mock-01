@@ -103,6 +103,48 @@ export async function createTestAction(
   return { ok: true, id: data.id }
 }
 
+const UpdateTestSchema = z.object({
+  id: z.string().uuid(),
+  title: z.string().min(1).max(150),
+  maxScore: z.number().int().min(1).max(1000),
+  testDate: z.string().min(1),
+})
+
+// Edits a test's title, total marks and date. The total is re-based onto every
+// score already recorded for it, so percentages, grades and reports follow the
+// new total — but it can't drop below a score someone has already been given
+// (that would make their mark exceed the total).
+export async function updateTestAction(
+  input: z.infer<typeof UpdateTestSchema>,
+  supabaseOverride?: SupabaseClient<Database>,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const parsed = UpdateTestSchema.safeParse(input)
+  if (!parsed.success) return { ok: false, error: 'Invalid test details.' }
+
+  const { supabase, userId, authorized } = await requireMarksCaller(supabaseOverride)
+  if (!authorized || !userId) return { ok: false, error: 'Not authorized.' }
+
+  const { id, title, maxScore, testDate } = parsed.data
+
+  const { data: test } = await supabase.from('tests').select('title, grade_level, section, subjects(name)').eq('id', id).single()
+  if (!test) return { ok: false, error: 'Test not found.' }
+
+  const { data: top } = await supabase.from('marks').select('score').eq('test_id', id).order('score', { ascending: false }).limit(1)
+  const highest = top?.[0]?.score
+  if (highest !== undefined && highest > maxScore) {
+    return { ok: false, error: `A student has already scored ${highest}, so the total can't be below that. Edit that score first.` }
+  }
+
+  const { error } = await supabase.from('tests').update({ title, max_score: maxScore, test_date: testDate }).eq('id', id)
+  if (error) return { ok: false, error: 'Could not update the test. Please try again.' }
+
+  const { error: marksError } = await supabase.from('marks').update({ max_score: maxScore }).eq('test_id', id)
+  if (marksError) return { ok: false, error: 'The test was updated but its recorded scores could not be re-based. Please try saving again.' }
+
+  await logAction(supabase, userId, `Edited test — ${title} · ${test.subjects?.name ?? '—'} · Grade ${test.grade_level}-${test.section} · total ${maxScore}`)
+  return { ok: true }
+}
+
 export type TestRosterStudent = { id: string; fullName: string; rollNumber: string; score: number | null }
 
 // The roster for a specific test's marks-entry screen — for a compulsory

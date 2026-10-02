@@ -21,6 +21,8 @@ export type RosterStudent = {
   section: string
   status: Status
   parentPhone: string | null
+  /** At least one parent account is linked — the in-app alert can be sent even without a phone number. */
+  hasParent: boolean
   alertStatus: 'sent' | 'failed' | null
   termAttendance: { present: number; absent: number; late: number; total: number }
 }
@@ -73,6 +75,7 @@ export default function AttendanceClassDetailContent({ grade, section, basePath 
 
     setPending(p => ({ ...p, [id]: false }))
     if (!outcome.ok) setRoster(prev => prev.map(s => s.id === id ? { ...s, status: previous } : s))
+    else if (status === 'absent' && outcome.notified) setRoster(prev => prev.map(s => s.id === id ? { ...s, alertStatus: 'sent' } : s))
   }
 
   const cycleStatus = (id: string) => {
@@ -204,7 +207,7 @@ export default function AttendanceClassDetailContent({ grade, section, basePath 
                           {s.alertStatus === null && (
                             <span className="text-[11px] text-neutral-300">Not sent</span>
                           )}
-                          {s.parentPhone && (
+                          {s.hasParent && (
                             <button
                               onClick={() => sendAlert(s.id)}
                               disabled={alertPending[s.id]}
