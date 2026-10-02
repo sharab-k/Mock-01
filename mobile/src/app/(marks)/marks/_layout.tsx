@@ -19,6 +19,8 @@ export default function MarksTabsLayout() {
       <Tabs.Screen name="index" options={{ title: 'Dashboard', tabBarIcon: ({ color, size }) => <LayoutDashboard color={color} size={size} /> }} />
       <Tabs.Screen name="enter" options={{ title: 'Enter', tabBarIcon: ({ color, size }) => <PenLine color={color} size={size} /> }} />
       <Tabs.Screen name="tests" options={{ title: 'Tests', tabBarIcon: ({ color, size }) => <ClipboardList color={color} size={size} /> }} />
+      {/* Reached from the dashboard's "Manage subjects" card, not a tab slot. */}
+      <Tabs.Screen name="subjects" options={{ href: null }} />
       <Tabs.Screen name="reports" options={{ title: 'Reports', tabBarIcon: ({ color, size }) => <BarChart2 color={color} size={size} /> }} />
     </Tabs>
   );

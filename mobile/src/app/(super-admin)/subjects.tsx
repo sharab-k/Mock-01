@@ -13,6 +13,7 @@ import { ChipSelect } from '@/components/ui/chip-select';
 import { SubjectEnrollmentModal } from '@/components/subject-enrollment-modal';
 import { Radius, Semantic, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { useAuth } from '@/lib/auth/auth-context';
 import { useAsyncData } from '@/lib/use-async-data';
 import { GRADES, type Grade } from '@/lib/students/constants';
 import { fetchSubjects, createSubjectAction, removeSubjectAction, type Subject } from '@/lib/subjects/fetch';
@@ -22,8 +23,12 @@ const TYPE_TONE: Record<Subject['type'], { bg: string; text: string }> = {
   elected: { bg: Semantic.warningBg, text: Semantic.warning },
 };
 
-export default function SuperAdminSubjectsScreen() {
+// Shared by Super Admin and Marks Admin (both can add/remove subjects) —
+// only Super Admin can enroll students into elected ones.
+export default function SubjectsScreen() {
   const theme = useTheme();
+  const { role } = useAuth();
+  const canEnroll = role === 'super_admin';
   const state = useAsyncData(fetchSubjects, []);
   const [subjects, setSubjects] = useState<Subject[] | null>(null);
   const [addingForGrade, setAddingForGrade] = useState<Grade | null>(null);
@@ -117,7 +122,7 @@ export default function SuperAdminSubjectsScreen() {
                         <View key={s.id} style={[styles.chip, { backgroundColor: tone.bg }]}>
                           <BookOpen size={11} color={tone.text} />
                           <ThemedText variant="small" style={{ color: tone.text }}>{s.name}</ThemedText>
-                          {s.type === 'elected' && (
+                          {canEnroll && s.type === 'elected' && (
                             <Pressable onPress={() => setEnrollTarget(s)} hitSlop={6}>
                               <Users size={13} color={tone.text} />
                             </Pressable>

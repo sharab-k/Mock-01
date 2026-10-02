@@ -43,7 +43,7 @@ function inRange(iso: string, start: Date, end: Date): boolean {
 export async function fetchChildAcademicData(supabase: SupabaseClient<Database>, studentId: string): Promise<ChildAcademicData> {
   const [attendanceRes, marksRes] = await Promise.all([
     supabase.from('attendance_records').select('class_date, status').eq('student_id', studentId).order('class_date', { ascending: false }),
-    supabase.from('marks').select('subject, exam_type, score, max_score, created_at').eq('student_id', studentId).order('created_at', { ascending: false }),
+    supabase.from('marks').select('subject, exam_type, score, max_score, created_at, tests(title)').eq('student_id', studentId).order('created_at', { ascending: false }),
   ]);
 
   const attRows = attendanceRes.data ?? [];
@@ -60,7 +60,7 @@ export async function fetchChildAcademicData(supabase: SupabaseClient<Database>,
   const avgScore = markRows.length > 0 ? Math.round(markRows.reduce((a, m) => a + (m.score / m.max_score) * 100, 0) / markRows.length) : 0;
   const marks = markRows.map((m) => ({
     subject: m.subject,
-    exam: EXAM_LABEL[m.exam_type] ?? m.exam_type,
+    exam: m.exam_type === 'custom' && m.tests?.title ? m.tests.title : (EXAM_LABEL[m.exam_type] ?? m.exam_type),
     score: m.score,
     max: m.max_score,
     grade: letterGrade(m.score, m.max_score),

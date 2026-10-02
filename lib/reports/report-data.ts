@@ -41,11 +41,11 @@ export async function fetchReportData(studentId: string): Promise<ReportData | n
 
   const [attendanceRes, marksRes] = await Promise.all([
     admin.from('attendance_records').select('status, class_date').eq('student_id', studentId),
-    admin.from('marks').select('subject, exam_type, score, max_score').eq('student_id', studentId).eq('term', term),
+    admin.from('marks').select('subject, exam_type, score, max_score, tests(title)').eq('student_id', studentId).eq('term', term),
   ])
 
   const attRows = attendanceRes.data ?? []
-  const markRows = marksRes.data ?? []
+  const markRows = (marksRes.data ?? []).map((m) => ({ subject: m.subject, exam_type: m.exam_type, score: m.score, max_score: m.max_score, test_title: m.tests?.title ?? null }))
   const overallAverage = computeOverallAverage(markRows)
 
   return {

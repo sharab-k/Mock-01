@@ -3,7 +3,7 @@
 import { z } from 'zod'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/server'
-import { getLinkedParentPhones, sendGradeAlert } from '@/lib/notifications/send-notification'
+import { queueGradeAlerts, type GradeAlertJob } from '@/lib/notifications/send-notification'
 import { currentTerm } from '@/lib/marks/term'
 import { logAction } from '@/lib/audit/log'
 import type { Database } from '@/types/supabase'
@@ -22,6 +22,59 @@ const EXAM_TYPE_LABEL: Record<'monthly' | 'half_yearly' | 'final', string> = {
   monthly: 'Monthly',
   half_yearly: 'Half-Yearly',
   final: 'Final',
+}
+
+type MarkEntry = { studentId: string; studentName: string; score: number }
+type MarkInsert = Database['public']['Tables']['marks']['Insert']
+type MarkBase = Omit<MarkInsert, 'student_id' | 'score'>
+
+// Writes a whole class's scores in a handful of queries instead of several
+// round trips per student: one bulk insert for new scores, parallel updates
+// for changed ones, one bulk insert of their edit-history rows. Unchanged
+// scores are skipped entirely. CLAUDE.md §4: every changed score gets its
+// own append-only history row, never a silent overwrite.
+async function persistMarkBatch(
+  supabase: SupabaseClient<Database>,
+  userId: string,
+  entries: MarkEntry[],
+  existing: { id: string; student_id: string; score: number }[],
+  base: MarkBase,
+) {
+  const existingByStudent = new Map(existing.map((r) => [r.student_id, r]))
+  const toInsert: MarkInsert[] = []
+  const toUpdate: { row: { id: string; score: number }; entry: MarkEntry }[] = []
+  const changed: MarkEntry[] = []
+
+  for (const entry of entries) {
+    const row = existingByStudent.get(entry.studentId)
+    if (!row) {
+      toInsert.push({ ...base, student_id: entry.studentId, score: entry.score })
+      changed.push(entry)
+    } else if (row.score !== entry.score) {
+      toUpdate.push({ row, entry })
+      changed.push(entry)
+    }
+  }
+
+  if (toInsert.length > 0) {
+    const { error } = await supabase.from('marks').insert(toInsert)
+    if (error) return { ok: false as const, error: 'Could not save the scores. Please try again.' }
+  }
+
+  if (toUpdate.length > 0) {
+    const results = await Promise.all(
+      toUpdate.map(({ row, entry }) => supabase.from('marks').update({ score: entry.score }).eq('id', row.id)),
+    )
+    const failed = results.findIndex((r) => r.error)
+    if (failed !== -1) return { ok: false as const, error: `Could not update ${toUpdate[failed].entry.studentName}'s score.` }
+
+    const { error: historyError } = await supabase.from('marks_edit_history').insert(
+      toUpdate.map(({ row, entry }) => ({ mark_id: row.id, previous_score: row.score, new_score: entry.score, edited_by: userId })),
+    )
+    if (historyError) return { ok: false as const, error: 'Could not log the score edits. Please try again.' }
+  }
+
+  return { ok: true as const, inserted: toInsert.length, updated: toUpdate.length, changed }
 }
 
 const BulkSaveSchema = z.object({
@@ -53,63 +106,25 @@ export async function bulkSaveMarksAction(
     if (entry.score > maxScore) return { ok: false as const, error: `${entry.studentName}'s score exceeds the maximum.` }
   }
 
-  let inserted = 0
-  let updated = 0
-  let notified = 0
+  const { data: existing } = await supabase
+    .from('marks')
+    .select('id, student_id, score')
+    .eq('subject', subject)
+    .eq('exam_type', examType)
+    .eq('term', term)
+    .is('test_id', null)
+    .in('student_id', entries.map((e) => e.studentId))
 
-  for (const entry of entries) {
-    const { data: existing } = await supabase
-      .from('marks')
-      .select('id, score')
-      .eq('student_id', entry.studentId)
-      .eq('subject', subject)
-      .eq('exam_type', examType)
-      .eq('term', term)
-      .maybeSingle()
+  const batch = await persistMarkBatch(supabase, user.id, entries, existing ?? [], {
+    subject, exam_type: examType, max_score: maxScore, term, recorded_by: user.id,
+  })
+  if (!batch.ok) return batch
+  const { inserted, updated } = batch
 
-    let shouldNotify = false
-
-    if (!existing) {
-      const { error } = await supabase.from('marks').insert({
-        student_id: entry.studentId,
-        subject,
-        exam_type: examType,
-        score: entry.score,
-        max_score: maxScore,
-        term,
-        recorded_by: user.id,
-      })
-      if (error) return { ok: false as const, error: `Could not save ${entry.studentName}'s score.` }
-      inserted++
-      shouldNotify = true
-    } else if (existing.score !== entry.score) {
-      const { error: updateError } = await supabase
-        .from('marks')
-        .update({ score: entry.score })
-        .eq('id', existing.id)
-      if (updateError) return { ok: false as const, error: `Could not update ${entry.studentName}'s score.` }
-
-      // CLAUDE.md §4: edits are "logged, never silently overwritten" — every
-      // changed score gets its own append-only history row.
-      const { error: historyError } = await supabase.from('marks_edit_history').insert({
-        mark_id: existing.id,
-        previous_score: existing.score,
-        new_score: entry.score,
-        edited_by: user.id,
-      })
-      if (historyError) return { ok: false as const, error: `Could not log the edit for ${entry.studentName}.` }
-      updated++
-      shouldNotify = true
-    }
-
-    if (shouldNotify) {
-      const phones = await getLinkedParentPhones(entry.studentId)
-      await Promise.all(phones.map((phone) =>
-        sendGradeAlert(entry.studentName, phone, subject, EXAM_TYPE_LABEL[examType], entry.score, maxScore),
-      ))
-      if (phones.length > 0) notified++
-    }
-  }
+  const alerts: GradeAlertJob[] = batch.changed.map((e) => ({
+    studentId: e.studentId, studentName: e.studentName, subject, examLabel: EXAM_TYPE_LABEL[examType], score: e.score, maxScore,
+  }))
+  const notified = await queueGradeAlerts(alerts)
 
   if (inserted + updated > 0) {
     const label = updated > 0 && inserted === 0 ? 'Edited marks' : 'Bulk marks upload'
@@ -155,57 +170,23 @@ export async function bulkSaveTestMarksAction(
 
   const term = currentTerm()
   const subjectName = test.subjects?.name ?? '—'
-  let inserted = 0
-  let updated = 0
-  let notified = 0
 
-  for (const entry of entries) {
-    const { data: existing } = await supabase
-      .from('marks')
-      .select('id, score')
-      .eq('student_id', entry.studentId)
-      .eq('test_id', testId)
-      .maybeSingle()
+  const { data: existing } = await supabase
+    .from('marks')
+    .select('id, student_id, score')
+    .eq('test_id', testId)
+    .in('student_id', entries.map((e) => e.studentId))
 
-    let shouldNotify = false
+  const batch = await persistMarkBatch(supabase, user.id, entries, existing ?? [], {
+    subject: subjectName, exam_type: 'custom', test_id: testId, max_score: test.max_score, term, recorded_by: user.id,
+  })
+  if (!batch.ok) return batch
+  const { inserted, updated } = batch
 
-    if (!existing) {
-      const { error } = await supabase.from('marks').insert({
-        student_id: entry.studentId,
-        subject: subjectName,
-        exam_type: 'custom',
-        test_id: testId,
-        score: entry.score,
-        max_score: test.max_score,
-        term,
-        recorded_by: user.id,
-      })
-      if (error) return { ok: false as const, error: `Could not save ${entry.studentName}'s score.` }
-      inserted++
-      shouldNotify = true
-    } else if (existing.score !== entry.score) {
-      const { error: updateError } = await supabase.from('marks').update({ score: entry.score }).eq('id', existing.id)
-      if (updateError) return { ok: false as const, error: `Could not update ${entry.studentName}'s score.` }
-
-      const { error: historyError } = await supabase.from('marks_edit_history').insert({
-        mark_id: existing.id,
-        previous_score: existing.score,
-        new_score: entry.score,
-        edited_by: user.id,
-      })
-      if (historyError) return { ok: false as const, error: `Could not log the edit for ${entry.studentName}.` }
-      updated++
-      shouldNotify = true
-    }
-
-    if (shouldNotify) {
-      const phones = await getLinkedParentPhones(entry.studentId)
-      await Promise.all(phones.map((phone) =>
-        sendGradeAlert(entry.studentName, phone, subjectName, test.title, entry.score, test.max_score),
-      ))
-      if (phones.length > 0) notified++
-    }
-  }
+  const alerts: GradeAlertJob[] = batch.changed.map((e) => ({
+    studentId: e.studentId, studentName: e.studentName, subject: subjectName, examLabel: test.title, score: e.score, maxScore: test.max_score,
+  }))
+  const notified = await queueGradeAlerts(alerts)
 
   if (inserted + updated > 0) {
     await logAction(supabase, user.id, `Bulk marks upload — ${subjectName} "${test.title}" · Grade ${test.grade_level}-${test.section} · ${inserted + updated} students`)

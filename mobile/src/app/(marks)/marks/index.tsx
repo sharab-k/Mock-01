@@ -1,6 +1,7 @@
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { BookOpen, ClipboardCheck, ClipboardList, Layers } from 'lucide-react-native';
+import { router, type Href } from 'expo-router';
+import { BookOpen, ChevronRight, ClipboardCheck, ClipboardList, Layers } from 'lucide-react-native';
 
 import { ErrorState } from '@/components/error-state';
 import { ThemedText } from '@/components/themed-text';
@@ -69,6 +70,14 @@ export default function MarksDashboard() {
             <StatCard icon={BookOpen} label="Subjects covered" value={String(data.subjectsCovered)} />
           </View>
 
+          <Pressable onPress={() => router.push('/marks/subjects' as Href)}>
+            <Card style={styles.linkRow}>
+              <BookOpen size={18} color={theme.textMuted} />
+              <ThemedText variant="bodyMedium" style={{ flex: 1 }}>Manage subjects</ThemedText>
+              <ChevronRight size={16} color={theme.textMuted} />
+            </Card>
+          </Pressable>
+
           <View style={{ gap: Spacing.two }}>
             <ThemedText variant="subtitle">Tier distribution</ThemedText>
             <Card style={styles.tierRow}>
@@ -112,5 +121,6 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', gap: Spacing.three },
   tierRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.three },
   tierItem: { gap: 6, minWidth: '40%' },
+  linkRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
   subjectRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
 });

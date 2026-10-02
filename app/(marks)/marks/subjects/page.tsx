@@ -1,7 +1,9 @@
-import MarksSubjectsContent from '@/components/dashboard/modules/MarksSubjectsContent'
-import { fetchSubjectStats } from '@/lib/marks/subjects-data'
+import SubjectsContent from '@/components/dashboard/modules/SuperAdminSubjectsContent'
+import { fetchSubjects } from '@/lib/actions/subjects'
 
+// Marks Admin manages each grade's subject list directly (add/remove) —
+// enrollment into elected subjects stays Super Admin-only.
 export default async function MarksSubjectsPage() {
-  const subjects = await fetchSubjectStats()
-  return <MarksSubjectsContent initialSubjects={subjects} />
+  const subjects = await fetchSubjects()
+  return <SubjectsContent initialSubjects={subjects} basePath="/marks" backLabel="Marks" canEnroll={false} />
 }

@@ -60,4 +60,14 @@ describe('report aggregation', () => {
   it('empty attendance log produces no months, not a crash', () => {
     expect(buildAttendanceLog([])).toEqual([])
   })
+
+  it('lists custom class tests in their own group, labelled with the test title', () => {
+    const groups = groupMarksByExam([
+      { subject: 'Physics', exam_type: 'final', score: 80, max_score: 100 },
+      { subject: 'Physics', exam_type: 'custom', score: 9, max_score: 10, test_title: 'Chapter 4 Quiz' },
+      { subject: 'Maths', exam_type: 'custom', score: 5, max_score: 10, test_title: null },
+    ])
+    expect(groups.map((g) => g.label)).toEqual(['Final', 'Class Tests'])
+    expect(groups[1].rows.map((r) => r.subject)).toEqual(['Physics — Chapter 4 Quiz', 'Maths'])
+  })
 })

@@ -7,13 +7,13 @@ import { logAction } from '@/lib/audit/log'
 import { GRADES } from '@/lib/students/constants'
 import type { Database } from '@/types/supabase'
 
-async function requireSuperAdminCaller(supabaseOverride?: SupabaseClient<Database>) {
+async function requireSubjectsCaller(supabaseOverride?: SupabaseClient<Database>) {
   const supabase = supabaseOverride ?? await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { supabase, userId: null, authorized: false as const }
 
   const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-  return { supabase, userId: user.id, authorized: profile?.role === 'super_admin' }
+  return { supabase, userId: user.id, authorized: !!profile && ['super_admin', 'marks_admin'].includes(profile.role) }
 }
 
 export type Subject = {
@@ -57,7 +57,7 @@ export async function createSubjectAction(
   const parsed = CreateSubjectSchema.safeParse(input)
   if (!parsed.success) return { ok: false, error: 'Invalid subject details.' }
 
-  const { supabase, userId, authorized } = await requireSuperAdminCaller(supabaseOverride)
+  const { supabase, userId, authorized } = await requireSubjectsCaller(supabaseOverride)
   if (!authorized || !userId) return { ok: false, error: 'Not authorized.' }
 
   const { gradeLevel, name, type } = parsed.data
@@ -85,7 +85,7 @@ export async function removeSubjectAction(
   const parsed = RemoveSubjectSchema.safeParse(input)
   if (!parsed.success) return { ok: false, error: 'Invalid subject.' }
 
-  const { supabase, userId, authorized } = await requireSuperAdminCaller(supabaseOverride)
+  const { supabase, userId, authorized } = await requireSubjectsCaller(supabaseOverride)
   if (!authorized || !userId) return { ok: false, error: 'Not authorized.' }
 
   const { data: subject } = await supabase.from('subjects').select('name, grade_level').eq('id', parsed.data.id).single()

@@ -12,7 +12,7 @@ const TYPE_STYLE: Record<Subject['type'], string> = {
   elected: 'bg-warning-bg text-warning',
 }
 
-export default function SuperAdminSubjectsContent({ initialSubjects }: { initialSubjects: Subject[] }) {
+export default function SuperAdminSubjectsContent({ initialSubjects, basePath = '/super-admin', backLabel = 'Dashboard', canEnroll = true }: { initialSubjects: Subject[]; basePath?: string; backLabel?: string; canEnroll?: boolean }) {
   const [subjects, setSubjects] = useState<Subject[]>(initialSubjects)
   const [addingForGrade, setAddingForGrade] = useState<string | null>(null)
   const [name, setName] = useState('')
@@ -58,8 +58,8 @@ export default function SuperAdminSubjectsContent({ initialSubjects }: { initial
   return (
     <>
       <div>
-        <Link href="/super-admin" className="inline-flex items-center gap-1.5 text-[12.5px] font-medium text-neutral-500 hover:text-ink-700 transition-colors no-underline mb-4 group">
-          <ArrowLeft size={13} className="group-hover:-translate-x-0.5 transition-transform" /> Dashboard
+        <Link href={basePath} className="inline-flex items-center gap-1.5 text-[12.5px] font-medium text-neutral-500 hover:text-ink-700 transition-colors no-underline mb-4 group">
+          <ArrowLeft size={13} className="group-hover:-translate-x-0.5 transition-transform" /> {backLabel}
         </Link>
         <h1 className="text-[20px] font-bold text-neutral-900">Subjects</h1>
         <p className="text-[13px] text-neutral-500 mt-0.5">
@@ -116,7 +116,7 @@ export default function SuperAdminSubjectsContent({ initialSubjects }: { initial
                         <BookOpen size={12} />
                         <span>{s.name}</span>
                         <span className="text-[10px] opacity-70 font-normal">{s.type === 'compulsory' ? 'Compulsory' : 'Elected'}</span>
-                        {s.type === 'elected' && (
+                        {canEnroll && s.type === 'elected' && (
                           <button onClick={() => setEnrollTarget(s)} title="Manage enrollment" className="w-5 h-5 flex items-center justify-center rounded-full hover:bg-white/60 transition-colors">
                             <Users size={12} />
                           </button>

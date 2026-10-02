@@ -33,7 +33,7 @@ export async function fetchClassMarks(grade: string, section: string): Promise<C
 
   const { data: marks } = await supabase
     .from('marks')
-    .select('id, student_id, subject, exam_type, score, max_score')
+    .select('id, student_id, subject, exam_type, score, max_score, tests(title)')
     .in('student_id', studentIds)
     .order('created_at', { ascending: false })
 
@@ -46,7 +46,7 @@ export async function fetchClassMarks(grade: string, section: string): Promise<C
       student: student?.full_name ?? 'Unknown',
       roll: student?.roll_number ?? '—',
       subject: m.subject,
-      exam: EXAM_TYPE_LABEL[m.exam_type] ?? m.exam_type,
+      exam: m.exam_type === 'custom' && m.tests?.title ? m.tests.title : (EXAM_TYPE_LABEL[m.exam_type] ?? m.exam_type),
       score: m.score,
       max: m.max_score,
     }

@@ -14,6 +14,7 @@ import { ChipSelect } from '@/components/ui/chip-select';
 import { StatusPill } from '@/components/ui/status-pill';
 import { TextField } from '@/components/ui/text-field';
 import { SetPasswordModal } from '@/components/set-password-modal';
+import { StudentSubjectsSection } from '@/components/student-subjects-section';
 import { Ink, Semantic, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import {
@@ -237,6 +238,8 @@ function EditStudentModal({
                 <ThemedText variant="small" style={{ color: Ink[600] }}>Reset parent password</ThemedText>
               </Pressable>
             )}
+
+            <StudentSubjectsSection studentId={student.id} gradeLevel={grade} />
 
             <ThemedText variant="label" color="textMuted" style={{ marginTop: Spacing.two }}>Office Use</ThemedText>
             <TextField label="Registration fee (PKR)" value={registrationFee} onChangeText={setRegistrationFee} keyboardType="numeric" />

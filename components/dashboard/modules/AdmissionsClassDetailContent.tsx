@@ -8,6 +8,7 @@ import {
   Pencil, Trash2, CheckCircle2, X,
 } from 'lucide-react'
 import { updateStudentAction, deleteStudentAction } from '@/lib/actions/students'
+import StudentSubjectsSection from '@/components/dashboard/StudentSubjectsSection'
 import { updateParentContactAction } from '@/lib/actions/parents'
 import { GRADES, sectionsForGrade, PROGRAM_GRADE, PROGRAMS, type Grade, type Section, type Program } from '@/lib/students/constants'
 
@@ -490,6 +491,10 @@ export default function AdmissionsClassDetailContent({ grade, section, basePath 
                   <p className="text-[11.5px] text-neutral-400 mt-2">No parent account linked — contact details can&apos;t be edited here.</p>
                 )}
               </div>
+
+              {isSuperAdmin && (
+                <StudentSubjectsSection key={editStudent.id} studentId={editStudent.id} gradeLevel={grade} />
+              )}
 
               <div className="pt-3 border-t border-neutral-100">
                 <p className="text-[11.5px] font-semibold text-neutral-400 uppercase tracking-wider mb-4">Office Use <span className="text-neutral-400 font-normal normal-case">(optional)</span></p>

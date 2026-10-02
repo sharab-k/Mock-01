@@ -152,6 +152,8 @@ export async function fetchTestRoster(
       score: scoreByStudent.get(s.id) ?? null,
     }))
 
+  roster.sort((a, b) => a.rollNumber.localeCompare(b.rollNumber, undefined, { numeric: true }))
+
   return {
     ok: true,
     test: {

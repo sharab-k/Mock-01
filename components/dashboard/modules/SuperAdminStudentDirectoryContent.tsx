@@ -2,11 +2,12 @@
 
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Search, X, CalendarCheck, BookOpen, Clock3, Loader2, Trash2, AlertTriangle, UserPlus, KeyRound } from 'lucide-react'
+import { ArrowLeft, Search, X, CalendarCheck, BookOpen, Clock3, Loader2, Trash2, AlertTriangle, UserPlus, KeyRound, Pencil } from 'lucide-react'
 import { fetchStudentAcademicSummaryAction, type StudentAcademicSummary } from '@/lib/actions/student-summary'
 import { deleteStudentAction } from '@/lib/actions/students'
 import { setParentPasswordAction } from '@/lib/actions/parents'
 import SetPasswordModal from '@/components/dashboard/SetPasswordModal'
+import StudentSubjectsSection from '@/components/dashboard/StudentSubjectsSection'
 
 export type DirectoryStudent = {
   id: string
@@ -304,6 +305,15 @@ export default function SuperAdminStudentDirectoryContent({ students: initialStu
                   )}
                 </div>
               )}
+
+              <Link
+                href={`/super-admin/admissions/${selected.grade}/${selected.section}`}
+                className="w-full flex items-center justify-center gap-2 text-[12.5px] font-semibold text-ink-700 bg-ink-50 border border-ink-100 py-2.5 rounded-xl hover:bg-ink-100/50 transition-colors no-underline"
+              >
+                <Pencil size={13} /> Edit student details
+              </Link>
+
+              <StudentSubjectsSection key={selected.id} studentId={selected.id} gradeLevel={selected.grade} />
 
               <div className="space-y-3 pt-4 border-t border-neutral-100">
                 <p className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider">Parent / Guardian</p>

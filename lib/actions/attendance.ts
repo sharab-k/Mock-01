@@ -3,7 +3,7 @@
 import { z } from 'zod'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/server'
-import { getLinkedParentPhones, sendAbsenceAlert } from '@/lib/notifications/send-notification'
+import { deferTask, getLinkedParentPhones, sendAbsenceAlert } from '@/lib/notifications/send-notification'
 import { logAction } from '@/lib/audit/log'
 import type { Database } from '@/types/supabase'
 
@@ -72,7 +72,7 @@ async function markOneAttendance(
       supabase.from('students').select('roll_number').eq('id', input.studentId).single(),
     ])
     const rollNumber = student?.roll_number ?? ''
-    await Promise.all(phones.map((phone) => sendAbsenceAlert(input.studentName, rollNumber, phone, classDate)))
+    await deferTask(() => Promise.all(phones.map((phone) => sendAbsenceAlert(input.studentName, rollNumber, phone, classDate))))
     notified = phones.length > 0
   }
 

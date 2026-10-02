@@ -5,10 +5,12 @@
 import { tierOf, type Tier } from '@/lib/marks/tier'
 import { letterGrade } from '@/lib/marks/letter-grade'
 
-export const EXAM_TYPE_LABEL: Record<string, string> = { monthly: 'Monthly', half_yearly: 'Half-Yearly', final: 'Final' }
-export const EXAM_TYPE_ORDER = ['monthly', 'half_yearly', 'final'] as const
+export const EXAM_TYPE_LABEL: Record<string, string> = { monthly: 'Monthly', half_yearly: 'Half-Yearly', final: 'Final', custom: 'Class Tests' }
+export const EXAM_TYPE_ORDER = ['monthly', 'half_yearly', 'final', 'custom'] as const
 
-export type RawMarkRow = { subject: string; exam_type: string; score: number; max_score: number }
+// test_title is set only for exam_type 'custom' (a Marks-Admin-created test) —
+// it's what tells one class test from another on the report.
+export type RawMarkRow = { subject: string; exam_type: string; score: number; max_score: number; test_title?: string | null }
 export type RawAttendanceRow = { status: string }
 export type RawAttendanceLogRow = { status: string; class_date: string }
 export type AttendanceLogRow = { date: string; status: 'present' | 'late' | 'absent' }
@@ -24,7 +26,12 @@ export function groupMarksByExam(markRows: RawMarkRow[]): MarksByExamGroup[] {
       label: EXAM_TYPE_LABEL[examType],
       rows: markRows
         .filter((m) => m.exam_type === examType)
-        .map((m) => ({ subject: m.subject, score: m.score, maxScore: m.max_score, grade: letterGrade(m.score, m.max_score) })),
+        .map((m) => ({
+          subject: m.exam_type === 'custom' && m.test_title ? `${m.subject} — ${m.test_title}` : m.subject,
+          score: m.score,
+          maxScore: m.max_score,
+          grade: letterGrade(m.score, m.max_score),
+        })),
     }))
     .filter((group) => group.rows.length > 0)
 }
