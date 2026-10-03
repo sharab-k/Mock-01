@@ -22,7 +22,7 @@ export async function GET(request: Request) {
       address, gr_number, registration_fee, tuition_fee, stream
     `)
     .is('deleted_at', null)
-    .order('gr_number', { ascending: true })
+    .order('roll_sort', { ascending: true })
 
   const studentIds = (rows ?? []).map((s) => s.id)
   const contactByStudent = await fetchParentEditContactsByStudentId(studentIds)

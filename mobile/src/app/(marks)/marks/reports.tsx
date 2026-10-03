@@ -6,6 +6,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Card } from '@/components/ui/card';
 import { StatusPill } from '@/components/ui/status-pill';
+import { ReportDownloadButton } from '@/components/report-download-button';
 import { Ink, Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { fetchTieredStudents, type TieredStudent } from '@/lib/marks/reports-data';
@@ -84,6 +85,7 @@ export default function MarksReportsScreen() {
                   </View>
                   <ThemedText variant="mono" color="textSecondary">{s.average}%</ThemedText>
                   <StatusPill tone={TIER_TONE[s.tier]} label={s.tier} />
+                  <ReportDownloadButton studentId={s.id} studentName={s.full_name} />
                 </Card>
               ))
             )}

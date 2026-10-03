@@ -32,7 +32,7 @@ export async function fetchFeeRoster(
       .select('id, roll_number, gr_number, full_name, grade_level, section')
       .is('deleted_at', null)
       .eq('status', 'active')
-      .order('gr_number', { ascending: true }),
+      .order('roll_sort', { ascending: true }),
     supabase
       .from('fee_payments')
       .select('student_id, status')

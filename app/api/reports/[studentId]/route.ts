@@ -2,8 +2,7 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { resolveRequestClient } from '@/lib/supabase/session'
 import { fetchReportData } from '@/lib/reports/report-data'
-import { renderReportHtml } from '@/lib/reports/template'
-import { renderHtmlToPdf } from '@/lib/reports/pdf'
+import { renderReportPdf } from '@/lib/reports/pdf-lite'
 
 const ParamsSchema = z.object({ studentId: z.string().uuid() })
 
@@ -45,32 +44,11 @@ export async function GET(
   const reportData = await fetchReportData(studentId)
   if (!reportData) return NextResponse.json({ error: 'Student not found.' }, { status: 404 })
 
-  const html = renderReportHtml(reportData)
-
-  // @sparticuz/chromium's launch on Vercel's serverless runtime is failing
-  // outright in this deployment (verified: every request 500s with an empty
-  // body — a Chromium cold-launch/memory failure, not a report-data or
-  // template bug). Rather than leave "download report" completely broken,
-  // fall back to serving the same fully-rendered report template as HTML
-  // directly — same content (every mark, the full attendance log), just not
-  // converted to PDF bytes. Puppeteer stays the primary path so a working
-  // Vercel Chromium config upgrades this back to a real PDF with no other
-  // code change; this only degrades gracefully instead of hard-failing.
-  try {
-    const pdf = await renderHtmlToPdf(html)
-    return new NextResponse(new Uint8Array(pdf), {
-      headers: {
-        'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="progress-report-${reportData.student.rollNumber}.pdf"`,
-      },
-    })
-  } catch (err) {
-    console.error('[reports] Puppeteer PDF generation failed, serving HTML fallback:', err)
-    return new NextResponse(html, {
-      headers: {
-        'Content-Type': 'text/html; charset=utf-8',
-        'Content-Disposition': `attachment; filename="progress-report-${reportData.student.rollNumber}.html"`,
-      },
-    })
-  }
+  const pdf = await renderReportPdf(reportData)
+  return new NextResponse(new Uint8Array(pdf), {
+    headers: {
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="progress-report-${reportData.student.rollNumber}.pdf"`,
+    },
+  })
 }

@@ -33,7 +33,7 @@ export default function AttendanceRosterContent({ basePath = '/attendance', stud
       const matchesQuery = !q || s.full_name.toLowerCase().includes(q) || s.roll_number.toLowerCase().includes(q)
       const matchesGrade = gradeFilter === 'All Grades' || s.grade === gradeFilter
       return matchesQuery && matchesGrade
-    }).sort((a, b) => (a.attendancePct ?? -1) - (b.attendancePct ?? -1))
+    })
   }, [students, query, gradeFilter])
 
   return (
@@ -43,7 +43,7 @@ export default function AttendanceRosterContent({ basePath = '/attendance', stud
           <ArrowLeft size={13} className="group-hover:-translate-x-0.5 transition-transform" /> Attendance
         </Link>
         <h1 className="text-[20px] font-bold text-neutral-900">Full Roster</h1>
-        <p className="text-[13px] text-neutral-500 mt-0.5">All classes combined, sorted lowest attendance first · {filtered.length} students</p>
+        <p className="text-[13px] text-neutral-500 mt-0.5">All classes combined, in roll-number order · {filtered.length} students</p>
       </div>
 
       <div className="bg-white rounded-2xl border border-neutral-200 shadow-1 p-4 flex items-center gap-3 flex-wrap">

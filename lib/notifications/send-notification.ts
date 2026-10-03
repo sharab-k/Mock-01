@@ -147,12 +147,15 @@ export async function notifyAbsence(input: {
 export async function queueGradeAlerts(jobs: GradeAlertJob[], createdBy: string | null): Promise<number> {
   if (jobs.length === 0) return 0
 
-  const parentsByStudent = await getLinkedParentsBatch(jobs.map((j) => j.studentId))
+  const studentIds = jobs.map((j) => j.studentId)
+  const parentsByStudent = await getLinkedParentsBatch(studentIds)
+  const { data: rolls } = await createAdminClient().from('students').select('id, roll_number').in('id', studentIds)
+  const rollById = new Map((rolls ?? []).map((r) => [r.id, r.roll_number]))
   const portalRows: PortalNotificationRow[] = []
   const sends: (() => Promise<boolean>)[] = []
 
   for (const j of jobs) {
-    const message = gradeAlertMessage(j.studentName, j.subject, j.examLabel, j.score, j.maxScore)
+    const message = gradeAlertMessage(j.studentName, rollById.get(j.studentId) ?? '', j.subject, j.examLabel, j.score, j.maxScore)
     for (const p of parentsByStudent.get(j.studentId) ?? []) {
       portalRows.push({ parentId: p.id, parentName: p.name, studentId: j.studentId, kind: 'grade', title: `${j.subject} result`, body: message, createdBy })
       if (p.phone) sends.push(() => dispatch(message, p.phone!))

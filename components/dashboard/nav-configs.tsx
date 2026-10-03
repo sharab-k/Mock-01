@@ -127,7 +127,10 @@ export function buildStudentNavSections(studentId: string): NavSection[] {
     },
     {
       title: 'School',
-      items: [{ label: 'Notices', href: `${base}/notices`, icon: Megaphone }],
+      items: [
+        { label: 'Notifications', href: '/parent/notifications', icon: Bell      },
+        { label: 'Notices',       href: `${base}/notices`,       icon: Megaphone },
+      ],
     },
   ]
 }

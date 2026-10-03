@@ -7,6 +7,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Avatar } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
+import { ChipSelect } from '@/components/ui/chip-select';
 import { TextField } from '@/components/ui/text-field';
 import { Ink, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -18,6 +19,7 @@ export function SubjectEnrollmentModal({ subject, onClose }: { subject: Subject 
   const [roster, setRoster] = useState<EnrollmentRosterStudent[] | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [query, setQuery] = useState('');
+  const [sectionFilter, setSectionFilter] = useState('All');
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -32,6 +34,7 @@ export function SubjectEnrollmentModal({ subject, onClose }: { subject: Subject 
     if (!subject) { setRoster(null); return; }
     setRoster(null);
     setQuery('');
+    setSectionFilter('All');
     setError('');
     fetchSubjectEnrollmentRoster(subject.id).then((result) => {
       if (!result.ok) { setError(result.error); return; }
@@ -42,10 +45,24 @@ export function SubjectEnrollmentModal({ subject, onClose }: { subject: Subject 
 
   if (!subject) return null;
 
+  const sections = Array.from(new Set((roster ?? []).map((s) => s.section))).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+
   const filtered = (roster ?? []).filter((s) => {
     const q = query.trim().toLowerCase();
-    return !q || s.fullName.toLowerCase().includes(q) || s.rollNumber.toLowerCase().includes(q);
+    const matchesQuery = !q || s.fullName.toLowerCase().includes(q) || s.rollNumber.toLowerCase().includes(q);
+    return matchesQuery && (sectionFilter === 'All' || s.section === sectionFilter);
   });
+
+  // Applies to exactly the students currently in view, so picking a class and
+  // pressing "Select all" / "Clear" changes that whole class at once.
+  function setInView(on: boolean) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      for (const s of filtered) { if (on) next.add(s.id); else next.delete(s.id); }
+      return next;
+    });
+    setSaved(false);
+  }
 
   function toggle(id: string) {
     setSelected((prev) => {
@@ -75,7 +92,7 @@ export function SubjectEnrollmentModal({ subject, onClose }: { subject: Subject 
           <View style={styles.header}>
             <View style={{ flex: 1 }}>
               <ThemedText variant="title" style={{ fontSize: 18 }}>{subject.name}</ThemedText>
-              <ThemedText variant="mono" color="textMuted" style={{ fontSize: 12 }}>Grade {subject.gradeLevel} · Elected enrollment</ThemedText>
+              <ThemedText variant="mono" color="textMuted" style={{ fontSize: 12 }}>Grade {subject.gradeLevel} · {subject.type === 'elected' ? 'Elected' : 'Compulsory'} — who takes this subject</ThemedText>
             </View>
             <Pressable onPress={onClose} hitSlop={8}><X size={20} color={theme.textSecondary} /></Pressable>
           </View>
@@ -88,7 +105,12 @@ export function SubjectEnrollmentModal({ subject, onClose }: { subject: Subject 
             <>
               <View style={{ paddingHorizontal: Spacing.four, gap: Spacing.two }}>
                 <TextField placeholder="Search by name or roll…" value={query} onChangeText={setQuery} autoCapitalize="none" />
-                <ThemedText variant="small" color="textMuted">{selected.size} of {roster.length} students enrolled</ThemedText>
+                <ChipSelect options={['All', ...sections]} value={sectionFilter} onChange={setSectionFilter} />
+                <View style={styles.bulkRow}>
+                  <Pressable onPress={() => setInView(true)} hitSlop={6}><ThemedText variant="small" style={{ color: Ink[700] }}>Select all shown</ThemedText></Pressable>
+                  <Pressable onPress={() => setInView(false)} hitSlop={6}><ThemedText variant="small" color="textMuted">Clear shown</ThemedText></Pressable>
+                </View>
+                <ThemedText variant="small" color="textMuted">{selected.size} of {roster.length} students take this subject</ThemedText>
               </View>
 
               <ScrollView contentContainerStyle={styles.list}>
@@ -111,7 +133,7 @@ export function SubjectEnrollmentModal({ subject, onClose }: { subject: Subject 
               </ScrollView>
 
               <View style={styles.footer}>
-                <Button label={saved ? 'Saved' : saving ? 'Saving…' : 'Save Enrollment'} variant={saved ? 'secondary' : 'primary'} loading={saving} onPress={handleSave} fullWidth />
+                <Button label={saved ? 'Saved' : saving ? 'Saving…' : 'Save'} variant={saved ? 'secondary' : 'primary'} loading={saving} onPress={handleSave} fullWidth />
               </View>
             </>
           )}
@@ -123,6 +145,7 @@ export function SubjectEnrollmentModal({ subject, onClose }: { subject: Subject 
 
 const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', padding: Spacing.four, gap: Spacing.three },
+  bulkRow: { flexDirection: 'row', gap: Spacing.four },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   list: { padding: Spacing.four, paddingTop: Spacing.two, gap: Spacing.one, paddingBottom: Spacing.six },
   row: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, paddingVertical: 8 },

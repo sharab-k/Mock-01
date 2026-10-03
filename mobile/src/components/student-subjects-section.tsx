@@ -6,11 +6,12 @@ import { ThemedText } from '@/components/themed-text';
 import { Button } from '@/components/ui/button';
 import { Ink, Radius, Semantic, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { fetchStudentSubjects, setStudentElectivesAction, type StudentSubjectRow } from '@/lib/subjects/student-subjects';
+import { fetchStudentSubjects, setStudentSubjectsAction, type StudentSubjectRow } from '@/lib/subjects/student-subjects';
 
 // Super Admin's per-student subject editor inside the Edit Student modal.
-// Compulsory subjects are implicit for the whole grade (read-only); elected
-// ones are toggled for this one student and saved together.
+// Every subject of the grade is a toggle: compulsory ones start on (a student
+// can still be taken off one), elected ones start off until enrolled. Saved
+// together as the student's exact subject set.
 export function StudentSubjectsSection({ studentId, gradeLevel }: { studentId: string; gradeLevel: string }) {
   const theme = useTheme();
   const [subjects, setSubjects] = useState<StudentSubjectRow[] | null>(null);
@@ -25,7 +26,7 @@ export function StudentSubjectsSection({ studentId, gradeLevel }: { studentId: s
     fetchStudentSubjects(studentId).then((res) => {
       if (!mounted) return;
       if (!res.ok) { setError(res.error); setSubjects([]); return; }
-      const on = new Set(res.subjects.filter((s) => s.type === 'elected' && s.enrolled).map((s) => s.id));
+      const on = new Set(res.subjects.filter((s) => s.enrolled).map((s) => s.id));
       setSubjects(res.subjects);
       setPicked(on);
       setSaved(on);
@@ -49,7 +50,7 @@ export function StudentSubjectsSection({ studentId, gradeLevel }: { studentId: s
   async function save() {
     setSaving(true);
     setError('');
-    const outcome = await setStudentElectivesAction(studentId, [...picked]);
+    const outcome = await setStudentSubjectsAction(studentId, [...picked]);
     setSaving(false);
     if (!outcome.ok) { setError(outcome.error); return; }
     setSaved(new Set(picked));
@@ -66,54 +67,42 @@ export function StudentSubjectsSection({ studentId, gradeLevel }: { studentId: s
         <ThemedText variant="small" color="textMuted">No subjects set up for this grade yet.</ThemedText>
       ) : (
         <>
-          {compulsory.length > 0 && (
-            <View style={{ gap: 6 }}>
-              <ThemedText variant="small" color="textMuted">Compulsory — every student in the grade</ThemedText>
+          {[
+            { key: 'compulsory', items: compulsory, hint: 'Compulsory — on for everyone by default; tap to take one off this student' },
+            { key: 'elected', items: elected, hint: 'Elected — tap to add or remove for this student' },
+          ].map((group) => group.items.length > 0 && (
+            <View key={group.key} style={{ gap: 6 }}>
+              <ThemedText variant="small" color="textMuted">{group.hint}</ThemedText>
               <View style={styles.chips}>
-                {compulsory.map((s) => (
-                  <View key={s.id} style={[styles.chip, { backgroundColor: Ink[100] }]}>
-                    <BookOpen size={11} color={Ink[700]} />
-                    <ThemedText variant="small" style={{ color: Ink[700] }}>{s.name}</ThemedText>
-                  </View>
-                ))}
-              </View>
-            </View>
-          )}
-
-          {elected.length > 0 && (
-            <View style={{ gap: 6 }}>
-              <ThemedText variant="small" color="textMuted">Elected — tap to add or remove for this student</ThemedText>
-              <View style={styles.chips}>
-                {elected.map((s) => {
+                {group.items.map((s) => {
                   const on = picked.has(s.id);
+                  const tone = s.type === 'compulsory' ? { fg: Ink[700], bg: Ink[100], border: Ink[200] } : { fg: Semantic.warning, bg: Semantic.warningBg, border: Semantic.warning };
                   return (
                     <Pressable
                       key={s.id}
                       onPress={() => toggle(s.id)}
                       accessibilityRole="button"
                       accessibilityState={{ selected: on }}
-                      style={[styles.chip, { borderWidth: 1, borderColor: on ? Semantic.warning : theme.border, backgroundColor: on ? Semantic.warningBg : theme.surface }]}>
-                      {on ? <Check size={11} color={Semantic.warning} /> : <BookOpen size={11} color={theme.textMuted} />}
-                      <ThemedText variant="small" style={{ color: on ? Semantic.warning : theme.textSecondary }}>{s.name}</ThemedText>
+                      style={[styles.chip, { borderWidth: 1, borderColor: on ? tone.border : theme.border, backgroundColor: on ? tone.bg : theme.surface }]}>
+                      {on ? <Check size={11} color={tone.fg} /> : <BookOpen size={11} color={theme.textMuted} />}
+                      <ThemedText variant="small" style={{ color: on ? tone.fg : theme.textMuted, textDecorationLine: on ? 'none' : 'line-through' }}>{s.name}</ThemedText>
                     </Pressable>
                   );
                 })}
               </View>
             </View>
-          )}
+          ))}
 
           {!!error && <ThemedText variant="small" style={{ color: Semantic.danger }}>{error}</ThemedText>}
 
-          {elected.length > 0 && (
-            <Button
-              label={saving ? 'Saving…' : justSaved && !dirty ? 'Subjects saved' : 'Save subjects'}
-              variant="secondary"
-              loading={saving}
-              disabled={!dirty}
-              onPress={save}
-              fullWidth
-            />
-          )}
+          <Button
+            label={saving ? 'Saving…' : justSaved && !dirty ? 'Subjects saved' : 'Save subjects'}
+            variant="secondary"
+            loading={saving}
+            disabled={!dirty}
+            onPress={save}
+            fullWidth
+          />
         </>
       )}
     </View>

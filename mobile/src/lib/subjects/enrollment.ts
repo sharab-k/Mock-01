@@ -1,7 +1,7 @@
 import { supabase } from '@/lib/supabase/client';
 import { callMobileApi } from '@/lib/api/client';
 
-export type EnrollmentRosterStudent = { id: string; fullName: string; rollNumber: string; enrolled: boolean };
+export type EnrollmentRosterStudent = { id: string; fullName: string; rollNumber: string; section: string; enrolled: boolean };
 
 // Ported from the web's lib/actions/subject-enrollments.ts
 // fetchSubjectEnrollmentRoster — direct RLS-scoped reads (super_admin's own
@@ -12,19 +12,22 @@ export async function fetchSubjectEnrollmentRoster(
 ): Promise<{ ok: true; gradeLevel: string; subjectName: string; roster: EnrollmentRosterStudent[] } | { ok: false; error: string }> {
   const { data: subject } = await supabase.from('subjects').select('grade_level, name, type').eq('id', subjectId).single();
   if (!subject) return { ok: false, error: 'Subject not found.' };
-  if (subject.type !== 'elected') return { ok: false, error: 'Only elected subjects need enrollment.' };
 
-  const [studentsRes, enrolledRes] = await Promise.all([
-    supabase.from('students').select('id, full_name, roll_number').is('deleted_at', null).eq('status', 'active').eq('grade_level', subject.grade_level).order('roll_number', { ascending: true }),
+  const [studentsRes, enrolledRes, excludedRes] = await Promise.all([
+    supabase.from('students').select('id, full_name, roll_number, section').is('deleted_at', null).eq('status', 'active').eq('grade_level', subject.grade_level).order('roll_sort', { ascending: true }),
     supabase.from('student_subject_enrollments').select('student_id').eq('subject_id', subjectId),
+    supabase.from('student_subject_exclusions').select('student_id').eq('subject_id', subjectId),
   ]);
 
   const enrolledIds = new Set((enrolledRes.data ?? []).map((r) => r.student_id));
+  const excludedIds = new Set((excludedRes.data ?? []).map((r) => r.student_id));
   const roster = (studentsRes.data ?? []).map((s) => ({
     id: s.id,
     fullName: s.full_name,
     rollNumber: s.roll_number,
-    enrolled: enrolledIds.has(s.id),
+    section: s.section,
+    // Elected: takes it only if enrolled. Compulsory: takes it unless excluded.
+    enrolled: subject.type === 'elected' ? enrolledIds.has(s.id) : !excludedIds.has(s.id),
   }));
 
   return { ok: true, gradeLevel: subject.grade_level, subjectName: subject.name, roster };

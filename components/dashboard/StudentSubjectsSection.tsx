@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from 'react'
 import { BookOpen, Check, Loader2 } from 'lucide-react'
-import { fetchStudentSubjects, setStudentElectivesAction, type StudentSubjectRow } from '@/lib/actions/subject-enrollments'
+import { fetchStudentSubjects, setStudentSubjectsAction, type StudentSubjectRow } from '@/lib/actions/subject-enrollments'
 
-// Super Admin's per-student subject editor, shown inside the student drawer.
-// Compulsory subjects are implicit for the whole grade (shown read-only);
-// elected subjects are toggled on/off for this one student and saved together.
+// Super Admin's per-student subject editor, shown inside the student drawer
+// and edit form. Every subject of the student's grade is a toggle: compulsory
+// ones start on (a student can still be taken off one), elected ones start off
+// until enrolled. Saved together as the student's exact subject set.
 export default function StudentSubjectsSection({ studentId, gradeLevel }: { studentId: string; gradeLevel: string }) {
   const [subjects, setSubjects] = useState<StudentSubjectRow[] | null>(null)
   const [picked, setPicked] = useState<Set<string>>(new Set())
@@ -20,10 +21,10 @@ export default function StudentSubjectsSection({ studentId, gradeLevel }: { stud
     fetchStudentSubjects(studentId).then((res) => {
       if (!mounted) return
       if (!res.ok) { setError(res.error); setSubjects([]); return }
-      const electedOn = new Set(res.subjects.filter((s) => s.type === 'elected' && s.enrolled).map((s) => s.id))
+      const taken = new Set(res.subjects.filter((s) => s.enrolled).map((s) => s.id))
       setSubjects(res.subjects)
-      setPicked(electedOn)
-      setSaved(electedOn)
+      setPicked(taken)
+      setSaved(taken)
     })
     return () => { mounted = false }
   }, [studentId])
@@ -45,11 +46,29 @@ export default function StudentSubjectsSection({ studentId, gradeLevel }: { stud
   const save = async () => {
     setSaving(true)
     setError('')
-    const outcome = await setStudentElectivesAction({ studentId, subjectIds: [...picked] })
+    const outcome = await setStudentSubjectsAction({ studentId, subjectIds: [...picked] })
     setSaving(false)
     if (!outcome.ok) { setError(outcome.error); return }
     setSaved(new Set(picked))
     setJustSaved(true)
+  }
+
+  const chip = (s: StudentSubjectRow) => {
+    const on = picked.has(s.id)
+    const onStyle = s.type === 'compulsory' ? 'bg-ink-100 text-ink-700 border-ink-200' : 'bg-warning-bg text-warning border-warning/30'
+    return (
+      <button
+        key={s.id}
+        type="button"
+        onClick={() => toggle(s.id)}
+        aria-pressed={on}
+        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[12px] font-medium border transition-colors ${
+          on ? onStyle : 'bg-white text-neutral-400 border-neutral-200 line-through hover:border-neutral-300'
+        }`}
+      >
+        {on ? <Check size={11} /> : <BookOpen size={11} />} {s.name}
+      </button>
+    )
   }
 
   return (
@@ -64,52 +83,27 @@ export default function StudentSubjectsSection({ studentId, gradeLevel }: { stud
         <>
           {compulsory.length > 0 && (
             <div>
-              <p className="text-[11.5px] text-neutral-400 mb-1.5">Compulsory — every student in the grade</p>
-              <div className="flex flex-wrap gap-1.5">
-                {compulsory.map((s) => (
-                  <span key={s.id} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[12px] font-medium bg-ink-100 text-ink-700">
-                    <BookOpen size={11} /> {s.name}
-                  </span>
-                ))}
-              </div>
+              <p className="text-[11.5px] text-neutral-400 mb-1.5">Compulsory — on for everyone by default; tap to take one off this student</p>
+              <div className="flex flex-wrap gap-1.5">{compulsory.map(chip)}</div>
             </div>
           )}
 
           {elected.length > 0 && (
             <div>
               <p className="text-[11.5px] text-neutral-400 mb-1.5">Elected — tap to add or remove for this student</p>
-              <div className="flex flex-wrap gap-1.5">
-                {elected.map((s) => {
-                  const on = picked.has(s.id)
-                  return (
-                    <button
-                      key={s.id}
-                      type="button"
-                      onClick={() => toggle(s.id)}
-                      aria-pressed={on}
-                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[12px] font-medium border transition-colors ${
-                        on ? 'bg-warning-bg text-warning border-warning/30' : 'bg-white text-neutral-500 border-neutral-200 hover:border-neutral-300'
-                      }`}
-                    >
-                      {on ? <Check size={11} /> : <BookOpen size={11} />} {s.name}
-                    </button>
-                  )
-                })}
-              </div>
+              <div className="flex flex-wrap gap-1.5">{elected.map(chip)}</div>
             </div>
           )}
 
           {error && <p className="text-[12px] text-danger">{error}</p>}
 
-          {elected.length > 0 && (
-            <button
-              onClick={save}
-              disabled={!dirty || saving}
-              className="w-full flex items-center justify-center gap-2 text-[12.5px] font-semibold text-ink-700 bg-ink-50 border border-ink-100 py-2.5 rounded-xl hover:bg-ink-100/50 transition-colors disabled:opacity-50"
-            >
-              {saving ? 'Saving…' : justSaved && !dirty ? 'Subjects saved' : 'Save subjects'}
-            </button>
-          )}
+          <button
+            onClick={save}
+            disabled={!dirty || saving}
+            className="w-full flex items-center justify-center gap-2 text-[12.5px] font-semibold text-ink-700 bg-ink-50 border border-ink-100 py-2.5 rounded-xl hover:bg-ink-100/50 transition-colors disabled:opacity-50"
+          >
+            {saving ? 'Saving…' : justSaved && !dirty ? 'Subjects saved' : 'Save subjects'}
+          </button>
         </>
       )}
     </div>

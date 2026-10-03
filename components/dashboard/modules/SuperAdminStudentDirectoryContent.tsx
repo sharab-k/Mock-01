@@ -8,6 +8,7 @@ import { deleteStudentAction } from '@/lib/actions/students'
 import { setParentPasswordAction } from '@/lib/actions/parents'
 import SetPasswordModal from '@/components/dashboard/SetPasswordModal'
 import StudentSubjectsSection from '@/components/dashboard/StudentSubjectsSection'
+import ReportDownloadButton from '@/components/dashboard/ReportDownloadButton'
 
 export type DirectoryStudent = {
   id: string
@@ -312,6 +313,8 @@ export default function SuperAdminStudentDirectoryContent({ students: initialStu
               >
                 <Pencil size={13} /> Edit student details
               </Link>
+
+              <ReportDownloadButton studentId={selected.id} variant="full" />
 
               <StudentSubjectsSection key={selected.id} studentId={selected.id} gradeLevel={selected.grade} />
 

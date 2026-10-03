@@ -15,7 +15,7 @@ async function fetchClassStudents(grade: string, section: string): Promise<Class
     .eq('grade_level', grade)
     .eq('section', section)
     .is('deleted_at', null)
-    .order('gr_number', { ascending: true })
+    .order('roll_sort', { ascending: true })
 
   const parentByStudent = await fetchParentEditContactsByStudentId((rows ?? []).map((s) => s.id))
 

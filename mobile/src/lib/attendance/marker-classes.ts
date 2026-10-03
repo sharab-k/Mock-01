@@ -16,7 +16,7 @@ export async function fetchMarkerClasses(): Promise<MarkerClass[]> {
     .select('id, roll_number, full_name, grade_level, section')
     .is('deleted_at', null)
     .eq('status', 'active')
-    .order('full_name', { ascending: true });
+    .order('roll_sort', { ascending: true });
 
   const byClass = new Map<string, MarkerClass>();
   for (const { grade, section } of GRADE_SECTION_PAIRS) {

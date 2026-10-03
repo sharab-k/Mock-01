@@ -15,6 +15,7 @@ import { StatusPill } from '@/components/ui/status-pill';
 import { TextField } from '@/components/ui/text-field';
 import { SetPasswordModal } from '@/components/set-password-modal';
 import { StudentSubjectsSection } from '@/components/student-subjects-section';
+import { ReportDownloadButton } from '@/components/report-download-button';
 import { Ink, Semantic, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import {
@@ -238,6 +239,8 @@ function EditStudentModal({
                 <ThemedText variant="small" style={{ color: Ink[600] }}>Reset parent password</ThemedText>
               </Pressable>
             )}
+
+            <ReportDownloadButton studentId={student.id} studentName={student.full_name} variant="full" />
 
             <StudentSubjectsSection studentId={student.id} gradeLevel={grade} />
 

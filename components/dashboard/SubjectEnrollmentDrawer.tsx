@@ -11,6 +11,7 @@ export default function SubjectEnrollmentDrawer({ subject, onClose }: { subject:
   const [roster, setRoster] = useState<EnrollmentRosterStudent[] | null>(null)
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [query, setQuery] = useState('')
+  const [sectionFilter, setSectionFilter] = useState('All')
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -26,10 +27,27 @@ export default function SubjectEnrollmentDrawer({ subject, onClose }: { subject:
     return () => { mounted = false }
   }, [subject.id])
 
+  const sections = Array.from(new Set((roster ?? []).map((s) => s.section))).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
+
   const filtered = (roster ?? []).filter((s) => {
     const q = query.trim().toLowerCase()
-    return !q || s.fullName.toLowerCase().includes(q) || s.rollNumber.toLowerCase().includes(q)
+    const matchesQuery = !q || s.fullName.toLowerCase().includes(q) || s.rollNumber.toLowerCase().includes(q)
+    return matchesQuery && (sectionFilter === 'All' || s.section === sectionFilter)
   })
+
+  // Applies to exactly the students currently in view, so picking a class and
+  // pressing "Select all" / "Clear" changes that whole class at once.
+  function setInView(on: boolean) {
+    setSelected((prev) => {
+      const next = new Set(prev)
+      for (const s of filtered) {
+        if (on) next.add(s.id)
+        else next.delete(s.id)
+      }
+      return next
+    })
+    setSaved(false)
+  }
 
   function toggle(id: string) {
     setSelected((prev) => {
@@ -58,7 +76,7 @@ export default function SubjectEnrollmentDrawer({ subject, onClose }: { subject:
         <div className="flex items-center justify-between px-6 py-5 border-b border-neutral-100 shrink-0">
           <div>
             <h3 className="text-[15px] font-bold text-neutral-900">{subject.name}</h3>
-            <p className="text-[12px] text-neutral-500 mt-0.5">Grade {subject.gradeLevel} · Elected subject enrollment</p>
+            <p className="text-[12px] text-neutral-500 mt-0.5">Grade {subject.gradeLevel} · {subject.type === 'elected' ? 'Elected' : 'Compulsory'} — choose who takes this subject</p>
           </div>
           <button onClick={onClose} className="w-8 h-8 rounded-full flex items-center justify-center text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition-colors">
             <X size={16} />
@@ -76,7 +94,15 @@ export default function SubjectEnrollmentDrawer({ subject, onClose }: { subject:
                 <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
                 <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search by name or roll…" className="w-full pl-8 pr-3 py-2 text-[13px] border border-neutral-200 rounded-xl bg-neutral-50 focus:outline-none focus:border-ink-400 focus:ring-2 focus:ring-ink-400/10 focus:bg-white transition-all" />
               </div>
-              <p className="text-[11.5px] text-neutral-400 mt-2">{selected.size} of {roster.length} students enrolled</p>
+              <div className="flex items-center gap-2 mt-2.5 flex-wrap">
+                <select value={sectionFilter} onChange={(e) => setSectionFilter(e.target.value)} className="text-[12px] border border-neutral-200 rounded-lg px-2.5 py-1.5 bg-white cursor-pointer">
+                  <option value="All">All classes</option>
+                  {sections.map((sec) => <option key={sec} value={sec}>Section {sec}</option>)}
+                </select>
+                <button type="button" onClick={() => setInView(true)} className="text-[12px] font-medium text-ink-700 bg-ink-50 hover:bg-ink-100 px-2.5 py-1.5 rounded-lg transition-colors">Select all shown</button>
+                <button type="button" onClick={() => setInView(false)} className="text-[12px] font-medium text-neutral-600 bg-neutral-100 hover:bg-neutral-200 px-2.5 py-1.5 rounded-lg transition-colors">Clear shown</button>
+              </div>
+              <p className="text-[11.5px] text-neutral-400 mt-2">{selected.size} of {roster.length} students take this subject</p>
             </div>
 
             <div className="flex-1 overflow-y-auto divide-y divide-neutral-100">
@@ -99,7 +125,7 @@ export default function SubjectEnrollmentDrawer({ subject, onClose }: { subject:
                 disabled={saving}
                 className={`w-full py-3 text-[13px] font-semibold rounded-xl transition-colors disabled:opacity-60 ${saved ? 'bg-success-bg text-success' : 'bg-ink-700 text-white hover:bg-ink-800'}`}
               >
-                {saved ? 'Saved' : saving ? 'Saving…' : 'Save Enrollment'}
+                {saved ? 'Saved' : saving ? 'Saving…' : 'Save'}
               </button>
             </div>
           </>

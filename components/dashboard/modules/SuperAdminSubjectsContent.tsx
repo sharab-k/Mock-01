@@ -63,8 +63,8 @@ export default function SuperAdminSubjectsContent({ initialSubjects, basePath = 
         </Link>
         <h1 className="text-[20px] font-bold text-neutral-900">Subjects</h1>
         <p className="text-[13px] text-neutral-500 mt-0.5">
-          Manage each grade&apos;s subject list. Compulsory subjects apply to every student in the grade automatically —
-          elected subjects need students enrolled one by one.
+          Manage each grade&apos;s subject list. Compulsory subjects apply to every student in the grade by default, elected ones to nobody until enrolled —
+          use the people icon on any subject to change who takes it, for one class or the whole grade.
         </p>
       </div>
 
@@ -116,8 +116,8 @@ export default function SuperAdminSubjectsContent({ initialSubjects, basePath = 
                         <BookOpen size={12} />
                         <span>{s.name}</span>
                         <span className="text-[10px] opacity-70 font-normal">{s.type === 'compulsory' ? 'Compulsory' : 'Elected'}</span>
-                        {canEnroll && s.type === 'elected' && (
-                          <button onClick={() => setEnrollTarget(s)} title="Manage enrollment" className="w-5 h-5 flex items-center justify-center rounded-full hover:bg-white/60 transition-colors">
+                        {canEnroll && (
+                          <button onClick={() => setEnrollTarget(s)} title="Choose which students take this subject" className="w-5 h-5 flex items-center justify-center rounded-full hover:bg-white/60 transition-colors">
                             <Users size={12} />
                           </button>
                         )}

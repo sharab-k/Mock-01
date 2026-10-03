@@ -34,7 +34,6 @@ const STATUS_STYLE: Record<Status, { pill: string; dot: string }> = {
   absent:   { pill: 'bg-danger-bg text-danger',   dot: 'bg-danger'  },
   late:     { pill: 'bg-warning-bg text-warning', dot: 'bg-warning' },
 }
-const STATUS_ORDER: Record<Status, number> = { unmarked: 0, absent: 1, late: 2, present: 3 }
 const NEXT_STATUS: Record<Status, 'present' | 'absent'> = { unmarked: 'present', present: 'absent', absent: 'present', late: 'present' }
 const INITIALS = (name: string) => name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
 
@@ -99,7 +98,6 @@ export default function AttendanceClassDetailContent({ grade, section, basePath 
     }
   }
 
-  const sorted = [...roster].sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status])
 
   const presentCount = roster.filter(s => s.status === 'present').length
   const absentCount  = roster.filter(s => s.status === 'absent').length
@@ -116,6 +114,32 @@ export default function AttendanceClassDetailContent({ grade, section, basePath 
   ]
 
   const selected = selectedId ? roster.find(s => s.id === selectedId) ?? null : null
+
+  // Alert status + Send/Resend for an absent student. Shown in its own column on
+  // wide screens and under the status pill on narrow ones, so a phone-sized
+  // view never loses the ability to see or resend an alert.
+  const alertControls = (s: RosterStudent) => (
+    <div className="flex items-center gap-2">
+          {s.alertStatus === 'sent' && (
+            <span className="flex items-center gap-1 text-[11px] text-success font-semibold"><MessageSquare size={11} /> Notified</span>
+          )}
+          {s.alertStatus === 'failed' && (
+            <span className="flex items-center gap-1 text-[11px] text-danger font-semibold" title="WhatsApp/SMS alert failed — contact the parent directly"><MessageSquare size={11} /> Alert failed</span>
+          )}
+          {s.alertStatus === null && (
+            <span className="text-[11px] text-neutral-300">Not sent</span>
+          )}
+          {s.hasParent && (
+            <button
+              onClick={() => sendAlert(s.id)}
+              disabled={alertPending[s.id]}
+              className="text-[11px] font-medium text-ink-600 hover:text-ink-800 bg-ink-50 hover:bg-ink-100 px-2 py-1 rounded-lg transition-colors disabled:opacity-50"
+            >
+              {alertPending[s.id] ? 'Sending…' : s.alertStatus ? 'Resend' : 'Send Alert'}
+            </button>
+          )}
+        </div>
+  )
 
   return (
     <>
@@ -173,7 +197,7 @@ export default function AttendanceClassDetailContent({ grade, section, basePath 
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-100">
-                {sorted.map(s => (
+                {roster.map(s => (
                   <tr key={s.id} className="hover:bg-neutral-50/80 transition-colors">
                     <td className="px-5 py-3">
                       <button onClick={() => setSelectedId(s.id)} className="flex items-center gap-3 w-full text-left group">
@@ -194,30 +218,10 @@ export default function AttendanceClassDetailContent({ grade, section, basePath 
                       >
                         <span className={`w-1.5 h-1.5 rounded-full ${STATUS_STYLE[s.status].dot}`} />{STATUS_LABEL[s.status]}
                       </button>
+                      {s.status === 'absent' && <div className="md:hidden mt-2">{alertControls(s)}</div>}
                     </td>
                     <td className="px-3 py-3 hidden md:table-cell">
-                      {s.status === 'absent' ? (
-                        <div className="flex items-center gap-2">
-                          {s.alertStatus === 'sent' && (
-                            <span className="flex items-center gap-1 text-[11px] text-success font-semibold"><MessageSquare size={11} /> Notified</span>
-                          )}
-                          {s.alertStatus === 'failed' && (
-                            <span className="flex items-center gap-1 text-[11px] text-danger font-semibold" title="WhatsApp/SMS alert failed — contact the parent directly"><MessageSquare size={11} /> Alert failed</span>
-                          )}
-                          {s.alertStatus === null && (
-                            <span className="text-[11px] text-neutral-300">Not sent</span>
-                          )}
-                          {s.hasParent && (
-                            <button
-                              onClick={() => sendAlert(s.id)}
-                              disabled={alertPending[s.id]}
-                              className="text-[11px] font-medium text-ink-600 hover:text-ink-800 bg-ink-50 hover:bg-ink-100 px-2 py-1 rounded-lg transition-colors disabled:opacity-50"
-                            >
-                              {alertPending[s.id] ? 'Sending…' : s.alertStatus ? 'Resend' : 'Send Alert'}
-                            </button>
-                          )}
-                        </div>
-                      ) : (
+                      {s.status === 'absent' ? alertControls(s) : (
                         <span className="text-[11px] text-neutral-300">—</span>
                       )}
                     </td>

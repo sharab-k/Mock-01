@@ -620,6 +620,49 @@ export type Database = {
           },
         ]
       }
+      student_subject_exclusions: {
+        Row: {
+          created_at: string
+          excluded_by: string | null
+          student_id: string
+          subject_id: string
+        }
+        Insert: {
+          created_at?: string
+          excluded_by?: string | null
+          student_id: string
+          subject_id: string
+        }
+        Update: {
+          created_at?: string
+          excluded_by?: string | null
+          student_id?: string
+          subject_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_subject_exclusions_excluded_by_fkey"
+            columns: ["excluded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_subject_exclusions_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_subject_exclusions_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       students: {
         Row: {
           academic_year: number
@@ -639,6 +682,7 @@ export type Database = {
           registration_fee: number | null
           registration_number: string
           roll_number: string
+          roll_sort: string | null
           section: string
           status: Database["public"]["Enums"]["student_status"]
           stream: string | null
@@ -663,6 +707,7 @@ export type Database = {
           registration_fee?: number | null
           registration_number: string
           roll_number: string
+          roll_sort?: string | null
           section: string
           status?: Database["public"]["Enums"]["student_status"]
           stream?: string | null
@@ -687,6 +732,7 @@ export type Database = {
           registration_fee?: number | null
           registration_number?: string
           roll_number?: string
+          roll_sort?: string | null
           section?: string
           status?: Database["public"]["Enums"]["student_status"]
           stream?: string | null
@@ -940,6 +986,7 @@ export type Database = {
           registration_fee: number | null
           registration_number: string
           roll_number: string
+          roll_sort: string | null
           section: string
           status: Database["public"]["Enums"]["student_status"]
           stream: string | null
@@ -953,6 +1000,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      natural_sort_key: { Args: { t: string }; Returns: string }
     }
     Enums: {
       attendance_status: "present" | "absent" | "late"

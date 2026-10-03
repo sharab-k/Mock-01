@@ -61,21 +61,25 @@ export async function fetchTestRoster(
     .eq('status', 'active')
     .eq('grade_level', test.grade_level)
     .eq('section', test.section)
-    .order('roll_number', { ascending: true });
+    .order('roll_sort', { ascending: true });
 
-  const [studentsRes, enrolledRes, marksRes] = await Promise.all([
+  const isElected = test.subjects?.type === 'elected';
+  const [studentsRes, linkRes, marksRes] = await Promise.all([
     studentsQuery,
-    test.subjects?.type === 'elected'
+    // Elected: only enrolled students sit it. Compulsory: everyone except
+    // students Super Admin has taken off this subject.
+    isElected
       ? supabase.from('student_subject_enrollments').select('student_id').eq('subject_id', test.subject_id)
-      : Promise.resolve({ data: null as { student_id: string }[] | null }),
+      : supabase.from('student_subject_exclusions').select('student_id').eq('subject_id', test.subject_id),
     supabase.from('marks').select('student_id, score').eq('test_id', testId),
   ]);
 
   const scoreByStudent = new Map((marksRes.data ?? []).map((m) => [m.student_id, m.score]));
-  const eligibleIds = test.subjects?.type === 'elected' ? new Set((enrolledRes.data ?? []).map((r) => r.student_id)) : null;
+  const linkedIds = new Set((linkRes.data ?? []).map((r) => r.student_id));
+  const isEligible = (id: string) => (isElected ? linkedIds.has(id) : !linkedIds.has(id));
 
   const roster = (studentsRes.data ?? [])
-    .filter((s) => !eligibleIds || eligibleIds.has(s.id))
+    .filter((s) => isEligible(s.id))
     .map((s) => ({
       id: s.id,
       fullName: s.full_name,

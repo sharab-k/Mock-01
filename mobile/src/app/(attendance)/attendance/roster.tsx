@@ -26,7 +26,6 @@ export default function AttendanceRosterScreen() {
         const stat: AttendancePct = pctByStudent.get(s.id) ?? { pct: 0, present: 0, total: 0 };
         return { id: s.id, name: s.full_name, roll: s.roll_number, grade: s.grade_level, section: s.section, pct: stat.pct };
       });
-      merged.sort((a, b) => a.pct - b.pct);
       setRows(merged);
     });
     return () => { mounted = false; };
@@ -54,7 +53,7 @@ export default function AttendanceRosterScreen() {
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.header}>
           <ThemedText variant="title">Roster</ThemedText>
-          <ThemedText variant="small" color="textSecondary">Sorted by attendance — lowest first</ThemedText>
+          <ThemedText variant="small" color="textSecondary">In roll-number order</ThemedText>
         </View>
 
         <View style={styles.searchWrap}>

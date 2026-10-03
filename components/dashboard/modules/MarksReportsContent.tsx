@@ -6,6 +6,7 @@ import { ArrowLeft } from 'lucide-react'
 import { GRADES, INITIALS } from '@/lib/students/constants'
 import { TIER_ORDER, TIER_STYLE, type Tier } from '@/lib/marks/tier'
 import type { TieredStudent } from '@/lib/marks/reports-data'
+import ReportDownloadButton from '@/components/dashboard/ReportDownloadButton'
 
 type Props = {
   /** Route prefix for this dashboard's own links — lets Super Admin render the
@@ -77,6 +78,7 @@ export default function MarksReportsContent({ basePath = '/marks', students }: P
                 <th className="px-3 py-3 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">Class</th>
                 <th className="px-3 py-3 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">Average</th>
                 <th className="px-3 py-3 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">Tier</th>
+                <th className="px-3 py-3 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider text-right">Report</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-100">
@@ -96,10 +98,11 @@ export default function MarksReportsContent({ basePath = '/marks', students }: P
                   <td className="px-3 py-3.5">
                     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold ${TIER_STYLE[s.tier].bgColor} ${TIER_STYLE[s.tier].textColor}`}>{s.tier}</span>
                   </td>
+                  <td className="px-3 py-3.5 text-right"><ReportDownloadButton studentId={s.id} /></td>
                 </tr>
               ))}
               {filtered.length === 0 && (
-                <tr><td colSpan={4} className="px-5 py-10 text-center text-[13px] text-neutral-400">No students match this filter.</td></tr>
+                <tr><td colSpan={5} className="px-5 py-10 text-center text-[13px] text-neutral-400">No students match this filter.</td></tr>
               )}
             </tbody>
           </table>

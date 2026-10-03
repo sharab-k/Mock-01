@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, Search } from 'lucide-react'
 import { GRADES, INITIALS } from '@/lib/students/constants'
+import ReportDownloadButton from '@/components/dashboard/ReportDownloadButton'
 
 export type MarksStudentRow = {
   id: string
@@ -24,7 +25,7 @@ export default function MarksStudentsListContent({ students }: { students: Marks
       const matchesQuery = !q || s.full_name.toLowerCase().includes(q) || s.roll_number.toLowerCase().includes(q)
       const matchesGrade = gradeFilter === 'All Grades' || s.grade === gradeFilter
       return matchesQuery && matchesGrade
-    }).sort((a, b) => (a.average ?? -1) - (b.average ?? -1))
+    })
   }, [students, query, gradeFilter])
 
   return (
@@ -34,7 +35,7 @@ export default function MarksStudentsListContent({ students }: { students: Marks
           <ArrowLeft size={13} className="group-hover:-translate-x-0.5 transition-transform" /> Marks
         </Link>
         <h1 className="text-[20px] font-bold text-neutral-900">Students List</h1>
-        <p className="text-[13px] text-neutral-500 mt-0.5">Sorted lowest average first, for follow-up · {filtered.length} students</p>
+        <p className="text-[13px] text-neutral-500 mt-0.5">In roll-number order · {filtered.length} students</p>
       </div>
 
       <div className="bg-white rounded-2xl border border-neutral-200 shadow-1 p-4 flex items-center gap-3 flex-wrap">
@@ -56,6 +57,7 @@ export default function MarksStudentsListContent({ students }: { students: Marks
                 <th className="px-5 py-3 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">Student</th>
                 <th className="px-3 py-3 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">Class</th>
                 <th className="px-3 py-3 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">Average Score</th>
+                <th className="px-3 py-3 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider text-right">Report</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-100">
@@ -83,10 +85,11 @@ export default function MarksStudentsListContent({ students }: { students: Marks
                       </div>
                     )}
                   </td>
+                  <td className="px-3 py-3.5 text-right"><ReportDownloadButton studentId={s.id} /></td>
                 </tr>
               ))}
               {filtered.length === 0 && (
-                <tr><td colSpan={3} className="px-5 py-10 text-center text-[13px] text-neutral-400">No students match this filter.</td></tr>
+                <tr><td colSpan={4} className="px-5 py-10 text-center text-[13px] text-neutral-400">No students match this filter.</td></tr>
               )}
             </tbody>
           </table>

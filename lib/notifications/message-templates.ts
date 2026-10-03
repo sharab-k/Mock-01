@@ -15,10 +15,14 @@ export function absenceAlertMessage(studentName: string, rollNumber: string, cla
   return `${absenceAlertPrefix(studentName)}having GR# ${rollNumber}, is absent today (${absenceDateLabel(classDate)}). Kindly ensure they cover the missed work.\n\nRegards,\nJ.E Academy.`
 }
 
-export function gradeAlertPrefix(studentName: string, subject: string): string {
-  return `JE Academy: ${studentName}'s ${subject} grade `
-}
+// Same formal school format as the absence notice, so every message a parent
+// receives — in the portal, on WhatsApp or by SMS — reads the same way.
+export function gradeAlertMessage(studentName: string, rollNumber: string, subject: string, examLabel: string, score: number, maxScore: number): string {
+  return `Notification of Result.
 
-export function gradeAlertMessage(studentName: string, subject: string, examType: string, score: number, maxScore: number): string {
-  return `${gradeAlertPrefix(studentName, subject)}has been recorded — ${score}/${maxScore} (${examType}).`
+Dear Parents,
+${studentName}, having GR# ${rollNumber}, has scored ${score}/${maxScore} in ${subject} (${examLabel}).
+
+Regards,
+J.E Academy.`
 }

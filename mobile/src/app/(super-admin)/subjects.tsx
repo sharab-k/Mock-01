@@ -96,7 +96,7 @@ export default function SubjectsScreen() {
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.header}>
-          <ScreenHeader title="Subjects" subtitle="Compulsory applies to the whole grade · Elected needs enrollment" onBack={() => router.back()} />
+          <ScreenHeader title="Subjects" subtitle="Tap the people icon on a subject to choose who takes it" onBack={() => router.back()} />
         </View>
 
         <ScrollView contentContainerStyle={styles.content}>
@@ -122,7 +122,7 @@ export default function SubjectsScreen() {
                         <View key={s.id} style={[styles.chip, { backgroundColor: tone.bg }]}>
                           <BookOpen size={11} color={tone.text} />
                           <ThemedText variant="small" style={{ color: tone.text }}>{s.name}</ThemedText>
-                          {canEnroll && s.type === 'elected' && (
+                          {canEnroll && (
                             <Pressable onPress={() => setEnrollTarget(s)} hitSlop={6}>
                               <Users size={13} color={tone.text} />
                             </Pressable>
