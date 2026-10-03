@@ -21,6 +21,7 @@ export async function fetchTieredStudents(): Promise<TieredStudent[]> {
     .select('id, full_name, roll_number, grade_level, section')
     .is('deleted_at', null)
     .eq('status', 'active')
+    .order('roll_sort', { ascending: true })
 
   const averages = await fetchStudentAverages()
 

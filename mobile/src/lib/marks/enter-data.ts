@@ -6,7 +6,7 @@ export type ExistingMark = { student_id: string; subject: string; exam_type: str
 // Ported from the web's lib/marks/enter-data.ts.
 export async function fetchMarksEntryData(): Promise<{ roster: EnterRosterStudent[]; existingMarks: ExistingMark[] }> {
   const [studentsRes, marksRes] = await Promise.all([
-    supabase.from('students').select('id, full_name, roll_number, grade_level, section').is('deleted_at', null).eq('status', 'active'),
+    supabase.from('students').select('id, full_name, roll_number, grade_level, section').is('deleted_at', null).eq('status', 'active').order('roll_sort', { ascending: true }),
     supabase.from('marks').select('student_id, subject, exam_type, score, max_score'),
   ]);
 

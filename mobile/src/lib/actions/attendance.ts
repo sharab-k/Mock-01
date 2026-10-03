@@ -25,3 +25,11 @@ export type MarkAttendanceInput = {
 export async function markAttendanceAction(input: MarkAttendanceInput) {
   return callMobileApi<{ notified: boolean }>('/api/mobile/attendance/mark', input);
 }
+
+// Manual Send Alert / Resend for an absent student — the same
+// /api/notifications route the web's roster button calls (bearer-authed by
+// resolveRequestClient). `sent` means saved to the parent portal(s); WhatsApp/SMS
+// is attempted in the background on top of that.
+export async function sendAbsenceAlertAction(input: { studentId: string; studentName: string; classDate: string }) {
+  return callMobileApi<{ notified: number; sent: boolean }>('/api/notifications', input);
+}
