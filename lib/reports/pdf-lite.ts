@@ -1,4 +1,5 @@
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from 'pdf-lib'
+import { gradeTone } from '@/lib/marks/letter-grade'
 import type { ReportData } from './report-data'
 
 // A real PDF with no browser dependency. The Puppeteer/Chromium path
@@ -24,6 +25,8 @@ const C = {
 const PAGE = { w: 595.28, h: 841.89 } // A4 in points
 const M = 44
 const CONTENT_W = PAGE.w - M * 2
+
+const GRADE_COLOR = { success: C.success, ink: C.ink700, warning: C.warning, danger: C.danger } as const
 
 const ATTENDANCE_LABEL: Record<string, string> = { present: 'Present', late: 'Late', absent: 'Absent' }
 
@@ -145,7 +148,7 @@ export async function renderReportPdf(data: ReportData): Promise<Uint8Array> {
       ensure(22)
       text(row.subject.length > 52 ? `${row.subject.slice(0, 51)}…` : row.subject, M + 8, 10, regular, C.text)
       text(`${row.score}/${row.maxScore}`, M + CONTENT_W - 150, 10, monoBold, scoreColor(row.score, row.maxScore))
-      text(row.grade, M + CONTENT_W - 50, 10, monoBold, C.ink700)
+      text(row.grade, M + CONTENT_W - 50, 10, monoBold, GRADE_COLOR[gradeTone(row.grade)])
       y -= 6
       rule()
       y -= 14

@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, FileDown, CheckCircle2, Loader2 } from 'lucide-react'
 import { downloadProgressReport } from '@/lib/reports/download-client'
+import { gradeTextClass } from '@/lib/marks/letter-grade'
 
 type Mark = { subject: string; exam: string; score: number; max: number; grade: string }
 
@@ -17,7 +18,7 @@ const scoreColor = (s: number, max: number) => {
   const pct = (s / max) * 100
   return pct >= 80 ? 'bg-success' : pct >= 65 ? 'bg-warning' : 'bg-danger'
 }
-const gradeColor = (g: string) => (g.startsWith('A') ? 'text-success' : g.startsWith('B') ? 'text-ink-600' : 'text-warning')
+const gradeColor = gradeTextClass
 
 export default function StudentMarksContent({ studentId, marks }: { studentId: string; marks: Mark[] }) {
   const subjects = useMemo(() => ['All Subjects', ...Array.from(new Set(marks.map((m) => m.subject)))], [marks])

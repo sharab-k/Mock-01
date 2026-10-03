@@ -65,7 +65,7 @@ export default function AdmissionsDashboard() {
 
           <Button label="Enrol Student" onPress={() => router.push('/students/new')} fullWidth />
 
-          <Pressable onPress={() => router.push('/students')}>
+          <Pressable onPress={() => router.push('/admissions/students')}>
             <Card style={styles.linkRow}>
               <Users size={18} color={theme.textMuted} />
               <ThemedText variant="bodyMedium" style={{ flex: 1 }}>All Students</ThemedText>
@@ -73,7 +73,7 @@ export default function AdmissionsDashboard() {
             </Card>
           </Pressable>
 
-          <Pressable onPress={() => router.push('/notices')}>
+          <Pressable onPress={() => router.push('/admissions/notices')}>
             <Card style={styles.linkRow}>
               <Megaphone size={18} color={theme.textMuted} />
               <ThemedText variant="bodyMedium" style={{ flex: 1 }}>Notices</ThemedText>

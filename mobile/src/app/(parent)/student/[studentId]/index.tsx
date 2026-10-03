@@ -17,6 +17,7 @@ import { fetchStudentDashboardData } from '@/lib/student/dashboard-data';
 import { useAsyncData } from '@/lib/use-async-data';
 import { useLinkedChildContext } from '@/lib/parent/linked-child-context';
 import { downloadProgressReport } from '@/lib/reports/download';
+import { gradeTone } from '@/lib/marks/letter-grade';
 
 const TIER_TONE = { Distinction: 'success', Merit: 'ink', Pass: 'warning', 'Below Pass': 'danger' } as const;
 const STATUS_TONE = { Present: 'success', Late: 'warning', Absent: 'danger' } as const;
@@ -132,7 +133,7 @@ export default function StudentOverview() {
                       <ThemedText variant="small" color="textMuted">{m.exam}</ThemedText>
                     </View>
                     <ThemedText variant="mono" color="textSecondary">{m.score}/{m.max}</ThemedText>
-                    <StatusPill tone="ink" label={m.grade} />
+                    <StatusPill tone={gradeTone(m.grade)} label={m.grade} />
                   </View>
                 ))
               )}

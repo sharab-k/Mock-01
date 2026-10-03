@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react'
 import Link from 'next/link'
 import StatCard from '@/components/dashboard/StatCard'
 import { ArrowLeft, PenLine, BookOpen, CheckCircle, Users, Upload, X } from 'lucide-react'
-import { letterGrade } from '@/lib/marks/letter-grade'
+import { letterGrade, gradeTextClass } from '@/lib/marks/letter-grade'
 import { GRADES, sectionsForGrade, type Grade, type Section } from '@/lib/students/constants'
 
 // ── Types & constants ─────────────────────────────────────────────────────────
@@ -17,12 +17,7 @@ const EXAM_STYLE: Record<string, string> = {
   'Final':       'bg-success-bg text-success',
 }
 
-const GRADE_COLOR = (g: string) => {
-  if (g.startsWith('A')) return 'text-success font-bold'
-  if (g.startsWith('B')) return 'text-ink-600 font-bold'
-  if (g.startsWith('C')) return 'text-warning font-bold'
-  return 'text-danger font-bold'
-}
+const GRADE_COLOR = (g: string) => `${gradeTextClass(g)} font-bold`
 
 const SCORE_BAR = (score: number, max: number) => {
   const pct = (score / max) * 100

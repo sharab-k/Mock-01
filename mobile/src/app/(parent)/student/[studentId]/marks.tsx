@@ -11,6 +11,7 @@ import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { supabase } from '@/lib/supabase/client';
 import { fetchChildAcademicData, type ChildAcademicData } from '@/lib/parent/child-academic-data';
+import { gradeTone } from '@/lib/marks/letter-grade';
 
 export default function StudentMarksScreen() {
   const { studentId } = useLocalSearchParams<{ studentId: string }>();
@@ -50,7 +51,7 @@ export default function StudentMarksScreen() {
                     <ThemedText variant="small" color="textMuted">{m.exam}</ThemedText>
                   </View>
                   <ThemedText variant="mono" color="textSecondary">{m.score}/{m.max}</ThemedText>
-                  <StatusPill tone="ink" label={m.grade} />
+                  <StatusPill tone={gradeTone(m.grade)} label={m.grade} />
                 </View>
               ))
             )}

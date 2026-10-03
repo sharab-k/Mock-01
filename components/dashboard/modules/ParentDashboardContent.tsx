@@ -10,6 +10,7 @@ import {
 import type { ParentChild, AttStatus } from '@/lib/parent/dashboard-data'
 import { downloadProgressReport } from '@/lib/reports/download-client'
 import { CATEGORY_STYLE, type Notice } from '@/lib/notices/types'
+import { gradeTextClass } from '@/lib/marks/letter-grade'
 
 type View = null | 'attendance' | 'marks' | 'notices'
 
@@ -24,8 +25,7 @@ const scoreBar = (s: number, m: number) => {
   return p >= 80 ? 'bg-success' : p >= 65 ? 'bg-warning' : 'bg-danger'
 }
 
-const gradeColor = (g: string) =>
-  g.startsWith('A') ? 'text-success' : g.startsWith('B') ? 'text-ink-700' : 'text-warning'
+const gradeColor = gradeTextClass
 
 export default function ParentDashboardContent({ kids, notices, unreadNotifications = 0 }: { kids: ParentChild[]; notices: Notice[]; unreadNotifications?: number }) {
   const [activeIdx,       setActiveIdx]       = useState(0)

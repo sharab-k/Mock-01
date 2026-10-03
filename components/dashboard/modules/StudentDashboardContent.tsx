@@ -6,6 +6,7 @@ import StatCard from '@/components/dashboard/StatCard'
 import SyllabusPieChart from '@/components/dashboard/SyllabusPieChart'
 import { CalendarCheck, BookOpen, PlayCircle, ClipboardList, CheckCircle2, Clock3, XCircle, X, UploadCloud, FileCheck2 } from 'lucide-react'
 import type { StudentDashboardData } from '@/lib/student/dashboard-data'
+import { gradeTextClass } from '@/lib/marks/letter-grade'
 
 // No study-guides or syllabus-coverage table exists in CLAUDE.md's schema —
 // these stay presentation-only, same as the assignments screens.
@@ -50,8 +51,7 @@ const scoreColor = (s: number, max: number) => {
   return pct >= 80 ? 'bg-success' : pct >= 65 ? 'bg-warning' : 'bg-danger'
 }
 
-const gradeColor = (g: string) =>
-  g.startsWith('A') ? 'text-success' : g.startsWith('B') ? 'text-ink-600' : 'text-warning'
+const gradeColor = gradeTextClass
 
 const SUBJ_COLOR: Record<string, string> = {
   Mathematics: 'bg-ink-200 text-ink-800',
