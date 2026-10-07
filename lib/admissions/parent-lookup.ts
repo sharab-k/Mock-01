@@ -38,9 +38,14 @@ export async function fetchParentEditContactsByStudentId(studentIds: string[]): 
 export type ParentDirectoryRow = {
   key: string
   name: string
+  /** The login username (a synthetic institutional email for parents). */
   email: string
   phone: string
-  children: { name: string; roll: string; grade: string; section: string }[]
+  secondaryPhone: string | null
+  whatsapp2: string | null
+  isActive: boolean
+  createdAt: string
+  children: { name: string; roll: string; grNumber: string | null; grade: string; section: string }[]
 }
 
 // Powers the Super Admin Parent Directory — grouped client-side from the
@@ -50,7 +55,7 @@ export async function fetchParentDirectory(): Promise<ParentDirectoryRow[]> {
   const admin = createAdminClient()
   const { data: links } = await admin
     .from('parent_student_links')
-    .select('parent_id, profiles(full_name, email, phone), students(full_name, roll_number, grade_level, section)')
+    .select('parent_id, profiles(full_name, email, phone, secondary_phone, whatsapp_number_2, is_active, created_at), students(full_name, roll_number, gr_number, grade_level, section)')
 
   const byParent = new Map<string, ParentDirectoryRow>()
   for (const link of links ?? []) {
@@ -61,16 +66,23 @@ export async function fetchParentDirectory(): Promise<ParentDirectoryRow[]> {
         name: link.profiles.full_name ?? '—',
         email: link.profiles.email,
         phone: link.profiles.phone ?? '—',
+        secondaryPhone: link.profiles.secondary_phone,
+        whatsapp2: link.profiles.whatsapp_number_2,
+        isActive: link.profiles.is_active,
+        createdAt: link.profiles.created_at,
         children: [],
       })
     }
     byParent.get(link.parent_id)!.children.push({
       name: link.students.full_name,
       roll: link.students.roll_number,
+      grNumber: link.students.gr_number,
       grade: link.students.grade_level,
       section: link.students.section,
     })
   }
+  // Siblings in roll-number order within each family, families alphabetical.
+  for (const p of byParent.values()) p.children.sort((a, b) => a.roll.localeCompare(b.roll, undefined, { numeric: true }))
   return Array.from(byParent.values()).sort((a, b) => a.name.localeCompare(b.name))
 }
 

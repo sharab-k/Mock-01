@@ -5,7 +5,11 @@ export type ParentDirectoryRow = {
   name: string;
   email: string;
   phone: string;
-  children: { name: string; roll: string; grade: string; section: string }[];
+  secondaryPhone: string | null;
+  whatsapp2: string | null;
+  isActive: boolean;
+  createdAt: string;
+  children: { name: string; roll: string; grNumber: string | null; grade: string; section: string }[];
 };
 
 // Mobile client for the read-only GET on app/api/mobile/parents/route.ts —
