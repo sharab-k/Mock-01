@@ -423,6 +423,42 @@ export type Database = {
         }
         Relationships: []
       }
+      parent_credentials: {
+        Row: {
+          parent_id: string
+          password_enc: string
+          set_by: string | null
+          updated_at: string
+        }
+        Insert: {
+          parent_id: string
+          password_enc: string
+          set_by?: string | null
+          updated_at?: string
+        }
+        Update: {
+          parent_id?: string
+          password_enc?: string
+          set_by?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "parent_credentials_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "parent_credentials_set_by_fkey"
+            columns: ["set_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       parent_student_links: {
         Row: {
           created_at: string

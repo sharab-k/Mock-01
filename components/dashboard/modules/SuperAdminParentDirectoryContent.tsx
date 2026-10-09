@@ -2,9 +2,9 @@
 
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Search, X, Copy, Check, KeyRound, Phone, MessageCircle, ShieldCheck, Users } from 'lucide-react'
+import { ArrowLeft, Search, X, Copy, Check, KeyRound, Phone, MessageCircle, ShieldCheck, Users, Eye, EyeOff, Loader2 } from 'lucide-react'
 import type { ParentDirectoryRow } from '@/lib/admissions/parent-lookup'
-import { setParentPasswordAction } from '@/lib/actions/parents'
+import { revealParentPasswordAction, setParentPasswordAction } from '@/lib/actions/parents'
 import SetPasswordModal from '@/components/dashboard/SetPasswordModal'
 
 const INITIALS = (name: string) => name.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase()
@@ -67,10 +67,11 @@ function CopyField({ label, value, mono = true, icon }: { label: string; value: 
   )
 }
 
-function allDetailsText(p: ParentDirectoryRow): string {
+function allDetailsText(p: ParentDirectoryRow, password?: string): string {
   const lines = [
     `Parent: ${p.name}`,
     `Username: ${p.email}`,
+    ...(password ? [`Password: ${password}`] : []),
     `Phone: ${p.phone}`,
     ...(p.secondaryPhone ? [`Secondary phone: ${p.secondaryPhone}`] : []),
     ...(p.whatsapp2 ? [`WhatsApp: ${p.whatsapp2}`] : []),
@@ -85,6 +86,30 @@ export default function SuperAdminParentDirectoryContent({ parents }: { parents:
   const [selected, setSelected] = useState<ParentDirectoryRow | null>(null)
   const [passwordTarget, setPasswordTarget] = useState<ParentDirectoryRow | null>(null)
   const [copiedAll, setCopiedAll] = useState(false)
+  // Passwords are fetched one at a time, on request — never loaded with the list.
+  const [revealed, setRevealed] = useState<Record<string, string>>({})
+  const [revealing, setRevealing] = useState(false)
+  const [revealError, setRevealError] = useState('')
+  // Parents whose password was (re)set from this screen: now on record.
+  const [recordedNow, setRecordedNow] = useState<Set<string>>(new Set())
+
+  const hasPassword = (p: ParentDirectoryRow) => p.hasStoredPassword || recordedNow.has(p.key)
+
+  const reveal = async (p: ParentDirectoryRow) => {
+    setRevealing(true)
+    setRevealError('')
+    const outcome = await revealParentPasswordAction({ id: p.key })
+    setRevealing(false)
+    if (!outcome.ok) { setRevealError(outcome.error); return }
+    setRevealed((prev) => ({ ...prev, [p.key]: outcome.password }))
+  }
+
+  const hide = (p: ParentDirectoryRow) =>
+    setRevealed((prev) => {
+      const next = { ...prev }
+      delete next[p.key]
+      return next
+    })
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -98,7 +123,7 @@ export default function SuperAdminParentDirectoryContent({ parents }: { parents:
   }, [parents, query])
 
   const copyAll = async (p: ParentDirectoryRow) => {
-    if (await copyText(allDetailsText(p))) {
+    if (await copyText(allDetailsText(p, revealed[p.key]))) {
       setCopiedAll(true)
       setTimeout(() => setCopiedAll(false), 1500)
     }
@@ -140,7 +165,7 @@ export default function SuperAdminParentDirectoryContent({ parents }: { parents:
             </thead>
             <tbody className="divide-y divide-neutral-100">
               {filtered.map((p) => (
-                <tr key={p.key} onClick={() => { setSelected(p); setCopiedAll(false) }} className="hover:bg-neutral-50 transition-colors cursor-pointer">
+                <tr key={p.key} onClick={() => { setSelected(p); setCopiedAll(false); setRevealError('') }} className="hover:bg-neutral-50 transition-colors cursor-pointer">
                   <td className="px-5 py-3.5">
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-full bg-ink-100 text-ink-700 flex items-center justify-center font-mono text-[10px] font-bold shrink-0">{INITIALS(p.name)}</div>
@@ -213,19 +238,42 @@ export default function SuperAdminParentDirectoryContent({ parents }: { parents:
               <div className="space-y-2.5">
                 <p className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider flex items-center gap-1.5"><ShieldCheck size={12} /> Login credentials</p>
                 <CopyField label="Username" value={selected.email} icon={<KeyRound size={14} />} />
-                <div className="bg-warning-bg/60 border border-warning/20 rounded-xl px-3.5 py-3">
-                  <p className="text-[12px] font-semibold text-neutral-800">Password</p>
-                  <p className="text-[11.5px] text-neutral-600 leading-relaxed mt-1">
-                    Passwords are stored encrypted and can&apos;t be read back — not even by an administrator. If the parent has forgotten it,
-                    set a new one here and copy it to send them.
-                  </p>
-                  <button
-                    onClick={() => setPasswordTarget(selected)}
-                    className="mt-2.5 w-full flex items-center justify-center gap-2 text-[12.5px] font-semibold text-ink-700 bg-white border border-ink-100 py-2 rounded-lg hover:bg-ink-50 transition-colors"
-                  >
-                    <KeyRound size={13} /> Set a new password &amp; copy it
-                  </button>
-                </div>
+                {revealed[selected.key] ? (
+                  <>
+                    <CopyField label="Password" value={revealed[selected.key]} icon={<KeyRound size={14} />} />
+                    <button onClick={() => hide(selected)} className="flex items-center gap-1.5 text-[11.5px] font-medium text-neutral-500 hover:text-neutral-800 transition-colors">
+                      <EyeOff size={12} /> Hide password
+                    </button>
+                  </>
+                ) : hasPassword(selected) ? (
+                  <div className="bg-neutral-50 border border-neutral-100 rounded-xl px-3.5 py-3">
+                    <p className="text-[10.5px] font-semibold text-neutral-400 uppercase tracking-wider">Password</p>
+                    <p className="text-[13px] font-mono text-neutral-400 mt-0.5 tracking-widest">••••••••••••</p>
+                    <button
+                      onClick={() => reveal(selected)}
+                      disabled={revealing}
+                      className="mt-2.5 w-full flex items-center justify-center gap-2 text-[12.5px] font-semibold text-ink-700 bg-white border border-ink-100 py-2 rounded-lg hover:bg-ink-50 transition-colors disabled:opacity-60"
+                    >
+                      {revealing ? <Loader2 size={13} className="animate-spin" /> : <Eye size={13} />} Show password
+                    </button>
+                    {revealError && <p className="text-[11.5px] text-danger mt-2">{revealError}</p>}
+                    <p className="text-[10.5px] text-neutral-400 mt-2">Each time a password is viewed it is recorded in the audit log.</p>
+                  </div>
+                ) : (
+                  <div className="bg-warning-bg/60 border border-warning/20 rounded-xl px-3.5 py-3">
+                    <p className="text-[12px] font-semibold text-neutral-800">Password not on record</p>
+                    <p className="text-[11.5px] text-neutral-600 leading-relaxed mt-1">
+                      This account&apos;s password was set before passwords were recorded, so it can&apos;t be shown.
+                      Set a new one here — it will be saved and visible from now on.
+                    </p>
+                  </div>
+                )}
+                <button
+                  onClick={() => setPasswordTarget(selected)}
+                  className="w-full flex items-center justify-center gap-2 text-[12.5px] font-semibold text-ink-700 bg-ink-50 border border-ink-100 py-2 rounded-lg hover:bg-ink-100/50 transition-colors"
+                >
+                  <KeyRound size={13} /> Set a new password
+                </button>
               </div>
 
               <div className="space-y-2.5">
@@ -258,7 +306,16 @@ export default function SuperAdminParentDirectoryContent({ parents }: { parents:
           targetName={passwordTarget.name}
           username={passwordTarget.email}
           onClose={() => setPasswordTarget(null)}
-          onSubmit={(newPassword) => setParentPasswordAction({ id: passwordTarget.key, newPassword })}
+          onSubmit={async (newPassword) => {
+            const outcome = await setParentPasswordAction({ id: passwordTarget.key, newPassword })
+            if (outcome.ok) {
+              // The old revealed value is stale either way; the new one is on record
+              // only if the server managed to save it.
+              hide(passwordTarget)
+              if (outcome.recorded) setRecordedNow((prev) => new Set(prev).add(passwordTarget.key))
+            }
+            return outcome
+          }}
         />
       )}
     </>

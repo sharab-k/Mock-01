@@ -3,7 +3,7 @@ import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, View } fro
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import * as Clipboard from 'expo-clipboard';
-import { Check, Copy, KeyRound, X } from 'lucide-react-native';
+import { Check, Copy, EyeOff, KeyRound, X } from 'lucide-react-native';
 
 import { ScreenHeader } from '@/components/screen-header';
 import { ThemedText } from '@/components/themed-text';
@@ -16,16 +16,17 @@ import { TextField } from '@/components/ui/text-field';
 import { SetPasswordModal } from '@/components/set-password-modal';
 import { Ink, Radius, Semantic, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { fetchParentDirectory, setParentPasswordAction, type ParentDirectoryRow } from '@/lib/actions/parents';
+import { fetchParentDirectory, revealParentPasswordAction, setParentPasswordAction, type ParentDirectoryRow } from '@/lib/actions/parents';
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
 }
 
-function allDetailsText(p: ParentDirectoryRow): string {
+function allDetailsText(p: ParentDirectoryRow, password?: string): string {
   return [
     `Parent: ${p.name}`,
     `Username: ${p.email}`,
+    ...(password ? [`Password: ${password}`] : []),
     `Phone: ${p.phone}`,
     ...(p.secondaryPhone ? [`Secondary phone: ${p.secondaryPhone}`] : []),
     ...(p.whatsapp2 ? [`WhatsApp: ${p.whatsapp2}`] : []),
@@ -68,6 +69,31 @@ export default function ParentDirectoryScreen() {
   const [selected, setSelected] = useState<ParentDirectoryRow | null>(null);
   const [passwordTarget, setPasswordTarget] = useState<ParentDirectoryRow | null>(null);
   const [copiedAll, setCopiedAll] = useState(false);
+  // Passwords are fetched one at a time, on request — never loaded with the list.
+  const [revealed, setRevealed] = useState<Record<string, string>>({});
+  const [revealing, setRevealing] = useState(false);
+  const [revealError, setRevealError] = useState('');
+  // Parents whose password was (re)set from this screen: now on record.
+  const [recordedNow, setRecordedNow] = useState<Set<string>>(new Set());
+
+  const hasPassword = (p: ParentDirectoryRow) => p.hasStoredPassword || recordedNow.has(p.key);
+
+  async function reveal(p: ParentDirectoryRow) {
+    setRevealing(true);
+    setRevealError('');
+    const outcome = await revealParentPasswordAction(p.key);
+    setRevealing(false);
+    if (!outcome.ok) { setRevealError(outcome.error); return; }
+    setRevealed((prev) => ({ ...prev, [p.key]: outcome.password }));
+  }
+
+  function hide(p: ParentDirectoryRow) {
+    setRevealed((prev) => {
+      const next = { ...prev };
+      delete next[p.key];
+      return next;
+    });
+  }
 
   useEffect(() => {
     let mounted = true;
@@ -92,7 +118,7 @@ export default function ParentDirectoryScreen() {
   }, [parents, query]);
 
   async function copyAll(p: ParentDirectoryRow) {
-    await Clipboard.setStringAsync(allDetailsText(p));
+    await Clipboard.setStringAsync(allDetailsText(p, revealed[p.key]));
     setCopiedAll(true);
     setTimeout(() => setCopiedAll(false), 1500);
   }
@@ -119,7 +145,7 @@ export default function ParentDirectoryScreen() {
               <ThemedText color="textSecondary" style={{ textAlign: 'center', marginTop: Spacing.four }}>No parents match this search.</ThemedText>
             )}
             {filtered.filter(Boolean).map((p) => (
-              <Pressable key={p.key} onPress={() => { setSelected(p); setCopiedAll(false); }}>
+              <Pressable key={p.key} onPress={() => { setSelected(p); setCopiedAll(false); setRevealError(''); }}>
                 <Card style={{ gap: Spacing.two }}>
                   <View style={styles.row}>
                     <Avatar name={p.name} size={36} />
@@ -168,17 +194,34 @@ export default function ParentDirectoryScreen() {
 
                     <ThemedText variant="label" color="textMuted">Login credentials</ThemedText>
                     <CopyRow label="Username" value={selected.email} />
-                    <View style={[styles.passwordNote, { backgroundColor: Semantic.warningBg }]}>
-                      <ThemedText variant="small" style={{ fontWeight: '600' }}>Password</ThemedText>
-                      <ThemedText variant="small" color="textSecondary" style={{ lineHeight: 19 }}>
-                        Passwords are stored encrypted and can&apos;t be read back, not even by an administrator. If the parent has forgotten it,
-                        set a new one here and copy it to send them.
-                      </ThemedText>
-                      <Pressable onPress={() => setPasswordTarget(selected)} style={styles.resetBtn}>
-                        <KeyRound size={14} color={Ink[700]} />
-                        <ThemedText variant="small" style={{ color: Ink[700] }}>Set a new password &amp; copy it</ThemedText>
-                      </Pressable>
-                    </View>
+                    {revealed[selected.key] ? (
+                      <>
+                        <CopyRow label="Password" value={revealed[selected.key]} />
+                        <Pressable onPress={() => hide(selected)} style={styles.resetBtn}>
+                          <EyeOff size={14} color={theme.textMuted} />
+                          <ThemedText variant="small" color="textMuted">Hide password</ThemedText>
+                        </Pressable>
+                      </>
+                    ) : hasPassword(selected) ? (
+                      <View style={[styles.copyRow, { backgroundColor: theme.surfaceElement, borderColor: theme.border, flexDirection: 'column', alignItems: 'stretch' }]}>
+                        <ThemedText variant="label" color="textMuted">Password</ThemedText>
+                        <ThemedText variant="mono" color="textMuted" style={{ letterSpacing: 3 }}>••••••••••••</ThemedText>
+                        <Button label={revealing ? 'Loading…' : 'Show password'} variant="secondary" loading={revealing} onPress={() => reveal(selected)} fullWidth />
+                        {!!revealError && <ThemedText variant="small" style={{ color: Semantic.danger }}>{revealError}</ThemedText>}
+                        <ThemedText variant="small" color="textMuted" style={{ fontSize: 11 }}>Each view is recorded in the audit log.</ThemedText>
+                      </View>
+                    ) : (
+                      <View style={[styles.passwordNote, { backgroundColor: Semantic.warningBg }]}>
+                        <ThemedText variant="small" style={{ fontWeight: '600' }}>Password not on record</ThemedText>
+                        <ThemedText variant="small" color="textSecondary" style={{ lineHeight: 19 }}>
+                          This account&apos;s password was set before passwords were recorded, so it can&apos;t be shown. Set a new one here — it will be saved and visible from now on.
+                        </ThemedText>
+                      </View>
+                    )}
+                    <Pressable onPress={() => setPasswordTarget(selected)} style={styles.resetBtn}>
+                      <KeyRound size={14} color={Ink[700]} />
+                      <ThemedText variant="small" style={{ color: Ink[700] }}>Set a new password</ThemedText>
+                    </Pressable>
 
                     <ThemedText variant="label" color="textMuted">Contact</ThemedText>
                     <CopyRow label="Phone / WhatsApp" value={selected.phone} />
@@ -203,7 +246,16 @@ export default function ParentDirectoryScreen() {
                 targetName={passwordTarget?.name ?? ''}
                 username={passwordTarget?.email ?? ''}
                 onClose={() => setPasswordTarget(null)}
-                onSubmit={(newPassword) => setParentPasswordAction({ id: passwordTarget!.key, newPassword })}
+                onSubmit={async (newPassword) => {
+                  const outcome = await setParentPasswordAction({ id: passwordTarget!.key, newPassword });
+                  if (outcome.ok) {
+                    // The old revealed value is stale either way; the new one is on
+                    // record only if the server managed to save it.
+                    hide(passwordTarget!);
+                    if (outcome.recorded) setRecordedNow((prev) => new Set(prev).add(passwordTarget!.key));
+                  }
+                  return outcome;
+                }}
               />
             </SafeAreaView>
           </ThemedView>

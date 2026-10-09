@@ -9,6 +9,7 @@ export type ParentDirectoryRow = {
   whatsapp2: string | null;
   isActive: boolean;
   createdAt: string;
+  hasStoredPassword: boolean;
   children: { name: string; roll: string; grNumber: string | null; grade: string; section: string }[];
 };
 
@@ -21,5 +22,10 @@ export async function fetchParentDirectory() {
 
 export async function setParentPasswordAction(input: { id: string; newPassword: string }) {
   const { id, ...body } = input;
-  return callMobileApi(`/api/mobile/parents/${id}/password`, body);
+  return callMobileApi<{ recorded: boolean }>(`/api/mobile/parents/${id}/password`, body);
+}
+
+// Super Admin only; every view is audit-logged server-side.
+export async function revealParentPasswordAction(id: string) {
+  return callMobileApi<{ password: string }>(`/api/mobile/parents/${id}/reveal-password`, {});
 }

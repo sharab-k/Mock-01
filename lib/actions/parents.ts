@@ -5,6 +5,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { logAction } from '@/lib/audit/log'
+import { readParentPassword, storeParentPassword } from '@/lib/auth/credential-vault'
 import type { Database } from '@/types/supabase'
 
 // Defense in depth — RLS is the real boundary on profiles; this just fails
@@ -49,9 +50,50 @@ export async function setParentPasswordAction(
   const { error } = await admin.auth.admin.updateUserById(parsed.data.id, { password: parsed.data.newPassword })
   if (error) return { ok: false as const, error: 'Could not update the password.' }
 
+  // Replace the recoverable copy so "Show password" always matches the live one.
+  const recorded = await storeParentPassword(parsed.data.id, parsed.data.newPassword, userId)
+
   await logAction(supabase, userId, `Password reset — ${target.full_name} (parent)`)
 
-  return { ok: true as const }
+  return { ok: true as const, recorded }
+}
+
+const RevealSchema = z.object({ id: z.string().uuid() })
+
+// Super Admin only — deliberately NOT Admissions Admin, who can reset a parent's
+// password but can't read it back. Every reveal is written to the audit log
+// (who looked at whose password), and the decrypted value is returned to the
+// caller only, never stored in any list or sent to the client in bulk.
+export async function revealParentPasswordAction(
+  input: z.infer<typeof RevealSchema>,
+  supabaseOverride?: SupabaseClient<Database>,
+): Promise<{ ok: true; password: string } | { ok: false; error: string; reason?: 'not_recorded' | 'key_unavailable' }> {
+  const parsed = RevealSchema.safeParse(input)
+  if (!parsed.success) return { ok: false, error: 'Invalid request.' }
+
+  const supabase = supabaseOverride ?? await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { ok: false, error: 'Not authorized.' }
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  if (profile?.role !== 'super_admin') return { ok: false, error: 'Not authorized.' }
+
+  const admin = createAdminClient()
+  const { data: target } = await admin.from('profiles').select('full_name').eq('id', parsed.data.id).eq('role', 'parent').maybeSingle()
+  if (!target) return { ok: false, error: 'Parent account not found.' }
+
+  const lookup = await readParentPassword(parsed.data.id)
+  if (!lookup.ok) {
+    return {
+      ok: false,
+      reason: lookup.reason,
+      error: lookup.reason === 'not_recorded'
+        ? 'No password is on record for this parent — set a new one to record it.'
+        : 'The password could not be decrypted on this server (encryption key missing or changed).',
+    }
+  }
+
+  await logAction(supabase, user.id, `Viewed parent password — ${target.full_name}`)
+  return { ok: true, password: lookup.password }
 }
 
 const UpdateParentContactSchema = z.object({

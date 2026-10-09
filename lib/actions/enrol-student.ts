@@ -5,6 +5,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { generateUsername, generateTempPassword } from '@/lib/auth/generate-credentials'
+import { storeParentPassword } from '@/lib/auth/credential-vault'
 import { logAction } from '@/lib/audit/log'
 import { sectionsForGrade, PROGRAM_GRADE, type Grade, type Section, type Program } from '@/lib/students/constants'
 import type { Database } from '@/types/supabase'
@@ -150,6 +151,11 @@ export async function enrolStudentAction(
       await admin.auth.admin.deleteUser(parentId) // compensate — no orphaned auth user
       return { ok: false, error: 'Could not create the parent profile. Please try again.' }
     }
+
+    // Keep a recoverable (encrypted) copy so Super Admin can look it up later.
+    // A failure here must not block enrolment — the credentials are still shown
+    // on the success screen — it just means "not on record" in the directory.
+    await storeParentPassword(parentId, tempPassword, user.id)
   }
 
   // Atomic student + link insert. Runs on the caller's own RLS-scoped

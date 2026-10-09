@@ -1,5 +1,6 @@
 import 'server-only'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { parentsWithStoredPassword } from '@/lib/auth/credential-vault'
 
 export type ParentEditContact = { id: string; name: string; email: string; phone: string; secondaryPhone: string | null; whatsapp2: string | null }
 
@@ -45,6 +46,8 @@ export type ParentDirectoryRow = {
   whatsapp2: string | null
   isActive: boolean
   createdAt: string
+  /** A recoverable password is on record, so "Show password" will work. */
+  hasStoredPassword: boolean
   children: { name: string; roll: string; grNumber: string | null; grade: string; section: string }[]
 }
 
@@ -70,6 +73,7 @@ export async function fetchParentDirectory(): Promise<ParentDirectoryRow[]> {
         whatsapp2: link.profiles.whatsapp_number_2,
         isActive: link.profiles.is_active,
         createdAt: link.profiles.created_at,
+        hasStoredPassword: false,
         children: [],
       })
     }
@@ -81,6 +85,9 @@ export async function fetchParentDirectory(): Promise<ParentDirectoryRow[]> {
       section: link.students.section,
     })
   }
+  const stored = await parentsWithStoredPassword(Array.from(byParent.keys()))
+  for (const [id, p] of byParent) p.hasStoredPassword = stored.has(id)
+
   // Siblings in roll-number order within each family, families alphabetical.
   for (const p of byParent.values()) p.children.sort((a, b) => a.roll.localeCompare(b.roll, undefined, { numeric: true }))
   return Array.from(byParent.values()).sort((a, b) => a.name.localeCompare(b.name))
