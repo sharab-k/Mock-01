@@ -67,7 +67,7 @@ const RevealSchema = z.object({ id: z.string().uuid() })
 export async function revealParentPasswordAction(
   input: z.infer<typeof RevealSchema>,
   supabaseOverride?: SupabaseClient<Database>,
-): Promise<{ ok: true; password: string } | { ok: false; error: string; reason?: 'not_recorded' | 'key_unavailable' }> {
+): Promise<{ ok: true; password: string } | { ok: false; error: string; reason?: 'not_recorded' | 'key_missing' | 'key_mismatch' }> {
   const parsed = RevealSchema.safeParse(input)
   if (!parsed.success) return { ok: false, error: 'Invalid request.' }
 
@@ -86,9 +86,10 @@ export async function revealParentPasswordAction(
     return {
       ok: false,
       reason: lookup.reason,
-      error: lookup.reason === 'not_recorded'
-        ? 'No password is on record for this parent — set a new one to record it.'
-        : 'The password could not be decrypted on this server (encryption key missing or changed).',
+      error:
+        lookup.reason === 'not_recorded' ? 'No password is on record for this parent — set a new one to record it.'
+        : lookup.reason === 'key_missing' ? 'This server has no CREDENTIAL_ENCRYPTION_KEY set. Add it in Vercel → Settings → Environment Variables (same value as in .env.local), then redeploy.'
+        : 'The CREDENTIAL_ENCRYPTION_KEY on this server does not match the key the passwords were saved with. Use the same value everywhere (copy it from .env.local).',
     }
   }
 

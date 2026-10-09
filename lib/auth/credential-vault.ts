@@ -30,7 +30,7 @@ export async function storeParentPassword(parentId: string, password: string, se
 
 export type PasswordLookup =
   | { ok: true; password: string }
-  | { ok: false; reason: 'not_recorded' | 'key_unavailable' }
+  | { ok: false; reason: 'not_recorded' | 'key_missing' | 'key_mismatch' }
 
 export async function readParentPassword(parentId: string): Promise<PasswordLookup> {
   const admin = createAdminClient()
@@ -39,7 +39,8 @@ export async function readParentPassword(parentId: string): Promise<PasswordLook
   try {
     return { ok: true, password: decryptSecret(data.password_enc) }
   } catch (err) {
-    if (err instanceof SecretKeyError || err instanceof SecretDecryptError) return { ok: false, reason: 'key_unavailable' }
+    if (err instanceof SecretKeyError) return { ok: false, reason: 'key_missing' }
+    if (err instanceof SecretDecryptError) return { ok: false, reason: 'key_mismatch' }
     throw err
   }
 }
