@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { absenceAlertPrefix } from '@/lib/notifications/message-templates'
+import { toE164 } from '@/lib/notifications/phone'
 import type { RosterStudent, Status } from '@/components/dashboard/modules/AttendanceClassDetailContent'
 import type { Database } from '@/types/supabase'
 
@@ -63,7 +64,9 @@ export async function fetchClassRoster(grade: string, section: string, supabaseO
   // parent phone, so recipient alone can't disambiguate whose alert this
   // was — the payload text (which embeds the student's name, see
   // lib/notifications/send-notification.ts) is what disambiguates.
-  const todayPhones = Array.from(new Set(Array.from(phoneByStudent.values()).filter((p): p is string => !!p)))
+  // The delivery log stores the E.164 form (that's what Twilio is sent), so
+  // look up and compare on that, not the number as typed at enrolment.
+  const todayPhones = Array.from(new Set(Array.from(phoneByStudent.values()).map((p) => toE164(p)).filter((p): p is string => !!p)))
   const alertRows: { recipient: string; status: 'sent' | 'failed'; payload: string }[] = []
   if (todayPhones.length > 0) {
     const { data: alerts } = await admin
@@ -76,9 +79,10 @@ export async function fetchClassRoster(grade: string, section: string, supabaseO
     if (alerts) alertRows.push(...alerts)
   }
   function alertStatusFor(phone: string | null, studentName: string): 'sent' | 'failed' | null {
-    if (!phone) return null
+    const e164 = toE164(phone)
+    if (!e164) return null
     const prefix = absenceAlertPrefix(studentName)
-    const match = alertRows.find((r) => r.recipient === phone && r.payload.startsWith(prefix))
+    const match = alertRows.find((r) => r.recipient === e164 && r.payload.startsWith(prefix))
     return match?.status ?? null
   }
 
