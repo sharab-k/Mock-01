@@ -3,7 +3,7 @@
 import { z } from 'zod'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/server'
-import { notifyAbsence } from '@/lib/notifications/send-notification'
+import { getLinkedParentsBatch } from '@/lib/notifications/send-notification'
 import { logAction } from '@/lib/audit/log'
 import type { Database } from '@/types/supabase'
 
@@ -33,8 +33,8 @@ const MarkOneSchema = z.object({
 // Shared core: upserts one attendance row and fires the absence pipeline only
 // when this is a genuine first-time mark for the day (an INSERT), never on a
 // same-day correction (an UPDATE) — CLAUDE.md §7's "not on every update" rule.
-// A Twilio failure inside notifyAbsence never throws, so it can never roll
-// back the attendance write that already committed above it.
+// The absence notification is a database event, so it can never roll back or
+// delay the attendance write.
 async function markOneAttendance(
   supabase: SupabaseClient<Database>,
   markedBy: string,
@@ -65,17 +65,14 @@ async function markOneAttendance(
 
   if (error) return { ok: false, error: 'Could not save attendance.' }
 
+  // The parent notification itself is raised by the database (trigger
+  // notify_parents_on_absence on attendance_records) the moment this row becomes
+  // 'absent' — nothing to send from here. We only report whether there was a
+  // parent account to receive it, for the UI's "Notified" state.
   let notified = false
   if (becameAbsent) {
-    const { data: student } = await supabase.from('students').select('roll_number').eq('id', input.studentId).single()
-    const { parents } = await notifyAbsence({
-      studentId: input.studentId,
-      studentName: input.studentName,
-      rollNumber: student?.roll_number ?? '',
-      classDate,
-      createdBy: markedBy,
-    })
-    notified = parents > 0
+    const parents = await getLinkedParentsBatch([input.studentId])
+    notified = (parents.get(input.studentId)?.length ?? 0) > 0
   }
 
   return { ok: true, notified }

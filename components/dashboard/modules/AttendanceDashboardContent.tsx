@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useState } from 'react'
 import StatCard from '@/components/dashboard/StatCard'
-import { UserCheck, UserX, Clock, Percent, MessageSquare, TrendingUp, Clock3 } from 'lucide-react'
+import { UserCheck, UserX, Clock, Percent, TrendingUp, Clock3 } from 'lucide-react'
 import { GRADES, sectionsForGrade } from '@/lib/students/constants'
 
 export type ClassAttendanceStat = { present: number; absent: number; late: number; total: number }
@@ -27,10 +27,9 @@ type Props = {
   classStats: Record<string, Record<string, ClassAttendanceStat>>
   week: DayAttendanceStat[]
   lastWeekAvg: number
-  failedAlertsToday: number
 }
 
-export default function AttendanceDashboardContent({ basePath = '/attendance', todayLabel, classStats, week, lastWeekAvg, failedAlertsToday }: Props) {
+export default function AttendanceDashboardContent({ basePath = '/attendance', todayLabel, classStats, week, lastWeekAvg }: Props) {
   const [hoveredDay, setHoveredDay] = useState<string | null>(null)
 
   const allClasses  = Object.values(classStats).flatMap(g => Object.values(g))
@@ -42,7 +41,7 @@ export default function AttendanceDashboardContent({ basePath = '/attendance', t
 
   const STATS = [
     { label: 'Present Today',   value: String(totalPresent), icon: <UserCheck size={22} />, iconBg: 'bg-success-bg', iconColor: 'text-success', sub: `of ${totalAll} enrolled`, subUp: true },
-    { label: 'Absent Today',    value: String(totalAbsent),  icon: <UserX size={22} />,     iconBg: 'bg-danger-bg',  iconColor: 'text-danger',  sub: failedAlertsToday > 0 ? `${failedAlertsToday} alert${failedAlertsToday > 1 ? 's' : ''} failed` : 'Alerts sent' },
+    { label: 'Absent Today',    value: String(totalAbsent),  icon: <UserX size={22} />,     iconBg: 'bg-danger-bg',  iconColor: 'text-danger',  sub: 'Parents notified in their portal' },
     { label: 'Late Arrivals',   value: String(totalLate),    icon: <Clock size={22} />,     iconBg: 'bg-warning-bg', iconColor: 'text-warning' },
     { label: 'Attendance Rate', value: `${globalRate}%`,     icon: <Percent size={22} />,   iconBg: 'bg-ink-100',    iconColor: 'text-ink-600', sub: 'Marked so far today' },
   ]
@@ -59,11 +58,6 @@ export default function AttendanceDashboardContent({ basePath = '/attendance', t
           <h1 className="text-[20px] font-bold text-neutral-900">Attendance Dashboard</h1>
           <p className="text-[13px] text-neutral-500 mt-0.5">Select a class to mark and view today&apos;s roster — {todayLabel}</p>
         </div>
-        {failedAlertsToday > 0 && (
-          <div className="flex items-center gap-2 px-3.5 py-2 bg-danger-bg border border-danger/20 rounded-xl text-[12.5px] font-medium text-danger">
-            <MessageSquare size={13} />{failedAlertsToday} alert{failedAlertsToday > 1 ? 's' : ''} failed
-          </div>
-        )}
       </div>
 
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">

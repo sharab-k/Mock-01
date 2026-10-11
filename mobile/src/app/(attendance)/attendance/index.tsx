@@ -1,7 +1,7 @@
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { AlertTriangle, ChevronRight } from 'lucide-react-native';
+import { ChevronRight } from 'lucide-react-native';
 
 import { ErrorState } from '@/components/error-state';
 import { ThemedText } from '@/components/themed-text';
@@ -58,15 +58,6 @@ export default function AttendanceDashboard() {
             <ThemedText variant="small" color="textMuted" style={{ marginTop: -Spacing.two }}>
               Signed in as {profile.fullName}
             </ThemedText>
-          )}
-
-          {data.failedAlertsToday > 0 && (
-            <Card style={[styles.alertCard, { backgroundColor: Semantic.dangerBg, borderColor: 'transparent' }]}>
-              <AlertTriangle size={16} color={Semantic.danger} />
-              <ThemedText variant="small" style={{ color: Semantic.danger, flex: 1 }}>
-                {data.failedAlertsToday} absence alert{data.failedAlertsToday === 1 ? '' : 's'} failed to send today — call these parents directly.
-              </ThemedText>
-            </Card>
           )}
 
           <View style={{ gap: Spacing.two }}>

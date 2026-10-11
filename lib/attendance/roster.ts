@@ -1,8 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { absenceAlertPrefix } from '@/lib/notifications/message-templates'
-import { toE164 } from '@/lib/notifications/phone'
 import type { RosterStudent, Status } from '@/components/dashboard/modules/AttendanceClassDetailContent'
 import type { Database } from '@/types/supabase'
 
@@ -45,10 +43,9 @@ export async function fetchClassRoster(grade: string, section: string, supabaseO
   for (const link of links ?? []) phoneByStudent.set(link.student_id, link.profiles?.phone ?? null)
   const hasParent = new Set((links ?? []).map((l) => l.student_id))
 
-  // The parent-portal copy of today's absence alert — exact (it carries a
-  // student_id) and independent of whether WhatsApp/SMS got through, so it's
-  // what decides "Notified". notification_log below still tells us whether the
-  // external channel failed for a student with no portal copy.
+  // Whether today's absence notice reached the parent's portal inbox — raised
+  // by the database event when the student was marked absent. This is what
+  // decides "Notified".
   const { data: portalToday } = await admin
     .from('portal_notifications')
     .select('student_id')
@@ -57,34 +54,6 @@ export async function fetchClassRoster(grade: string, section: string, supabaseO
     .gte('created_at', `${classDate}T00:00:00.000Z`)
     .lt('created_at', `${classDate}T23:59:59.999Z`)
   const notifiedInPortal = new Set((portalToday ?? []).map((r) => r.student_id))
-
-  // Today's alert outcome, surfaced so the admin knows to call a parent
-  // directly if Twilio failed. notification_log has no student_id column
-  // (matches CLAUDE.md §5's schema exactly) and siblings can share one
-  // parent phone, so recipient alone can't disambiguate whose alert this
-  // was — the payload text (which embeds the student's name, see
-  // lib/notifications/send-notification.ts) is what disambiguates.
-  // The delivery log stores the E.164 form (that's what Twilio is sent), so
-  // look up and compare on that, not the number as typed at enrolment.
-  const todayPhones = Array.from(new Set(Array.from(phoneByStudent.values()).map((p) => toE164(p)).filter((p): p is string => !!p)))
-  const alertRows: { recipient: string; status: 'sent' | 'failed'; payload: string }[] = []
-  if (todayPhones.length > 0) {
-    const { data: alerts } = await admin
-      .from('notification_log')
-      .select('recipient, status, payload, sent_at')
-      .in('recipient', todayPhones)
-      .gte('sent_at', `${classDate}T00:00:00.000Z`)
-      .lt('sent_at', `${classDate}T23:59:59.999Z`)
-      .order('sent_at', { ascending: true })
-    if (alerts) alertRows.push(...alerts)
-  }
-  function alertStatusFor(phone: string | null, studentName: string): 'sent' | 'failed' | null {
-    const e164 = toE164(phone)
-    if (!e164) return null
-    const prefix = absenceAlertPrefix(studentName)
-    const match = alertRows.find((r) => r.recipient === e164 && r.payload.startsWith(prefix))
-    return match?.status ?? null
-  }
 
   const statusByStudent = new Map<string, Status>()
   for (const row of todayRes.data ?? []) statusByStudent.set(row.student_id, row.status as Status)
@@ -108,7 +77,7 @@ export async function fetchClassRoster(grade: string, section: string, supabaseO
       status: statusByStudent.get(s.id) ?? 'unmarked',
       parentPhone: phone,
       hasParent: hasParent.has(s.id),
-      alertStatus: notifiedInPortal.has(s.id) ? 'sent' : alertStatusFor(phone, s.full_name),
+      alertStatus: notifiedInPortal.has(s.id) ? 'sent' : null,
       termAttendance: termStatsByStudent.get(s.id) ?? { present: 0, absent: 0, late: 0, total: 0 },
     }
   })

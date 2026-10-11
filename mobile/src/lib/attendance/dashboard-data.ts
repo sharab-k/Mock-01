@@ -21,7 +21,6 @@ export type AttendanceDashboardData = {
   classStats: Record<string, Record<string, ClassAttendanceStat>>;
   week: DayAttendanceStat[];
   lastWeekAvg: number;
-  failedAlertsToday: number;
 };
 
 // Ported from the web's lib/attendance/dashboard-data.ts.
@@ -30,15 +29,11 @@ export async function fetchAttendanceDashboardData(): Promise<AttendanceDashboar
   const thisWeekDates = lastNDates(5);
   const priorWeekDates = lastNDates(5, 5);
 
-  const [studentsRes, todayRes, weekRes, priorWeekRes, failedRes] = await Promise.all([
+  const [studentsRes, todayRes, weekRes, priorWeekRes] = await Promise.all([
     supabase.from('students').select('grade_level, section').is('deleted_at', null).eq('status', 'active'),
     supabase.from('attendance_records').select('status, students(grade_level, section)').eq('class_date', today),
     supabase.from('attendance_records').select('class_date, status').in('class_date', thisWeekDates),
     supabase.from('attendance_records').select('class_date, status').in('class_date', priorWeekDates),
-    supabase.from('notification_log').select('id', { count: 'exact', head: true })
-      .eq('status', 'failed')
-      .gte('sent_at', `${today}T00:00:00.000Z`)
-      .lt('sent_at', `${today}T23:59:59.999Z`),
   ]);
 
   const classStats: Record<string, Record<string, ClassAttendanceStat>> = {};
@@ -85,6 +80,5 @@ export async function fetchAttendanceDashboardData(): Promise<AttendanceDashboar
     classStats,
     week,
     lastWeekAvg,
-    failedAlertsToday: failedRes.count ?? 0,
   };
 }
