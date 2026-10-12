@@ -1,13 +1,13 @@
 import { createClient } from '@/lib/supabase/server'
 
 export type EnterRosterStudent = { id: string; full_name: string; roll_number: string; grade: string; section: string }
-export type ExistingMark = { student_id: string; subject: string; exam_type: string; score: number; max_score: number }
+export type ExistingMark = { student_id: string; subject: string; exam_type: string; score: number; max_score: number; exam_date: string }
 
 export async function fetchMarksEntryData(): Promise<{ roster: EnterRosterStudent[]; existingMarks: ExistingMark[] }> {
   const supabase = await createClient()
   const [studentsRes, marksRes] = await Promise.all([
     supabase.from('students').select('id, full_name, roll_number, grade_level, section').is('deleted_at', null).eq('status', 'active').order('roll_sort', { ascending: true }),
-    supabase.from('marks').select('student_id, subject, exam_type, score, max_score'),
+    supabase.from('marks').select('student_id, subject, exam_type, score, max_score, exam_date').is('test_id', null),
   ])
 
   const roster = (studentsRes.data ?? []).map((s) => ({

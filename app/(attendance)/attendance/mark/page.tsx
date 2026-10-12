@@ -13,7 +13,7 @@ export default async function MarkAttendancePage() {
           <ArrowLeft size={13} className="group-hover:-translate-x-0.5 transition-transform" /> Attendance
         </Link>
         <h1 className="text-[20px] font-bold text-neutral-900">Mark Today&apos;s Attendance</h1>
-        <p className="text-[13px] text-neutral-500 mt-0.5">Single-click check-in · submits trigger WhatsApp alerts for absences</p>
+        <p className="text-[13px] text-neutral-500 mt-0.5">Single-click check-in · an absence sends the parent a notice in their portal</p>
       </div>
 
       <AttendanceMarkContent classes={classes} />

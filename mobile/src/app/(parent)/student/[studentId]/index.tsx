@@ -130,7 +130,7 @@ export default function StudentOverview() {
                   <View key={i} style={styles.listRow}>
                     <View style={{ flex: 1 }}>
                       <ThemedText variant="small">{m.subject}</ThemedText>
-                      <ThemedText variant="small" color="textMuted">{m.exam}</ThemedText>
+                      <ThemedText variant="small" color="textMuted">{m.exam} · {m.date}</ThemedText>
                     </View>
                     <ThemedText variant="mono" color="textSecondary">{m.score}/{m.max}</ThemedText>
                     <StatusPill tone={gradeTone(m.grade)} label={m.grade} />

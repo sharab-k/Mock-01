@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { authenticateBearerRequest } from '@/lib/supabase/bearer'
 import { fetchClassRoster } from '@/lib/attendance/roster'
+import { resolveClassDate } from '@/lib/attendance/class-date'
 
 const QuerySchema = z.object({
   grade: z.enum(['9', '10', '11', '12', 'ICOM-1', 'ICOM-2']),
@@ -24,6 +25,6 @@ export async function GET(request: Request) {
   const parsed = QuerySchema.safeParse({ grade: url.searchParams.get('grade'), section: url.searchParams.get('section') })
   if (!parsed.success) return NextResponse.json({ error: 'Invalid grade/section.' }, { status: 400 })
 
-  const roster = await fetchClassRoster(parsed.data.grade, parsed.data.section, auth.supabase)
+  const roster = await fetchClassRoster(parsed.data.grade, parsed.data.section, auth.supabase, resolveClassDate(url.searchParams.get('date')))
   return NextResponse.json({ roster })
 }

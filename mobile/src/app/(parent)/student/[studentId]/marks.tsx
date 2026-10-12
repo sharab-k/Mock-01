@@ -48,7 +48,7 @@ export default function StudentMarksScreen() {
                 <View key={i} style={[styles.row, i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: theme.border }]}>
                   <View style={{ flex: 1 }}>
                     <ThemedText variant="bodyMedium">{m.subject}</ThemedText>
-                    <ThemedText variant="small" color="textMuted">{m.exam}</ThemedText>
+                    <ThemedText variant="small" color="textMuted">{m.exam} · {m.date}</ThemedText>
                   </View>
                   <ThemedText variant="mono" color="textSecondary">{m.score}/{m.max}</ThemedText>
                   <StatusPill tone={gradeTone(m.grade)} label={m.grade} />

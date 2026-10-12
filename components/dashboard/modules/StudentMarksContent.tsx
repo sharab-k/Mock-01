@@ -6,7 +6,7 @@ import { ArrowLeft, FileDown, CheckCircle2, Loader2 } from 'lucide-react'
 import { downloadProgressReport } from '@/lib/reports/download-client'
 import { gradeTextClass } from '@/lib/marks/letter-grade'
 
-type Mark = { subject: string; exam: string; score: number; max: number; grade: string }
+type Mark = { subject: string; exam: string; date: string; score: number; max: number; grade: string }
 
 const EXAM_PILL: Record<string, string> = {
   Monthly: 'bg-ink-100 text-ink-700',
@@ -97,7 +97,7 @@ export default function StudentMarksContent({ studentId, marks }: { studentId: s
                 <tr key={i} className="hover:bg-neutral-50/70 transition-colors">
                   <td className="px-6 py-3.5 font-medium text-neutral-900">{m.subject}</td>
                   <td className="px-4 py-3.5">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${EXAM_PILL[m.exam] ?? ''}`}>{m.exam}</span>
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${EXAM_PILL[m.exam] ?? ''}`}>{m.exam}</span> <span className="font-mono text-[10.5px] text-neutral-400">{m.date}</span>
                   </td>
                   <td className="px-4 py-3.5">
                     <div className="flex flex-col gap-1.5">

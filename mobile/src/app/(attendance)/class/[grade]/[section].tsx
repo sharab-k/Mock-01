@@ -4,6 +4,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { MessageSquare, MessageSquareWarning } from 'lucide-react-native';
 
+import { TextField } from '@/components/ui/text-field';
+
 import { ScreenHeader } from '@/components/screen-header';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -31,6 +33,8 @@ function today(): string {
 export default function ClassDetailScreen() {
   const { grade, section } = useLocalSearchParams<{ grade: string; section: string }>();
   const theme = useTheme();
+  const [classDate, setClassDate] = useState(today());
+  const classDateValid = /^\d{4}-\d{2}-\d{2}$/.test(classDate) && !Number.isNaN(Date.parse(classDate)) && classDate <= today();
   const [roster, setRoster] = useState<RosterStudent[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState<Record<string, boolean>>({});
@@ -38,13 +42,14 @@ export default function ClassDetailScreen() {
 
   useEffect(() => {
     let mounted = true;
-    fetchClassRoster(grade, section).then((result) => {
+    if (!classDateValid) return;
+    fetchClassRoster(grade, section, classDate).then((result) => {
       if (!mounted) return;
       if (!result.ok) { setError(result.error); return; }
       setRoster(result.roster);
     });
     return () => { mounted = false; };
-  }, [grade, section]);
+  }, [grade, section, classDate, classDateValid]);
 
   function patchStudent(id: string, patch: Partial<RosterStudent>) {
     setRoster((prev) => (prev ? prev.map((s) => (s.id === id ? { ...s, ...patch } : s)) : prev));
@@ -57,7 +62,7 @@ export default function ClassDetailScreen() {
     setPending((p) => ({ ...p, [student.id]: true }));
     patchStudent(student.id, { status });
 
-    const outcome = await markAttendanceAction({ studentId: student.id, studentName: student.name, status });
+    const outcome = await markAttendanceAction({ studentId: student.id, studentName: student.name, status, classDate });
     setPending((p) => ({ ...p, [student.id]: false }));
     if (!outcome.ok) { patchStudent(student.id, { status: previous }); return; }
     if (status === 'absent' && outcome.notified) patchStudent(student.id, { alertStatus: 'sent' });
@@ -66,7 +71,7 @@ export default function ClassDetailScreen() {
   async function sendAlert(student: RosterStudent) {
     if (alertPending[student.id]) return;
     setAlertPending((p) => ({ ...p, [student.id]: true }));
-    const outcome = await sendAbsenceAlertAction({ studentId: student.id, studentName: student.name, classDate: today() });
+    const outcome = await sendAbsenceAlertAction({ studentId: student.id, studentName: student.name, classDate });
     setAlertPending((p) => ({ ...p, [student.id]: false }));
     if (outcome.ok && outcome.notified > 0) patchStudent(student.id, { alertStatus: outcome.sent ? 'sent' : 'failed' });
   }
@@ -75,7 +80,11 @@ export default function ClassDetailScreen() {
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.header}>
-          <ScreenHeader title={`Grade ${grade} · Section ${section}`} subtitle={`Today · Late: ${lateCutoffLabel(grade, section)}`} onBack={() => router.back()} />
+          <ScreenHeader title={`Grade ${grade} · Section ${section}`} subtitle={`${classDate === today() ? 'Today' : classDate} · Late: ${lateCutoffLabel(grade, section)}`} onBack={() => router.back()} />
+        </View>
+
+        <View style={{ paddingHorizontal: Spacing.four }}>
+          <TextField label="Attendance date (YYYY-MM-DD)" value={classDate} onChangeText={(v) => setClassDate(v.replace(/[^\d-]/g, '').slice(0, 10))} keyboardType="numbers-and-punctuation" autoCapitalize="none" />
         </View>
 
         {error && (

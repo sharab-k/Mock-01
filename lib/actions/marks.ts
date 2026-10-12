@@ -4,7 +4,7 @@ import { z } from 'zod'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/server'
 import { queueGradeAlerts, type GradeAlertJob } from '@/lib/notifications/send-notification'
-import { currentTerm } from '@/lib/marks/term'
+import { termForDate } from '@/lib/marks/term'
 import { logAction } from '@/lib/audit/log'
 import type { Database } from '@/types/supabase'
 
@@ -22,6 +22,15 @@ const EXAM_TYPE_LABEL: Record<'monthly' | 'half_yearly' | 'final', string> = {
   monthly: 'Monthly',
   half_yearly: 'Half-Yearly',
   final: 'Final',
+}
+
+function todayIso(): string {
+  return new Date().toISOString().slice(0, 10)
+}
+
+function isRealDate(iso: string): boolean {
+  const d = new Date(`${iso}T00:00:00Z`)
+  return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === iso
 }
 
 type MarkEntry = { studentId: string; studentName: string; score: number }
@@ -86,6 +95,8 @@ const BulkSaveSchema = z.object({
   subject: z.string().min(1).max(100),
   examType: z.enum(['monthly', 'half_yearly', 'final']),
   maxScore: z.number().int().min(1).max(1000),
+  // The day the exam was held (YYYY-MM-DD, not in the future). Defaults to today.
+  examDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   classLabel: z.string().optional(),
   entries: z.array(z.object({
     studentId: z.string().uuid(),
@@ -105,7 +116,9 @@ export async function bulkSaveMarksAction(
   if (!authorized || !user) return { ok: false as const, error: 'Not authorized.' }
 
   const { subject, examType, maxScore, entries } = parsed.data
-  const term = currentTerm()
+  const examDate = parsed.data.examDate ?? todayIso()
+  if (!isRealDate(examDate) || examDate > todayIso()) return { ok: false as const, error: 'Exam date must be a valid date, not in the future.' }
+  const term = termForDate(examDate)
 
   for (const entry of entries) {
     if (entry.score > maxScore) return { ok: false as const, error: `${entry.studentName}'s score exceeds the maximum.` }
@@ -117,11 +130,12 @@ export async function bulkSaveMarksAction(
     .eq('subject', subject)
     .eq('exam_type', examType)
     .eq('term', term)
+    .eq('exam_date', examDate)
     .is('test_id', null)
     .in('student_id', entries.map((e) => e.studentId))
 
   const batch = await persistMarkBatch(supabase, user.id, entries, existing ?? [], {
-    subject, exam_type: examType, max_score: maxScore, term, recorded_by: user.id,
+    subject, exam_type: examType, max_score: maxScore, term, exam_date: examDate, recorded_by: user.id,
   })
   if (!batch.ok) return batch
   const { inserted, updated } = batch
@@ -133,7 +147,7 @@ export async function bulkSaveMarksAction(
 
   if (inserted + updated > 0) {
     const label = updated > 0 && inserted === 0 ? 'Edited marks' : 'Bulk marks upload'
-    await logAction(supabase, user.id, `${label} — ${subject} ${EXAM_TYPE_LABEL[examType]} · ${parsed.data.classLabel ?? term} · ${inserted + updated} students`)
+    await logAction(supabase, user.id, `${label} — ${subject} ${EXAM_TYPE_LABEL[examType]} · ${parsed.data.classLabel ?? term} · ${examDate} · ${inserted + updated} students`)
   }
 
   return { ok: true as const, inserted, updated, notified }
@@ -166,14 +180,14 @@ export async function bulkSaveTestMarksAction(
 
   const { testId, entries } = parsed.data
 
-  const { data: test } = await supabase.from('tests').select('title, max_score, grade_level, section, subjects(name)').eq('id', testId).single()
+  const { data: test } = await supabase.from('tests').select('title, max_score, grade_level, section, test_date, subjects(name)').eq('id', testId).single()
   if (!test) return { ok: false as const, error: 'Test not found.' }
 
   for (const entry of entries) {
     if (entry.score > test.max_score) return { ok: false as const, error: `${entry.studentName}'s score exceeds the maximum.` }
   }
 
-  const term = currentTerm()
+  const term = termForDate(test.test_date)
   const subjectName = test.subjects?.name ?? '—'
 
   const { data: existing } = await supabase
@@ -183,7 +197,7 @@ export async function bulkSaveTestMarksAction(
     .in('student_id', entries.map((e) => e.studentId))
 
   const batch = await persistMarkBatch(supabase, user.id, entries, existing ?? [], {
-    subject: subjectName, exam_type: 'custom', test_id: testId, max_score: test.max_score, term, recorded_by: user.id,
+    subject: subjectName, exam_type: 'custom', test_id: testId, max_score: test.max_score, term, exam_date: test.test_date, recorded_by: user.id,
   })
   if (!batch.ok) return batch
   const { inserted, updated } = batch

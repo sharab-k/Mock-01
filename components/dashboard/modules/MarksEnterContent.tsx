@@ -29,6 +29,8 @@ export default function MarksEnterContent({ basePath = '/marks', roster: fullRos
   const [section, setSection] = useState(sectionsForGrade(GRADES[0])[0])
   const [subject, setSubject] = useState('')
   const [maxScore, setMaxScore] = useState('100')
+  const todayIso = new Date().toISOString().slice(0, 10)
+  const [examDate, setExamDate] = useState(todayIso)
   const [examType, setExamType] = useState<'monthly' | 'half_yearly' | 'final'>(EXAM_TYPES[0].value)
   const [scores, setScores] = useState<Record<string, string>>({})
   const [status, setStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
@@ -56,7 +58,7 @@ export default function MarksEnterContent({ basePath = '/marks', roster: fullRos
     const prefill: Record<string, string> = {}
     let recordedMax: number | null = null
     for (const s of roster) {
-      const existing = existingMarks.find((m) => m.student_id === s.id && m.subject === subject && m.exam_type === examType)
+      const existing = existingMarks.find((m) => m.student_id === s.id && m.subject === subject && m.exam_type === examType && m.exam_date === examDate)
       if (existing) {
         prefill[s.id] = String(existing.score)
         recordedMax = existing.max_score
@@ -65,7 +67,7 @@ export default function MarksEnterContent({ basePath = '/marks', roster: fullRos
     setScores(prefill)
     setMaxScore(String(recordedMax ?? 100))
     setStatus('idle')
-  }, [roster, existingMarks, subject, examType])
+  }, [roster, existingMarks, subject, examType, examDate])
 
   const setScore = (studentId: string, value: string) => {
     if (value !== '' && (!/^\d{1,4}$/.test(value) || Number(value) > maxScoreNum)) return
@@ -91,7 +93,7 @@ export default function MarksEnterContent({ basePath = '/marks', roster: fullRos
       return
     }
 
-    const outcome = await bulkSaveMarksAction({ subject, examType, maxScore: maxScoreNum, classLabel: `Grade ${grade}-${section}`, entries })
+    const outcome = await bulkSaveMarksAction({ subject, examType, maxScore: maxScoreNum, examDate, classLabel: `Grade ${grade}-${section}`, entries })
 
     if (!outcome.ok) {
       setError(outcome.error)
@@ -113,7 +115,7 @@ export default function MarksEnterContent({ basePath = '/marks', roster: fullRos
         <p className="text-[13px] text-neutral-500 mt-0.5">Bulk entry for one class, subject, and exam at a time</p>
       </div>
 
-      <div className="bg-white rounded-2xl border border-neutral-200 shadow-1 p-4 grid grid-cols-2 sm:grid-cols-5 gap-3">
+      <div className="bg-white rounded-2xl border border-neutral-200 shadow-1 p-4 grid grid-cols-2 sm:grid-cols-6 gap-3">
         <div>
           <label className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5">Grade</label>
           <select value={grade} onChange={(e) => setGrade(e.target.value as typeof grade)} className="w-full text-[13px] border border-neutral-200 rounded-xl px-3 py-2.5 text-neutral-700 bg-white focus:outline-none focus:ring-1 focus:ring-ink-300 cursor-pointer">
@@ -140,8 +142,12 @@ export default function MarksEnterContent({ basePath = '/marks', roster: fullRos
           </select>
         </div>
         <div>
+          <label className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5">Exam Date</label>
+          <input type="date" value={examDate} max={todayIso} onChange={(e) => e.target.value && setExamDate(e.target.value)} className="w-full text-[13px] font-mono border border-neutral-200 rounded-xl px-3 py-2.5 text-neutral-700 bg-white focus:outline-none focus:ring-1 focus:ring-ink-300" />
+        </div>
+        <div>
           <label className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5">Total Marks</label>
-          <input value={maxScore} onChange={(e) => setMaxScore(e.target.value.replace(/D/g, '').slice(0, 4))} inputMode="numeric" className="w-full text-[13px] font-mono border border-neutral-200 rounded-xl px-3 py-2.5 text-neutral-700 bg-white focus:outline-none focus:ring-1 focus:ring-ink-300" />
+          <input value={maxScore} onChange={(e) => setMaxScore(e.target.value.replace(/\D/g, '').slice(0, 4))} inputMode="numeric" className="w-full text-[13px] font-mono border border-neutral-200 rounded-xl px-3 py-2.5 text-neutral-700 bg-white focus:outline-none focus:ring-1 focus:ring-ink-300" />
         </div>
       </div>
 
@@ -155,7 +161,7 @@ export default function MarksEnterContent({ basePath = '/marks', roster: fullRos
       <div className="bg-white rounded-2xl border border-neutral-200 shadow-1 overflow-hidden">
         <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-100">
           <div>
-            <h2 className="text-[14px] font-semibold text-neutral-900">Grade {grade}-{section} · {subject} · {EXAM_TYPES.find((e) => e.value === examType)?.label}</h2>
+            <h2 className="text-[14px] font-semibold text-neutral-900">Grade {grade}-{section} · {subject} · {EXAM_TYPES.find((e) => e.value === examType)?.label} · {examDate}</h2>
             <p className="text-[11.5px] text-neutral-400 mt-0.5">{enteredCount} of {roster.length} scores entered</p>
           </div>
           <button

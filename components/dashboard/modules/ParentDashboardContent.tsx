@@ -404,7 +404,7 @@ export default function ParentDashboardContent({ kids, notices, unreadNotificati
                             <span className="block text-[13px] font-semibold text-neutral-900">{m.subject}</span>
                             <span className={`inline-flex items-center mt-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${
                               m.exam === 'Monthly' ? 'bg-ink-100 text-ink-700' : 'bg-warning-bg text-warning'
-                            }`}>{m.exam}</span>
+                            }`}>{m.exam}</span> <span className="font-mono text-[10.5px] text-neutral-400">{m.date}</span>
                           </div>
                           <div className="flex items-center gap-2.5 w-36 shrink-0">
                             <div className="flex-1 h-1.5 bg-neutral-100 rounded-full overflow-hidden">

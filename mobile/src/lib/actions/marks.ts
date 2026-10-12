@@ -4,6 +4,8 @@ export type BulkSaveMarksInput = {
   subject: string;
   examType: 'monthly' | 'half_yearly' | 'final';
   maxScore: number;
+  /** YYYY-MM-DD, not in the future; the server defaults to today. */
+  examDate?: string;
   classLabel?: string;
   entries: { studentId: string; studentName: string; score: number }[];
 };

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import StatCard from '@/components/dashboard/StatCard'
 import {
@@ -44,9 +45,16 @@ type Props = {
    *  identical class-detail view within its own shell. */
   basePath?: string
   students: RosterStudent[]
+  /** The day being viewed/marked (YYYY-MM-DD); today unless a past day was picked. */
+  classDate: string
 }
 
-export default function AttendanceClassDetailContent({ grade, section, basePath = '/attendance', students: initialStudents }: Props) {
+export default function AttendanceClassDetailContent({ grade, section, basePath = '/attendance', students: initialStudents, classDate }: Props) {
+  const router = useRouter()
+  const pathname = usePathname()
+  const todayStr = new Date().toISOString().slice(0, 10)
+  const isToday = classDate === todayStr
+  const dayLabel = isToday ? 'today' : classDate
   const [roster, setRoster] = useState<RosterStudent[]>(initialStudents)
   const [pending, setPending] = useState<Record<string, boolean>>({})
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -70,7 +78,7 @@ export default function AttendanceClassDetailContent({ grade, section, basePath 
     setPending(p => ({ ...p, [id]: true }))
     setRoster(prev => prev.map(s => s.id === id ? { ...s, status } : s))
 
-    const outcome = await markAttendanceAction({ studentId: id, studentName: student.name, status })
+    const outcome = await markAttendanceAction({ studentId: id, studentName: student.name, status, classDate })
 
     setPending(p => ({ ...p, [id]: false }))
     if (!outcome.ok) setRoster(prev => prev.map(s => s.id === id ? { ...s, status: previous } : s))
@@ -155,9 +163,19 @@ export default function AttendanceClassDetailContent({ grade, section, basePath 
             <div>
               <h1 className="text-[20px] font-bold text-neutral-900">Grade {grade} · Section {section}</h1>
               <p className="text-[13px] text-neutral-500 mt-0.5">
-                {EMPTY ? 'No students on roster yet' : `${total} student${total !== 1 ? 's' : ''} · today`}
+                {EMPTY ? 'No students on roster yet' : `${total} student${total !== 1 ? 's' : ''} · ${dayLabel}`}
               </p>
             </div>
+          </div>
+          <div>
+            <label className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5">Attendance date</label>
+            <input
+              type="date"
+              value={classDate}
+              max={todayStr}
+              onChange={(e) => e.target.value && router.push(e.target.value === todayStr ? pathname : `${pathname}?date=${e.target.value}`)}
+              className="text-[13px] font-mono border border-neutral-200 rounded-xl px-3 py-2 text-neutral-700 bg-white focus:outline-none focus:ring-1 focus:ring-ink-300"
+            />
           </div>
         </div>
       </div>
@@ -264,7 +282,7 @@ export default function AttendanceClassDetailContent({ grade, section, basePath 
                   <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                     <span className="text-[11px] font-mono bg-ink-50 text-ink-700 px-2 py-0.5 rounded-full font-semibold">Grade {selected.grade}-{selected.section}</span>
                     <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${STATUS_STYLE[selected.status].pill}`}>
-                      <span className={`w-1.5 h-1.5 rounded-full ${STATUS_STYLE[selected.status].dot}`} />{STATUS_LABEL[selected.status]} today
+                      <span className={`w-1.5 h-1.5 rounded-full ${STATUS_STYLE[selected.status].dot}`} />{STATUS_LABEL[selected.status]} {dayLabel}
                     </span>
                   </div>
                 </div>

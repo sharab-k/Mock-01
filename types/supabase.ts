@@ -257,6 +257,7 @@ export type Database = {
       marks: {
         Row: {
           created_at: string
+          exam_date: string
           exam_type: Database["public"]["Enums"]["exam_type"]
           id: string
           max_score: number
@@ -270,6 +271,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          exam_date?: string
           exam_type: Database["public"]["Enums"]["exam_type"]
           id?: string
           max_score?: number
@@ -283,6 +285,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          exam_date?: string
           exam_type?: Database["public"]["Enums"]["exam_type"]
           id?: string
           max_score?: number

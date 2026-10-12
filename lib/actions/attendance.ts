@@ -27,7 +27,8 @@ const MarkOneSchema = z.object({
   studentId: z.string().uuid(),
   studentName: z.string().min(1),
   status: AttendanceStatusSchema,
-  classDate: z.string().optional(),
+  // Back-dated marking is allowed; a day that hasn't happened yet is not.
+  classDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine((d) => d <= today(), 'Date cannot be in the future.').optional(),
 })
 
 // Shared core: upserts one attendance row and fires the absence pipeline only
@@ -96,7 +97,7 @@ export async function markAttendanceAction(
 }
 
 const SubmitClassSchema = z.object({
-  classDate: z.string().optional(),
+  classDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine((d) => d <= today(), 'Date cannot be in the future.').optional(),
   classLabel: z.string().optional(),
   records: z.array(z.object({
     studentId: z.string().uuid(),

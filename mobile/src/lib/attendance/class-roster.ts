@@ -20,6 +20,7 @@ export type RosterStudent = {
 // route (a read) — this one needs the service-role client (parent phone, alert
 // status), which can't run directly from the mobile app, so it goes through
 // the server the same way the write actions do (Phase 0).
-export async function fetchClassRoster(grade: string, section: string) {
-  return getMobileApi<{ roster: RosterStudent[] }>(`/api/mobile/attendance/class-roster?grade=${grade}&section=${section}`);
+export async function fetchClassRoster(grade: string, section: string, date?: string) {
+  const dateParam = date ? `&date=${date}` : '';
+  return getMobileApi<{ roster: RosterStudent[] }>(`/api/mobile/attendance/class-roster?grade=${grade}&section=${section}${dateParam}`);
 }

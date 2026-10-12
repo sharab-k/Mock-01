@@ -10,13 +10,13 @@ export const EXAM_TYPE_ORDER = ['monthly', 'half_yearly', 'final', 'custom'] as 
 
 // test_title is set only for exam_type 'custom' (a Marks-Admin-created test) —
 // it's what tells one class test from another on the report.
-export type RawMarkRow = { subject: string; exam_type: string; score: number; max_score: number; test_title?: string | null }
+export type RawMarkRow = { subject: string; exam_type: string; score: number; max_score: number; test_title?: string | null; exam_date?: string | null }
 export type RawAttendanceRow = { status: string }
 export type RawAttendanceLogRow = { status: string; class_date: string }
 export type AttendanceLogRow = { date: string; status: 'present' | 'late' | 'absent' }
 export type AttendanceLogMonth = { label: string; rows: AttendanceLogRow[] }
 
-export type ReportMark = { subject: string; score: number; maxScore: number; grade: string }
+export type ReportMark = { subject: string; score: number; maxScore: number; grade: string; date?: string | null }
 export type MarksByExamGroup = { examType: string; label: string; rows: ReportMark[] }
 
 export function groupMarksByExam(markRows: RawMarkRow[]): MarksByExamGroup[] {
@@ -31,6 +31,7 @@ export function groupMarksByExam(markRows: RawMarkRow[]): MarksByExamGroup[] {
           score: m.score,
           maxScore: m.max_score,
           grade: letterGrade(m.score, m.max_score),
+          date: m.exam_date ?? null,
         })),
     }))
     .filter((group) => group.rows.length > 0)

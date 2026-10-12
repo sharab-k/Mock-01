@@ -12,7 +12,7 @@ export type ChildAcademicData = {
   tier: Tier | null;
   attendancePct: number;
   avgScore: number;
-  marks: { subject: string; exam: string; score: number; max: number; grade: string }[];
+  marks: { subject: string; exam: string; date: string; score: number; max: number; grade: string }[];
   attendance: { day: string; date: string; status: AttStatus }[];
   monthlyTrend: { month: string; attendance: number; avgScore: number }[];
 };
@@ -43,7 +43,7 @@ function inRange(iso: string, start: Date, end: Date): boolean {
 export async function fetchChildAcademicData(supabase: SupabaseClient<Database>, studentId: string): Promise<ChildAcademicData> {
   const [attendanceRes, marksRes] = await Promise.all([
     supabase.from('attendance_records').select('class_date, status').eq('student_id', studentId).order('class_date', { ascending: false }),
-    supabase.from('marks').select('subject, exam_type, score, max_score, created_at, tests(title)').eq('student_id', studentId).order('created_at', { ascending: false }),
+    supabase.from('marks').select('subject, exam_type, score, max_score, exam_date, tests(title)').eq('student_id', studentId).order('exam_date', { ascending: false }),
   ]);
 
   const attRows = attendanceRes.data ?? [];
@@ -61,6 +61,7 @@ export async function fetchChildAcademicData(supabase: SupabaseClient<Database>,
   const marks = markRows.map((m) => ({
     subject: m.subject,
     exam: m.exam_type === 'custom' && m.tests?.title ? m.tests.title : (EXAM_LABEL[m.exam_type] ?? m.exam_type),
+    date: new Date(`${m.exam_date}T00:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }),
     score: m.score,
     max: m.max_score,
     grade: letterGrade(m.score, m.max_score),
@@ -72,7 +73,7 @@ export async function fetchChildAcademicData(supabase: SupabaseClient<Database>,
     const attendedInMonth = attInMonth.filter((r) => r.status === 'present' || r.status === 'late').length;
     const attendance = attInMonth.length > 0 ? Math.round((attendedInMonth / attInMonth.length) * 100) : 0;
 
-    const marksInMonth = markRows.filter((m) => inRange(m.created_at, b.start, b.end));
+    const marksInMonth = markRows.filter((m) => inRange(`${m.exam_date}T00:00:00Z`, b.start, b.end));
     const avgScoreInMonth = marksInMonth.length > 0
       ? Math.round(marksInMonth.reduce((a, m) => a + (m.score / m.max_score) * 100, 0) / marksInMonth.length)
       : 0;

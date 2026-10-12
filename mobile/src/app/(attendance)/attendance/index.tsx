@@ -1,7 +1,7 @@
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
-import { ChevronRight } from 'lucide-react-native';
+import { router, type Href } from 'expo-router';
+import { ChevronRight, Upload } from 'lucide-react-native';
 
 import { ErrorState } from '@/components/error-state';
 import { ThemedText } from '@/components/themed-text';
@@ -98,6 +98,14 @@ export default function AttendanceDashboard() {
               <ThemedText variant="small" style={{ color: Semantic.warning }}>Late 15 mins after class starts</ThemedText>
             </Card>
           </View>
+
+          <Pressable onPress={() => router.push('/attendance/upload' as Href)}>
+            <Card style={styles.classRow}>
+              <Upload size={18} color={theme.textMuted} />
+              <ThemedText variant="bodyMedium" style={{ flex: 1 }}>Upload attendance (spreadsheet)</ThemedText>
+              <ChevronRight size={16} color={theme.textMuted} />
+            </Card>
+          </Pressable>
 
           <View style={{ gap: Spacing.two }}>
             <ThemedText variant="subtitle">Classes</ThemedText>

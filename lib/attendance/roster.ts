@@ -4,18 +4,16 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import type { RosterStudent, Status } from '@/components/dashboard/modules/AttendanceClassDetailContent'
 import type { Database } from '@/types/supabase'
 
-function today(): string {
-  return new Date().toISOString().slice(0, 10)
-}
+import { todayIso } from '@/lib/attendance/class-date'
 
 // supabaseOverride lets the mobile app's bearer-authed GET route (Phase 0's
 // pattern, app/api/mobile/attendance/class-roster) reuse this exact query
 // instead of re-implementing it — the admin-client enrichment below (parent
 // phone, alert status) stays server-side either way, since that key can
 // never ship to a mobile bundle.
-export async function fetchClassRoster(grade: string, section: string, supabaseOverride?: SupabaseClient<Database>): Promise<RosterStudent[]> {
+export async function fetchClassRoster(grade: string, section: string, supabaseOverride?: SupabaseClient<Database>, classDateOverride?: string): Promise<RosterStudent[]> {
   const supabase = supabaseOverride ?? await createClient()
-  const classDate = today()
+  const classDate = classDateOverride ?? todayIso()
 
   const { data: students } = await supabase
     .from('students')
@@ -52,7 +50,7 @@ export async function fetchClassRoster(grade: string, section: string, supabaseO
     .eq('kind', 'absence')
     .in('student_id', studentIds)
     .gte('created_at', `${classDate}T00:00:00.000Z`)
-    .lt('created_at', `${classDate}T23:59:59.999Z`)
+    .lt('created_at', classDate === todayIso() ? `${classDate}T23:59:59.999Z` : '9999-12-31T00:00:00.000Z')
   const notifiedInPortal = new Set((portalToday ?? []).map((r) => r.student_id))
 
   const statusByStudent = new Map<string, Status>()

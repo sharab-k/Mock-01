@@ -33,6 +33,9 @@ export default function MarksEnterScreen() {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [subjectChoice, setSubjectChoice] = useState('');
   const [maxScore, setMaxScore] = useState('100');
+  const todayIso = new Date().toISOString().slice(0, 10);
+  const [examDate, setExamDate] = useState(todayIso);
+  const examDateValid = /^\d{4}-\d{2}-\d{2}$/.test(examDate) && !Number.isNaN(Date.parse(examDate)) && examDate <= todayIso;
   const [examType, setExamType] = useState<'monthly' | 'half_yearly' | 'final'>('monthly');
   const [scores, setScores] = useState<Record<string, string>>({});
   const [status, setStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
@@ -73,7 +76,7 @@ export default function MarksEnterScreen() {
     const prefill: Record<string, string> = {};
     let recordedMax: number | null = null;
     for (const s of roster) {
-      const existing = existingMarks.find((m) => m.student_id === s.id && m.subject === subject && m.exam_type === examType);
+      const existing = existingMarks.find((m) => m.student_id === s.id && m.subject === subject && m.exam_type === examType && m.exam_date === examDate);
       if (existing) {
         prefill[s.id] = String(existing.score);
         recordedMax = existing.max_score;
@@ -87,7 +90,7 @@ export default function MarksEnterScreen() {
     setScores(prefill);
     setMaxScore(String(recordedMax ?? 100));
     setStatus('idle');
-  }, [roster, existingMarks, subject, examType]);
+  }, [roster, existingMarks, subject, examType, examDate]);
 
   function setScore(studentId: string, value: string) {
     if (value !== '' && (!/^\d{1,4}$/.test(value) || Number(value) > maxScoreNum)) return;
@@ -112,7 +115,7 @@ export default function MarksEnterScreen() {
       return;
     }
 
-    const outcome = await bulkSaveMarksAction({ subject, examType, maxScore: maxScoreNum, classLabel: `Grade ${grade}-${section}`, entries });
+    const outcome = await bulkSaveMarksAction({ subject, examType, maxScore: maxScoreNum, examDate, classLabel: `Grade ${grade}-${section}`, entries });
 
     if (!outcome.ok) {
       setError(outcome.error);
@@ -156,7 +159,8 @@ export default function MarksEnterScreen() {
               value={EXAM_TYPES.find((e) => e.value === examType)!.label}
               onChange={(label) => setExamType(EXAM_TYPES.find((e) => e.label === label)!.value)}
             />
-            <TextField label="Total marks" value={maxScore} onChangeText={(v) => setMaxScore(v.replace(/D/g, '').slice(0, 4))} keyboardType="number-pad" />
+            <TextField label="Exam date (YYYY-MM-DD)" value={examDate} onChangeText={(v) => setExamDate(v.replace(/[^\d-]/g, '').slice(0, 10))} keyboardType="numbers-and-punctuation" autoCapitalize="none" />
+            <TextField label="Total marks" value={maxScore} onChangeText={(v) => setMaxScore(v.replace(/\D/g, '').slice(0, 4))} keyboardType="number-pad" />
           </View>
 
           {status === 'error' && (
@@ -178,7 +182,7 @@ export default function MarksEnterScreen() {
                 label={status === 'saved' ? 'Saved' : status === 'saving' ? 'Saving…' : 'Save All'}
                 variant={status === 'saved' ? 'secondary' : 'primary'}
                 loading={status === 'saving'}
-                disabled={enteredCount === 0 || !subject || maxScoreNum < 1}
+                disabled={enteredCount === 0 || !subject || maxScoreNum < 1 || !examDateValid}
                 onPress={handleSave}
                 size="sm"
               />

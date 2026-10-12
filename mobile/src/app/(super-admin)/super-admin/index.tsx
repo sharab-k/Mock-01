@@ -1,7 +1,7 @@
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, type Href } from 'expo-router';
-import { AlertTriangle, BellRing, BookOpen, CalendarClock, ChevronRight, ShieldAlert, Users2, Wallet, UsersRound, GraduationCap, Search } from 'lucide-react-native';
+import { AlertTriangle, BellRing, BookOpen, CalendarClock, ChevronRight, ShieldAlert, Users2, Wallet, UsersRound, GraduationCap, Search, Upload } from 'lucide-react-native';
 
 import { ErrorState } from '@/components/error-state';
 import { ThemedText } from '@/components/themed-text';
@@ -129,6 +129,22 @@ export default function SuperAdminDashboard() {
             <Card style={styles.linkRow}>
               <GraduationCap size={18} color={theme.textMuted} />
               <ThemedText variant="bodyMedium" style={{ flex: 1 }}>Student Directory</ThemedText>
+              <ChevronRight size={16} color={theme.textMuted} />
+            </Card>
+          </Pressable>
+
+          <Pressable onPress={() => router.push('/upload-marks' as Href)}>
+            <Card style={styles.linkRow}>
+              <Upload size={18} color={theme.textMuted} />
+              <ThemedText variant="bodyMedium" style={{ flex: 1 }}>Upload Marks</ThemedText>
+              <ChevronRight size={16} color={theme.textMuted} />
+            </Card>
+          </Pressable>
+
+          <Pressable onPress={() => router.push('/upload-attendance' as Href)}>
+            <Card style={styles.linkRow}>
+              <Upload size={18} color={theme.textMuted} />
+              <ThemedText variant="bodyMedium" style={{ flex: 1 }}>Upload Attendance</ThemedText>
               <ChevronRight size={16} color={theme.textMuted} />
             </Card>
           </Pressable>

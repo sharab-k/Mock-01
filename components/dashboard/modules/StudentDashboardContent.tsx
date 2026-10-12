@@ -164,7 +164,7 @@ export default function StudentDashboardContent({ studentId, student, data }: Pr
                       </div>
                     </td>
                     <td className="px-4 py-3.5">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${EXAM_PILL[m.exam] ?? 'bg-success-bg text-success'}`}>{m.exam}</span>
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${EXAM_PILL[m.exam] ?? 'bg-success-bg text-success'}`}>{m.exam}</span> <span className="font-mono text-[10.5px] text-neutral-400">{m.date}</span>
                     </td>
                     <td className="px-4 py-3.5">
                       <div className="flex flex-col gap-1.5">

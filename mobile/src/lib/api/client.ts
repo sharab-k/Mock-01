@@ -51,3 +51,43 @@ export async function getMobileApi<T>(path: string): Promise<ApiResult<T & Recor
     return { ok: false, error: 'Network error. Please check your connection and try again.' };
   }
 }
+
+export type SheetUploadResult = {
+  totalRows: number;
+  saved: number;
+  skipped: number;
+  inserted?: number;
+  updated?: number;
+  absent?: number;
+  errors: { row: number; message: string }[];
+};
+
+// Multipart upload of a picked spreadsheet to /api/uploads/{marks|attendance}.
+// On a phone the picker hands back a file URI (React Native's FormData accepts
+// {uri,name,type}); on web it also provides a real File.
+export async function uploadSheet(
+  kind: 'marks' | 'attendance',
+  asset: { uri: string; name: string; mimeType?: string; file?: File },
+): Promise<ApiResult<SheetUploadResult>> {
+  if (!API_BASE_URL) return { ok: false, error: 'API base URL is not configured.' };
+
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) return { ok: false, error: 'Not signed in.' };
+
+  const form = new FormData();
+  if (asset.file) form.append('file', asset.file);
+  else form.append('file', { uri: asset.uri, name: asset.name, type: asset.mimeType ?? 'application/octet-stream' } as unknown as Blob);
+
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/uploads/${kind}`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${session.access_token}` },
+      body: form,
+    });
+    const json = await res.json().catch(() => null);
+    if (!res.ok) return { ok: false, error: json?.error ?? 'The upload failed. Please try again.' };
+    return { ok: true, ...(json as SheetUploadResult) };
+  } catch {
+    return { ok: false, error: 'Network error. Please check your connection and try again.' };
+  }
+}

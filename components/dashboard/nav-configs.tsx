@@ -2,7 +2,7 @@ import {
   LayoutDashboard, Users, UserPlus, Inbox,
   CalendarCheck, BookOpen, Megaphone, Settings2, UserCog,
   ClipboardList, BarChart2, PenLine, PlayCircle,
-  GraduationCap, UsersRound, Wallet, CalendarClock, Bell, Search,
+  GraduationCap, UsersRound, Wallet, CalendarClock, Bell, Search, Upload,
 } from 'lucide-react'
 import type { NavSection } from './types'
 
@@ -26,6 +26,8 @@ export const NAV_CONFIGS: Record<string, NavSection[]> = {
         { label: 'Admissions', href: '/super-admin/admissions', icon: Inbox,        badge: 14 },
         { label: 'Attendance', href: '/super-admin/attendance', icon: CalendarCheck           },
         { label: 'Marks',      href: '/super-admin/marks',      icon: BookOpen                },
+        { label: 'Upload Marks', href: '/super-admin/marks/upload', icon: Upload              },
+        { label: 'Upload Attendance', href: '/super-admin/attendance/upload', icon: Upload      },
         { label: 'Subjects',   href: '/super-admin/subjects',   icon: ClipboardList           },
         { label: 'Timetable',  href: '/super-admin/timetable',  icon: CalendarClock            },
         { label: 'Sent Alerts', href: '/super-admin/notifications', icon: Bell                },
@@ -69,6 +71,7 @@ export const NAV_CONFIGS: Record<string, NavSection[]> = {
       items: [
         { label: 'Mark Today', href: '/attendance/mark',    icon: CalendarCheck },
         { label: 'Roster',     href: '/attendance/roster',  icon: ClipboardList },
+        { label: 'Upload Attendance', href: '/attendance/upload', icon: Upload },
         { label: 'Reports',    href: '/attendance/reports', icon: BarChart2     },
       ],
     },
@@ -86,6 +89,7 @@ export const NAV_CONFIGS: Record<string, NavSection[]> = {
       title: 'Marks',
       items: [
         { label: 'Enter Marks', href: '/marks/enter',    icon: PenLine   },
+        { label: 'Upload Marks', href: '/marks/upload',  icon: Upload    },
         { label: 'Tests',       href: '/marks/tests',    icon: ClipboardList },
         { label: 'Subjects',    href: '/marks/subjects', icon: BookOpen  },
         { label: 'Reports',     href: '/marks/reports',  icon: BarChart2 },

@@ -70,7 +70,7 @@ export async function searchStudents(
 export type AttendanceDay = { date: string; status: 'present' | 'absent' | 'late' }
 export type MarkEntry = {
   id: string
-  /** Test date for a class test; the day the mark was entered for the fixed exams. */
+  /** The day the exam was held. */
   date: string
   subject: string
   title: string
@@ -153,7 +153,7 @@ export async function fetchStudentRecord(
   const admin = createAdminClient()
   const [attRows, markRows, feeRes, parentRes, subjectsRes] = await Promise.all([
     fetchAll((from, to) => supabase.from('attendance_records').select('class_date, status').eq('student_id', studentId).order('class_date', { ascending: false }).range(from, to)),
-    fetchAll((from, to) => supabase.from('marks').select('id, subject, exam_type, score, max_score, term, created_at, tests(title, test_date)').eq('student_id', studentId).range(from, to)),
+    fetchAll((from, to) => supabase.from('marks').select('id, subject, exam_type, score, max_score, term, exam_date, tests(title)').eq('student_id', studentId).range(from, to)),
     supabase.from('fee_payments').select('year, month, status').eq('student_id', studentId).order('year', { ascending: false }).order('month', { ascending: false }),
     admin.from('parent_student_links').select('profiles(full_name, email, phone, secondary_phone, whatsapp_number_2)').eq('student_id', studentId),
     fetchStudentSubjects(studentId, supabase),
@@ -170,7 +170,7 @@ export async function fetchStudentRecord(
       const pct = Math.round((m.score / m.max_score) * 10000) / 100
       return {
         id: m.id,
-        date: m.exam_type === 'custom' && m.tests?.test_date ? m.tests.test_date : m.created_at.slice(0, 10),
+        date: m.exam_date,
         subject: m.subject,
         title: m.exam_type === 'custom' ? (m.tests?.title ?? 'Class test') : (KIND[m.exam_type] ?? m.exam_type),
         kind: KIND[m.exam_type] ?? 'Class test',

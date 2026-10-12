@@ -5,3 +5,9 @@
 export function currentTerm(): string {
   return String(new Date().getFullYear())
 }
+
+// The term a dated exam belongs to — the school-year (calendar year) it was held
+// in, so back-dated and uploaded results land in the right year's reports.
+export function termForDate(isoDate: string): string {
+  return isoDate.slice(0, 4)
+}

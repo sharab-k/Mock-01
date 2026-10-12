@@ -59,6 +59,10 @@ function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
 }
 
+function formatExamDate(iso: string): string {
+  return new Date(`${iso}T00:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' })
+}
+
 function formatLogDate(iso: string): string {
   return new Date(`${iso}T00:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' })
 }
@@ -141,12 +145,14 @@ export async function renderReportPdf(data: ReportData): Promise<Uint8Array> {
     page.drawRectangle({ x: M, y: y - 4, width: CONTENT_W, height: 18, color: C.ink100 })
     y += 1
     text('SUBJECT', M + 8, 8, bold, C.muted)
+    text('DATE', M + CONTENT_W - 260, 8, bold, C.muted)
     text('SCORE', M + CONTENT_W - 150, 8, bold, C.muted)
     text('GRADE', M + CONTENT_W - 50, 8, bold, C.muted)
     y -= 20
     for (const row of group.rows) {
       ensure(22)
-      text(row.subject.length > 52 ? `${row.subject.slice(0, 51)}…` : row.subject, M + 8, 10, regular, C.text)
+      text(row.subject.length > 40 ? `${row.subject.slice(0, 39)}…` : row.subject, M + 8, 10, regular, C.text)
+      if (row.date) text(formatExamDate(row.date), M + CONTENT_W - 260, 9.5, mono, C.muted)
       text(`${row.score}/${row.maxScore}`, M + CONTENT_W - 150, 10, monoBold, scoreColor(row.score, row.maxScore))
       text(row.grade, M + CONTENT_W - 50, 10, monoBold, GRADE_COLOR[gradeTone(row.grade)])
       y -= 6

@@ -1,7 +1,7 @@
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, type Href } from 'expo-router';
-import { BookOpen, ChevronRight, ClipboardCheck, ClipboardList, Layers } from 'lucide-react-native';
+import { BookOpen, ChevronRight, ClipboardCheck, ClipboardList, Layers, Upload } from 'lucide-react-native';
 
 import { ErrorState } from '@/components/error-state';
 import { ThemedText } from '@/components/themed-text';
@@ -69,6 +69,14 @@ export default function MarksDashboard() {
             <StatCard icon={Layers} label="Entries this week" value={String(data.entriesThisWeek)} />
             <StatCard icon={BookOpen} label="Subjects covered" value={String(data.subjectsCovered)} />
           </View>
+
+          <Pressable onPress={() => router.push('/marks/upload' as Href)}>
+            <Card style={styles.linkRow}>
+              <Upload size={18} color={theme.textMuted} />
+              <ThemedText variant="bodyMedium" style={{ flex: 1 }}>Upload marks (spreadsheet)</ThemedText>
+              <ChevronRight size={16} color={theme.textMuted} />
+            </Card>
+          </Pressable>
 
           <Pressable onPress={() => router.push('/marks/subjects' as Href)}>
             <Card style={styles.linkRow}>
