@@ -41,14 +41,19 @@ export async function GET(
   }
   if (!authorized) return NextResponse.json({ error: 'Not authorized for this student.' }, { status: 403 })
 
-  const reportData = await fetchReportData(studentId)
+  // ?type=month|full — the current month's report, or the full record to date
+  // (default full, which is what older app versions always asked for).
+  // ?month=YYYY-MM picks another month (default: this month).
+  const query = new URL(request.url).searchParams
+  const scope = query.get('type') === 'month' ? 'month' : 'full'
+  const reportData = await fetchReportData(studentId, query.get('month'), scope)
   if (!reportData) return NextResponse.json({ error: 'Student not found.' }, { status: 404 })
 
   const pdf = await renderReportPdf(reportData)
   return new NextResponse(new Uint8Array(pdf), {
     headers: {
       'Content-Type': 'application/pdf',
-      'Content-Disposition': `attachment; filename="progress-report-${reportData.student.rollNumber}.pdf"`,
+      'Content-Disposition': `attachment; filename="progress-report-${reportData.student.rollNumber}-${reportData.reportMonth.key}-${scope}.pdf"`,
     },
   })
 }

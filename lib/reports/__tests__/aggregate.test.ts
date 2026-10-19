@@ -71,3 +71,57 @@ describe('report aggregation', () => {
     expect(groups[1].rows.map((r) => r.subject)).toEqual(['Physics — Chapter 4 Quiz', 'Maths'])
   })
 })
+
+import { buildAttendanceMonths, buildFeeLines, buildMarksByMonth, monthEnd, monthLabel, resolveReportMonth } from '../aggregate'
+
+describe('monthly report building', () => {
+  it('names, bounds and clamps the report month', () => {
+    expect(monthLabel('2026-10')).toBe('October 2026')
+    expect(monthEnd('2026-02')).toBe('2026-02-28')
+    expect(monthEnd('2028-02')).toBe('2028-02-29')
+    const now = new Date('2026-10-19T12:00:00Z')
+    expect(resolveReportMonth('2026-09', now).key).toBe('2026-09')
+    expect(resolveReportMonth('2027-01', now).key).toBe('2026-10') // never a future month
+    expect(resolveReportMonth('garbage', now).label).toBe('October 2026')
+    expect(resolveReportMonth(null, now).key).toBe('2026-10')
+  })
+
+  it('attendance: every month up to the report month, newest first, with counts', () => {
+    const rows = [
+      { status: 'present', class_date: '2026-08-10' },
+      { status: 'absent', class_date: '2026-09-02' },
+      { status: 'late', class_date: '2026-09-01' },
+      { status: 'present', class_date: '2026-10-05' },
+      { status: 'present', class_date: '2026-11-03' }, // after the report month: excluded
+    ]
+    const months = buildAttendanceMonths(rows, '2026-10')
+    expect(months.map((m) => m.key)).toEqual(['2026-10', '2026-09', '2026-08'])
+    expect(months[0].isReportMonth).toBe(true)
+    expect(months[1]).toMatchObject({ present: 0, late: 1, absent: 1, total: 2 })
+    expect(months[1].rows.map((r) => r.date)).toEqual(['2026-09-01', '2026-09-02'])
+  })
+
+  it('marks: grouped by the month the exam was held, dated, with a monthly average', () => {
+    const blocks = buildMarksByMonth([
+      { subject: 'Maths', exam_type: 'monthly', score: 40, max_score: 50, exam_date: '2026-10-03' },
+      { subject: 'English', exam_type: 'monthly', score: 20, max_score: 50, exam_date: '2026-09-15' },
+      { subject: 'Physics', exam_type: 'custom', score: 9, max_score: 10, test_title: 'Quiz 1', exam_date: '2026-10-01' },
+      { subject: 'Urdu', exam_type: 'final', score: 90, max_score: 100, exam_date: '2026-12-01' }, // after the report month
+    ], '2026-10')
+    expect(blocks.map((b) => b.key)).toEqual(['2026-10', '2026-09'])
+    expect(blocks[0].isReportMonth).toBe(true)
+    expect(blocks[0].rows.map((r) => [r.date, r.exam])).toEqual([['2026-10-01', 'Quiz 1'], ['2026-10-03', 'Monthly']])
+    expect(blocks[0].average).toBe(85)
+    expect(blocks[1].average).toBe(40)
+  })
+
+  it('fees: a line per month from enrolment to the report month; no record = unpaid', () => {
+    const lines = buildFeeLines('2026-08-15', '2026-10', new Set(['2026-08', '2026-10']))
+    expect(lines.map((l) => [l.key, l.status])).toEqual([['2026-10', 'paid'], ['2026-09', 'unpaid'], ['2026-08', 'paid']])
+    expect(lines[0].isReportMonth).toBe(true)
+    // crosses a year boundary and never goes before enrolment
+    expect(buildFeeLines('2025-11-01', '2026-01', new Set()).map((l) => l.key)).toEqual(['2026-01', '2025-12', '2025-11'])
+    // enrolled after the report month -> nothing to show
+    expect(buildFeeLines('2026-11-01', '2026-10', new Set())).toEqual([])
+  })
+})

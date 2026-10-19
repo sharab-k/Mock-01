@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { Newsreader, IBM_Plex_Sans, IBM_Plex_Mono } from 'next/font/google'
 import './globals.css'
+import ReportChoiceHost from '@/components/dashboard/ReportChoiceHost'
 
 const newsreader = Newsreader({
   subsets: ['latin'],
@@ -36,7 +37,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={`${newsreader.variable} ${ibmPlexSans.variable} ${ibmPlexMono.variable}`}>
-      <body>{children}</body>
+      <body>
+        {children}
+        <ReportChoiceHost />
+      </body>
     </html>
   )
 }

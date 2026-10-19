@@ -1,5 +1,6 @@
 import { File, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
+import { Alert, Platform } from 'react-native';
 import { supabase } from '@/lib/supabase/client';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
@@ -20,14 +21,42 @@ export type DownloadReportResult = { ok: true } | { ok: false; error: string };
 // filename — and therefore the extension — from the response's
 // Content-Disposition header instead of us hardcoding ".pdf" and mismatching
 // whatever the server actually sent.
-export async function downloadProgressReport(studentId: string, studentName: string): Promise<DownloadReportResult> {
+export type ReportKind = 'month' | 'full';
+
+// Asks which report is wanted: the current month's, or the full record to date.
+// Resolves null if the person backs out.
+function askReportKind(): Promise<ReportKind | null> {
+  if (Platform.OS === 'web') {
+    // Alert.alert has no buttons on web (only the browser preview uses this).
+    return Promise.resolve(window.confirm('OK = current month report, Cancel = full progress report') ? 'month' : 'full');
+  }
+  return new Promise((resolve) => {
+    Alert.alert(
+      'Download progress report',
+      'Which report would you like?',
+      [
+        { text: 'Current month report', onPress: () => resolve('month') },
+        { text: 'Full progress report', onPress: () => resolve('full') },
+        { text: 'Cancel', style: 'cancel', onPress: () => resolve(null) },
+      ],
+      { cancelable: true, onDismiss: () => resolve(null) },
+    );
+  });
+}
+
+// `kind` omitted = ask first. Backing out of the question is not a failure, so
+// it returns ok (callers only react to failures).
+export async function downloadProgressReport(studentId: string, studentName: string, kind?: ReportKind): Promise<DownloadReportResult> {
+  const chosen = kind ?? (await askReportKind());
+  if (!chosen) return { ok: true };
+
   if (!API_BASE_URL) return { ok: false, error: 'API base URL is not configured.' };
 
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) return { ok: false, error: 'Not signed in.' };
 
   try {
-    const file = await File.downloadFileAsync(`${API_BASE_URL}/api/reports/${studentId}`, Paths.cache, {
+    const file = await File.downloadFileAsync(`${API_BASE_URL}/api/reports/${studentId}?type=${chosen}`, Paths.cache, {
       headers: { Authorization: `Bearer ${session.access_token}` },
       idempotent: true,
     });

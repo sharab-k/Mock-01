@@ -20,6 +20,7 @@ export default function ReportDownloadButton({
   const run = async () => {
     setState('loading')
     const ok = await downloadProgressReport(studentId)
+    if (ok === null) { setState('idle'); return } // popup closed without choosing
     setState(ok ? 'done' : 'error')
     setTimeout(() => setState('idle'), 2500)
   }

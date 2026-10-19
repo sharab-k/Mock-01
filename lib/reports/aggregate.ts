@@ -76,3 +76,116 @@ export function buildAttendanceLog(attRows: RawAttendanceLogRow[]): AttendanceLo
       return { label, rows: rows.sort((a, b) => b.date.localeCompare(a.date)) }
     })
 }
+
+// ---- Monthly progress report ---------------------------------------------------
+// The report is "for" one month (shown in its header) and carries the student's
+// whole record up to the end of that month: every attendance day, every mark
+// (with its exam date) and every month's fee status — the report month's own
+// figures are called out alongside the running totals.
+
+export type ReportMonth = { key: string; label: string }
+
+export function monthLabel(key: string): string {
+  const [y, m] = key.split('-').map(Number)
+  return new Date(Date.UTC(y, m - 1, 1)).toLocaleDateString('en-GB', { month: 'long', year: 'numeric', timeZone: 'UTC' })
+}
+
+export const monthKeyOf = (isoDate: string): string => isoDate.slice(0, 7)
+
+// Last calendar day of 'YYYY-MM' as YYYY-MM-DD.
+export function monthEnd(key: string): string {
+  const [y, m] = key.split('-').map(Number)
+  return new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10)
+}
+
+// 'YYYY-MM' from the request, defaulting to (and never later than) the current month.
+export function resolveReportMonth(raw: string | null | undefined, now: Date = new Date()): ReportMonth {
+  const current = now.toISOString().slice(0, 7)
+  const key = raw && /^\d{4}-(0[1-9]|1[0-2])$/.test(raw) && raw <= current ? raw : current
+  return { key, label: monthLabel(key) }
+}
+
+export type AttendanceMonthBlock = {
+  key: string
+  label: string
+  isReportMonth: boolean
+  present: number
+  late: number
+  absent: number
+  total: number
+  rows: AttendanceLogRow[]
+}
+
+// Every attendance day up to the end of the report month, newest month first,
+// days within a month in date order, with the month's own counts.
+export function buildAttendanceMonths(attRows: RawAttendanceLogRow[], reportKey: string): AttendanceMonthBlock[] {
+  const byMonth = new Map<string, AttendanceLogRow[]>()
+  for (const row of attRows) {
+    const key = monthKeyOf(row.class_date)
+    if (key > reportKey) continue
+    byMonth.set(key, [...(byMonth.get(key) ?? []), { date: row.class_date, status: row.status as AttendanceLogRow['status'] }])
+  }
+  return Array.from(byMonth.entries())
+    .sort(([a], [b]) => b.localeCompare(a))
+    .map(([key, rows]) => {
+      const sorted = rows.sort((a, b) => a.date.localeCompare(b.date))
+      return {
+        key,
+        label: monthLabel(key),
+        isReportMonth: key === reportKey,
+        present: sorted.filter((r) => r.status === 'present').length,
+        late: sorted.filter((r) => r.status === 'late').length,
+        absent: sorted.filter((r) => r.status === 'absent').length,
+        total: sorted.length,
+        rows: sorted,
+      }
+    })
+}
+
+export type MarkLine = { date: string; subject: string; exam: string; score: number; maxScore: number; grade: string }
+export type MarksMonthBlock = { key: string; label: string; isReportMonth: boolean; average: number | null; rows: MarkLine[] }
+export type RawDatedMark = RawMarkRow & { exam_date: string }
+
+const examName = (m: RawMarkRow): string =>
+  m.exam_type === 'custom' ? (m.test_title ?? 'Class test') : (EXAM_TYPE_LABEL[m.exam_type] ?? m.exam_type)
+
+// Every mark with an exam date up to the end of the report month, grouped by the
+// month the exam was held in (newest month first, exams in date order).
+export function buildMarksByMonth(rows: RawDatedMark[], reportKey: string): MarksMonthBlock[] {
+  const byMonth = new Map<string, RawDatedMark[]>()
+  for (const m of rows) {
+    const key = monthKeyOf(m.exam_date)
+    if (key > reportKey) continue
+    byMonth.set(key, [...(byMonth.get(key) ?? []), m])
+  }
+  return Array.from(byMonth.entries())
+    .sort(([a], [b]) => b.localeCompare(a))
+    .map(([key, list]) => ({
+      key,
+      label: monthLabel(key),
+      isReportMonth: key === reportKey,
+      average: computeOverallAverage(list),
+      rows: list
+        .sort((a, b) => a.exam_date.localeCompare(b.exam_date) || a.subject.localeCompare(b.subject))
+        .map((m) => ({ date: m.exam_date, subject: m.subject, exam: examName(m), score: m.score, maxScore: m.max_score, grade: letterGrade(m.score, m.max_score) })),
+    }))
+}
+
+export type FeeLine = { key: string; label: string; status: 'paid' | 'unpaid'; isReportMonth: boolean }
+
+// One line per month from the month the student enrolled up to the report
+// month (newest first — every month, not a recent window). A month with no fee record counts as
+// unpaid — the same convention the fee roster uses.
+export function buildFeeLines(enrollmentDate: string, reportKey: string, paidKeys: ReadonlySet<string>): FeeLine[] {
+  const start = monthKeyOf(enrollmentDate)
+  const out: FeeLine[] = []
+  let [y, m] = reportKey.split('-').map(Number)
+  while (out.length < 120) {
+    const key = `${y}-${String(m).padStart(2, '0')}`
+    if (key < start) break
+    out.push({ key, label: monthLabel(key), status: paidKeys.has(key) ? 'paid' : 'unpaid', isReportMonth: key === reportKey })
+    m -= 1
+    if (m === 0) { m = 12; y -= 1 }
+  }
+  return out
+}
