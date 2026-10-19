@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AlertCircle } from 'lucide-react-native';
+import { MarksBulkUploadModal } from '@/components/marks-bulk-upload-modal';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -40,6 +41,7 @@ export default function MarksEnterScreen() {
   const [scores, setScores] = useState<Record<string, string>>({});
   const [status, setStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [error, setError] = useState('');
+  const [bulkOpen, setBulkOpen] = useState(false);
 
   // Section options depend on grade (9-10 are Boys/Girls, 11-12 are A-D) —
   // reset to the first valid option whenever grade changes, set directly in
@@ -141,6 +143,7 @@ export default function MarksEnterScreen() {
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.header}>
           <ThemedText variant="title" style={{ fontSize: 20, lineHeight: 26 }}>Enter Marks</ThemedText>
+          <Button variant="secondary" size="sm" label="Bulk upload" onPress={() => setBulkOpen(true)} />
           <ThemedText variant="small" color="textSecondary">Bulk entry for one class, subject, and exam at a time</ThemedText>
         </View>
 
@@ -217,6 +220,7 @@ export default function MarksEnterScreen() {
           </View>
         </ScrollView>
       </SafeAreaView>
+      <MarksBulkUploadModal visible={bulkOpen} onClose={() => setBulkOpen(false)} />
     </ThemedView>
   );
 }

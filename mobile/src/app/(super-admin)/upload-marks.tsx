@@ -1,5 +1,5 @@
-import { SheetUploadScreen } from '@/components/sheet-upload-screen';
+import { MarksBulkUploadScreen } from '@/components/marks-bulk-upload-screen';
 
 export default function Screen() {
-  return <SheetUploadScreen kind="marks" />;
+  return <MarksBulkUploadScreen />;
 }

@@ -98,6 +98,9 @@ const BulkSaveSchema = z.object({
   // The day the exam was held (YYYY-MM-DD, not in the future). Defaults to today.
   examDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   classLabel: z.string().optional(),
+  // Parents get a result notice per new/changed mark unless this is false
+  // (a bulk upload of old results usually shouldn't re-announce them all).
+  notify: z.boolean().optional(),
   entries: z.array(z.object({
     studentId: z.string().uuid(),
     studentName: z.string().min(1),
@@ -143,7 +146,7 @@ export async function bulkSaveMarksAction(
   const alerts: GradeAlertJob[] = batch.changed.map((e) => ({
     studentId: e.studentId, studentName: e.studentName, subject, examLabel: EXAM_TYPE_LABEL[examType], score: e.score, maxScore,
   }))
-  const notified = await queueGradeAlerts(alerts, user.id)
+  const notified = parsed.data.notify === false ? 0 : await queueGradeAlerts(alerts, user.id)
 
   if (inserted + updated > 0) {
     const label = updated > 0 && inserted === 0 ? 'Edited marks' : 'Bulk marks upload'

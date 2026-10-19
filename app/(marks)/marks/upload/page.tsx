@@ -1,5 +1,5 @@
-import SpreadsheetUploadContent from '@/components/dashboard/modules/SpreadsheetUploadContent'
+import MarksUploadPageContent from '@/components/dashboard/modules/MarksUploadPageContent'
 
 export default function UploadPage() {
-  return <SpreadsheetUploadContent kind="marks" />
+  return <MarksUploadPageContent />
 }

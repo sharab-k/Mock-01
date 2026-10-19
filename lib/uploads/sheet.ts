@@ -103,3 +103,57 @@ export const idKey = (raw: string): string => raw.trim().toLowerCase().replace(/
 // GR numbers are matched with ALL whitespace removed: the school's data has
 // "N 101", "N101" and "N 101 " for the same kind of number.
 export const grKey = (raw: string): string => raw.toLowerCase().replace(/\s+/g, '')
+
+export type Grid = { name: string; rows: string[][] }
+
+// Every worksheet of the file as a plain grid of trimmed text (rows[r][c],
+// zero-based). Used by the wide "one column per test" result sheets, where the
+// layout — header blocks, repeated tables, several sheets — matters more than
+// any one header row. CSV files come back as a single grid.
+export async function readWorkbook(file: File): Promise<{ ok: true; sheets: Grid[] } | { ok: false; error: string }> {
+  if (file.size > MAX_UPLOAD_BYTES) return { ok: false, error: 'File is too large (5 MB maximum).' }
+  const name = file.name.toLowerCase()
+  const isCsv = name.endsWith('.csv')
+  if (!isCsv && !name.endsWith('.xlsx')) return { ok: false, error: 'Upload an .xlsx or .csv file.' }
+
+  const workbook = new ExcelJS.Workbook()
+  try {
+    const buffer = Buffer.from(await file.arrayBuffer())
+    if (isCsv) await workbook.csv.read(Readable.from(buffer), { map: (value: unknown) => (value === '' ? null : value), parserOptions: { delimiter: ',' } })
+    else await workbook.xlsx.load(buffer as unknown as ArrayBuffer)
+  } catch {
+    return { ok: false, error: 'Could not read the file. Check that it is a valid spreadsheet.' }
+  }
+
+  const sheets: Grid[] = workbook.worksheets.map((ws) => {
+    const rows: string[][] = []
+    for (let r = 1; r <= ws.rowCount; r++) {
+      const cells: string[] = []
+      ws.getRow(r).eachCell({ includeEmpty: true }, (cell, col) => { cells[col - 1] = cellText(cell.value) })
+      for (let i = 0; i < cells.length; i++) if (cells[i] === undefined) cells[i] = ''
+      rows.push(cells)
+    }
+    return { name: ws.name, rows }
+  }).filter((g) => g.rows.some((r) => r.some((c) => c !== '')))
+
+  if (sheets.length === 0) return { ok: false, error: 'The file has no data rows.' }
+  return { ok: true, sheets }
+}
+
+// Header-keyed rows from a grid's first row (the "one row per record" format).
+export function gridToRows(grid: Grid): SheetRow[] {
+  const headers = (grid.rows[0] ?? []).map(normalizeHeader)
+  const out: SheetRow[] = []
+  for (let r = 1; r < grid.rows.length; r++) {
+    const cells: Record<string, string> = {}
+    let any = false
+    grid.rows[r].forEach((text, c) => {
+      const key = headers[c]
+      if (!key) return
+      if (text !== '') any = true
+      cells[key] = text
+    })
+    if (any) out.push({ rowNumber: r + 1, cells })
+  }
+  return out
+}

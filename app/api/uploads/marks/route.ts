@@ -1,13 +1,19 @@
 import { NextResponse } from 'next/server'
 import { resolveRequestClient } from '@/lib/supabase/session'
-import { readSheet } from '@/lib/uploads/sheet'
-import { processMarksUpload } from '@/lib/marks/upload'
+import { processMarksUpload, type ExamType } from '@/lib/marks/upload'
 
-export const maxDuration = 60
+// Reading and saving a whole school's results can take a while.
+export const maxDuration = 300
+
+const EXAM_TYPES: ExamType[] = ['monthly', 'half_yearly', 'final']
 
 // Marks spreadsheet upload. Shared by the website (cookie session) and the
 // phone app (Bearer token). Only marks_admin / super_admin may call it; the
-// per-row writes then run on the caller's own RLS-scoped session.
+// writes run on the caller's own RLS-scoped session.
+//
+// Form fields: file, examType (monthly | half_yearly | final — chosen in the
+// popup), dryRun ("1" = check the file and report, write nothing), notify
+// ("1" = send parents their result notices).
 export async function POST(request: Request) {
   const supabase = await resolveRequestClient(request)
   const { data: { user } } = await supabase.auth.getUser()
@@ -19,8 +25,14 @@ export async function POST(request: Request) {
   const file = form?.get('file')
   if (!(file instanceof File)) return NextResponse.json({ error: 'Choose a file to upload.' }, { status: 400 })
 
-  const sheet = await readSheet(file)
-  if (!sheet.ok) return NextResponse.json({ error: sheet.error }, { status: 400 })
+  const examType = String(form?.get('examType') ?? '') as ExamType
+  if (!EXAM_TYPES.includes(examType)) return NextResponse.json({ error: 'Choose the exam: Monthly, Half-Yearly or Final.' }, { status: 400 })
 
-  return NextResponse.json(await processMarksUpload(supabase, sheet.rows))
+  const outcome = await processMarksUpload(supabase, file, {
+    examType,
+    dryRun: form?.get('dryRun') === '1',
+    notify: form?.get('notify') === '1',
+  })
+  if (!outcome.ok) return NextResponse.json({ error: outcome.error }, { status: 400 })
+  return NextResponse.json(outcome.result)
 }

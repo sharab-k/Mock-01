@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Save, CheckCircle2, AlertCircle } from 'lucide-react'
+import { ArrowLeft, Save, CheckCircle2, AlertCircle, Upload } from 'lucide-react'
+import MarksBulkUploadModal from '@/components/dashboard/modules/MarksBulkUploadModal'
 import { GRADES, sectionsForGrade, INITIALS } from '@/lib/students/constants'
 import { bulkSaveMarksAction } from '@/lib/actions/marks'
 import type { EnterRosterStudent, ExistingMark } from '@/lib/marks/enter-data'
@@ -35,6 +36,7 @@ export default function MarksEnterContent({ basePath = '/marks', roster: fullRos
   const [scores, setScores] = useState<Record<string, string>>({})
   const [status, setStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   const [error, setError] = useState('')
+  const [bulkOpen, setBulkOpen] = useState(false)
 
   const roster = useMemo(
     () => fullRoster.filter((s) => s.grade === grade && s.section === section),
@@ -111,8 +113,15 @@ export default function MarksEnterContent({ basePath = '/marks', roster: fullRos
         <Link href={basePath} className="inline-flex items-center gap-1.5 text-[12.5px] font-medium text-neutral-500 hover:text-ink-700 transition-colors no-underline mb-4 group">
           <ArrowLeft size={13} className="group-hover:-translate-x-0.5 transition-transform" /> Marks
         </Link>
-        <h1 className="text-[20px] font-bold text-neutral-900">Enter Marks</h1>
-        <p className="text-[13px] text-neutral-500 mt-0.5">Bulk entry for one class, subject, and exam at a time</p>
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <div>
+            <h1 className="text-[20px] font-bold text-neutral-900">Enter Marks</h1>
+            <p className="text-[13px] text-neutral-500 mt-0.5">Bulk entry for one class, subject, and exam at a time</p>
+          </div>
+          <button type="button" onClick={() => setBulkOpen(true)} className="inline-flex items-center gap-2 text-[13px] font-semibold px-3.5 py-2 rounded-xl border border-ink-200 text-ink-700 bg-white hover:bg-ink-50">
+            <Upload size={14} /> Bulk upload
+          </button>
+        </div>
       </div>
 
       <div className="bg-white rounded-2xl border border-neutral-200 shadow-1 p-4 grid grid-cols-2 sm:grid-cols-6 gap-3">
@@ -200,6 +209,7 @@ export default function MarksEnterContent({ basePath = '/marks', roster: fullRos
           )}
         </div>
       </div>
+      {bulkOpen && <MarksBulkUploadModal onClose={() => setBulkOpen(false)} />}
     </>
   )
 }
