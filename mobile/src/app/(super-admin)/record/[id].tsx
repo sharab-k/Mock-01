@@ -11,6 +11,7 @@ import { StatusPill } from '@/components/ui/status-pill';
 import { Spacing } from '@/constants/theme';
 import { getMobileApi } from '@/lib/api/client';
 import { gradeTone } from '@/lib/marks/letter-grade';
+import { StudentIdCard } from '@/components/student-id-card';
 
 type Day = { date: string; status: 'present' | 'absent' | 'late' };
 type Mark = { id: string; date: string; subject: string; title: string; score: number; max: number; pct: number; grade: string };
@@ -73,6 +74,7 @@ export default function StudentRecordScreen() {
         {!record && !error && <View style={styles.centered}><ActivityIndicator /></View>}
         {record && s && (
           <ScrollView contentContainerStyle={styles.content}>
+            <StudentIdCard studentId={s.id} studentName={s.fullName} role="super_admin" />
             <Card>
               <ThemedText variant="bodyMedium" style={{ marginBottom: Spacing.two }}>Profile</ThemedText>
               <Field label="Programme" value={s.program} />

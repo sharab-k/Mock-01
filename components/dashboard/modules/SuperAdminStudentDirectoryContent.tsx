@@ -9,6 +9,7 @@ import { setParentPasswordAction } from '@/lib/actions/parents'
 import SetPasswordModal from '@/components/dashboard/SetPasswordModal'
 import StudentSubjectsSection from '@/components/dashboard/StudentSubjectsSection'
 import ReportDownloadButton from '@/components/dashboard/ReportDownloadButton'
+import StudentIdCard from '@/components/dashboard/StudentIdCard'
 
 export type DirectoryStudent = {
   id: string
@@ -313,6 +314,8 @@ export default function SuperAdminStudentDirectoryContent({ students: initialStu
               >
                 <Pencil size={13} /> Edit student details
               </Link>
+
+              <StudentIdCard studentId={selected.id} studentName={selected.full_name} role="super_admin" />
 
               <ReportDownloadButton studentId={selected.id} variant="full" />
 

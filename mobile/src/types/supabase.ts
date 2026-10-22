@@ -716,6 +716,9 @@ export type Database = {
           id: string
           is_late_enrollment: boolean
           last_qualification: string | null
+          photo_path: string | null
+          photo_updated_at: string | null
+          photo_updated_by: string | null
           previous_school: string | null
           program: string
           registration_fee: number | null
@@ -741,6 +744,9 @@ export type Database = {
           id?: string
           is_late_enrollment?: boolean
           last_qualification?: string | null
+          photo_path?: string | null
+          photo_updated_at?: string | null
+          photo_updated_by?: string | null
           previous_school?: string | null
           program: string
           registration_fee?: number | null
@@ -766,6 +772,9 @@ export type Database = {
           id?: string
           is_late_enrollment?: boolean
           last_qualification?: string | null
+          photo_path?: string | null
+          photo_updated_at?: string | null
+          photo_updated_by?: string | null
           previous_school?: string | null
           program?: string
           registration_fee?: number | null
@@ -778,7 +787,15 @@ export type Database = {
           tuition_fee?: number | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "students_photo_updated_by_fkey"
+            columns: ["photo_updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       subjects: {
         Row: {
@@ -1080,6 +1097,9 @@ export type Database = {
           id: string
           is_late_enrollment: boolean
           last_qualification: string | null
+          photo_path: string | null
+          photo_updated_at: string | null
+          photo_updated_by: string | null
           previous_school: string | null
           program: string
           registration_fee: number | null

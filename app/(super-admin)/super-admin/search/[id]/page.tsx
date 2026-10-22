@@ -4,6 +4,7 @@ import { ArrowLeft } from 'lucide-react'
 import { fetchStudentRecord } from '@/lib/students/record'
 import { gradeTextClass } from '@/lib/marks/letter-grade'
 import ReportDownloadButton from '@/components/dashboard/ReportDownloadButton'
+import StudentIdCard from '@/components/dashboard/StudentIdCard'
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
 const fmtDate = (iso: string) => new Date(iso + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
@@ -53,7 +54,7 @@ export default async function StudentRecordPage({ params }: { params: Promise<{ 
           <h1 className="text-xl font-semibold text-neutral-900">{s.fullName}</h1>
           <p className="font-mono text-xs text-neutral-600">GR {s.grNumber ?? '—'} · Roll {s.rollNumber} · Grade {s.grade}-{s.section}</p>
         </div>
-        <ReportDownloadButton studentId={s.id} variant="full" />
+        <div className="flex flex-wrap gap-2"><StudentIdCard studentId={s.id} studentName={s.fullName} role="super_admin" /><ReportDownloadButton studentId={s.id} variant="full" /></div>
       </div>
 
       <Section title="Profile">

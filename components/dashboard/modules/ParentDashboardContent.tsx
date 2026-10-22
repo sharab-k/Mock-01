@@ -11,6 +11,7 @@ import type { ParentChild, AttStatus } from '@/lib/parent/dashboard-data'
 import { downloadProgressReport } from '@/lib/reports/download-client'
 import { CATEGORY_STYLE, type Notice } from '@/lib/notices/types'
 import { gradeTextClass } from '@/lib/marks/letter-grade'
+import StudentIdCard from '@/components/dashboard/StudentIdCard'
 
 type View = null | 'attendance' | 'marks' | 'notices'
 
@@ -109,6 +110,7 @@ export default function ParentDashboardContent({ kids, notices, unreadNotificati
           >
             <Mail size={13} /> Contact
           </a>
+          <StudentIdCard studentId={child.id} studentName={child.name} role="parent" />
           <span className="inline-flex items-center gap-1.5 text-[12px] font-medium text-neutral-500 bg-neutral-50 border border-neutral-200 px-3 py-2 rounded-xl">
             <ShieldCheck size={12} /> Read-Only
           </span>

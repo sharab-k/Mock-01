@@ -12,6 +12,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@pdf-lib/fontkit": "^1.1.1",
     "@supabase/ssr": "^0.12.3",
     "@supabase/supabase-js": "^2.47.0",
     "class-variance-authority": "^0.7.1",
@@ -23,6 +24,7 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "server-only": "^0.0.1",
+    "sharp": "^0.35.5",
     "tailwind-merge": "^2.6.0",
     "zod": "^3.24.1"
   },

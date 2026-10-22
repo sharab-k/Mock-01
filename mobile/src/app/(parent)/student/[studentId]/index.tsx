@@ -17,6 +17,7 @@ import { fetchStudentDashboardData } from '@/lib/student/dashboard-data';
 import { useAsyncData } from '@/lib/use-async-data';
 import { useLinkedChildContext } from '@/lib/parent/linked-child-context';
 import { downloadProgressReport } from '@/lib/reports/download';
+import { StudentIdCard } from '@/components/student-id-card';
 import { gradeTone } from '@/lib/marks/letter-grade';
 
 const TIER_TONE = { Distinction: 'success', Merit: 'ink', Pass: 'warning', 'Below Pass': 'danger' } as const;
@@ -86,6 +87,8 @@ export default function StudentOverview() {
               <StatusPill tone={TIER_TONE[data.tier]} label={data.tier} />
             </Card>
           )}
+
+          <StudentIdCard studentId={child.id} studentName={child.fullName} role="parent" />
 
           <View style={{ gap: Spacing.two }}>
             <Pressable onPress={() => router.push(`/student/${studentId}/assignments`)}>
