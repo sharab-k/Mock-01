@@ -5,8 +5,8 @@ import Link from 'next/link'
 import { ArrowLeft, Save, CheckCircle2, AlertCircle, Upload } from 'lucide-react'
 import MarksBulkUploadModal from '@/components/dashboard/modules/MarksBulkUploadModal'
 import { GRADES, sectionsForGrade, INITIALS } from '@/lib/students/constants'
-import { bulkSaveMarksAction } from '@/lib/actions/marks'
-import type { EnterRosterStudent, ExistingMark } from '@/lib/marks/enter-data'
+import { bulkSaveMarksAction, fetchExistingMarksAction } from '@/lib/actions/marks'
+import type { EnterRosterStudent } from '@/lib/marks/enter-data'
 import type { Subject } from '@/lib/actions/subjects'
 
 const EXAM_TYPES: { value: 'monthly' | 'half_yearly' | 'final'; label: string }[] = [
@@ -20,12 +20,11 @@ type Props = {
    *  identical bulk-entry flow within its own shell. */
   basePath?: string
   roster: EnterRosterStudent[]
-  existingMarks: ExistingMark[]
   /** Every grade's real subject list — the subject picker follows the selected grade. */
   subjects: Subject[]
 }
 
-export default function MarksEnterContent({ basePath = '/marks', roster: fullRoster, existingMarks, subjects }: Props) {
+export default function MarksEnterContent({ basePath = '/marks', roster: fullRoster, subjects }: Props) {
   const [grade, setGrade] = useState(GRADES[0])
   const [section, setSection] = useState(sectionsForGrade(GRADES[0])[0])
   const [subject, setSubject] = useState('')
@@ -56,20 +55,26 @@ export default function MarksEnterContent({ basePath = '/marks', roster: fullRos
     if (!valid.includes(section)) setSection(valid[0])
   }, [grade, section])
 
+  // Pre-fill with whatever is already saved for this class / subject / exam /
+  // date — fetched on demand rather than shipping every mark in the school.
   useEffect(() => {
-    const prefill: Record<string, string> = {}
-    let recordedMax: number | null = null
-    for (const s of roster) {
-      const existing = existingMarks.find((m) => m.student_id === s.id && m.subject === subject && m.exam_type === examType && m.exam_date === examDate)
-      if (existing) {
-        prefill[s.id] = String(existing.score)
-        recordedMax = existing.max_score
-      }
-    }
-    setScores(prefill)
-    setMaxScore(String(recordedMax ?? 100))
+    let cancelled = false
+    setScores({})
     setStatus('idle')
-  }, [roster, existingMarks, subject, examType, examDate])
+    if (!subject || roster.length === 0) return
+    void fetchExistingMarksAction({ grade, section, subject, examType, examDate }).then((res) => {
+      if (cancelled || !res.ok) return
+      const prefill: Record<string, string> = {}
+      let recordedMax: number | null = null
+      for (const m of res.marks) {
+        prefill[m.student_id] = String(m.score)
+        recordedMax = m.max_score
+      }
+      setScores(prefill)
+      setMaxScore(String(recordedMax ?? 100))
+    })
+    return () => { cancelled = true }
+  }, [grade, section, roster.length, subject, examType, examDate])
 
   const setScore = (studentId: string, value: string) => {
     if (value !== '' && (!/^\d{1,4}$/.test(value) || Number(value) > maxScoreNum)) return

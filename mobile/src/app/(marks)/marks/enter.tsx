@@ -14,7 +14,7 @@ import { TextField } from '@/components/ui/text-field';
 import { FontFamily, Radius, Semantic, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { bulkSaveMarksAction } from '@/lib/actions/marks';
-import { fetchMarksEntryData, type EnterRosterStudent, type ExistingMark } from '@/lib/marks/enter-data';
+import { fetchExistingMarks, fetchMarksEntryData, type EnterRosterStudent } from '@/lib/marks/enter-data';
 import { GRADES, sectionsForGrade } from '@/lib/students/constants';
 import { fetchSubjects, type Subject } from '@/lib/subjects/fetch';
 
@@ -28,7 +28,6 @@ const EXAM_TYPE_LABELS = EXAM_TYPES.map((e) => e.label);
 export default function MarksEnterScreen() {
   const theme = useTheme();
   const [fullRoster, setFullRoster] = useState<EnterRosterStudent[] | null>(null);
-  const [existingMarks, setExistingMarks] = useState<ExistingMark[]>([]);
   const [grade, setGrade] = useState(GRADES[0]);
   const [section, setSection] = useState(sectionsForGrade(GRADES[0])[0]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
@@ -54,10 +53,9 @@ export default function MarksEnterScreen() {
 
   useEffect(() => {
     let mounted = true;
-    Promise.all([fetchMarksEntryData(), fetchSubjects()]).then(([{ roster, existingMarks }, subjectList]) => {
+    Promise.all([fetchMarksEntryData(), fetchSubjects()]).then(([{ roster }, subjectList]) => {
       if (!mounted) return;
       setFullRoster(roster);
-      setExistingMarks(existingMarks);
       setSubjects(subjectList);
     });
     return () => { mounted = false; };
@@ -74,25 +72,28 @@ export default function MarksEnterScreen() {
     [fullRoster, grade, section],
   );
 
+  // Pre-fill with whatever is already saved for this class / subject / exam /
+  // date — fetched on demand (marks_existing) rather than every mark in the school.
   useEffect(() => {
-    const prefill: Record<string, string> = {};
-    let recordedMax: number | null = null;
-    for (const s of roster) {
-      const existing = existingMarks.find((m) => m.student_id === s.id && m.subject === subject && m.exam_type === examType && m.exam_date === examDate);
-      if (existing) {
-        prefill[s.id] = String(existing.score);
-        recordedMax = existing.max_score;
-      }
-    }
-    // Deliberate: re-derives the entered-scores state whenever the
-    // class/subject/exam selection changes, prefilling from any existing
-    // marks — the same "reset on dependency change" pattern as the web's
-    // MarksEnterContent.tsx.
+    let cancelled = false;
+    // Deliberate: reset the entered scores whenever the selection changes.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setScores(prefill);
-    setMaxScore(String(recordedMax ?? 100));
+    setScores({});
     setStatus('idle');
-  }, [roster, existingMarks, subject, examType, examDate]);
+    if (!subject || roster.length === 0) return;
+    void fetchExistingMarks({ grade, section, subject, examType, examDate }).then((marks) => {
+      if (cancelled) return;
+      const prefill: Record<string, string> = {};
+      let recordedMax: number | null = null;
+      for (const m of marks) {
+        prefill[m.student_id] = String(m.score);
+        recordedMax = m.max_score;
+      }
+      setScores(prefill);
+      setMaxScore(String(recordedMax ?? 100));
+    });
+    return () => { cancelled = true; };
+  }, [grade, section, roster.length, subject, examType, examDate]);
 
   function setScore(studentId: string, value: string) {
     if (value !== '' && (!/^\d{1,4}$/.test(value) || Number(value) > maxScoreNum)) return;

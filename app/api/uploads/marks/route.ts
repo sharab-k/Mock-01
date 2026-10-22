@@ -2,8 +2,8 @@ import { NextResponse } from 'next/server'
 import { resolveRequestClient } from '@/lib/supabase/session'
 import { processMarksUpload, type ExamType } from '@/lib/marks/upload'
 
-// Reading and saving a whole school's results can take a while.
-export const maxDuration = 300
+// One database call per 500 marks, so even a whole school's results save in seconds.
+export const maxDuration = 60
 
 const EXAM_TYPES: ExamType[] = ['monthly', 'half_yearly', 'final']
 
@@ -28,7 +28,7 @@ export async function POST(request: Request) {
   const examType = String(form?.get('examType') ?? '') as ExamType
   if (!EXAM_TYPES.includes(examType)) return NextResponse.json({ error: 'Choose the exam: Monthly, Half-Yearly or Final.' }, { status: 400 })
 
-  const outcome = await processMarksUpload(supabase, file, {
+  const outcome = await processMarksUpload(supabase, user.id, file, {
     examType,
     dryRun: form?.get('dryRun') === '1',
     notify: form?.get('notify') === '1',

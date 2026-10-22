@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { fetchAllRows } from '@/lib/db/fetch-all'
 
 const EXAM_TYPE_LABEL: Record<string, string> = {
   monthly: 'Monthly',
@@ -31,15 +32,21 @@ export async function fetchClassMarks(grade: string, section: string): Promise<C
   const studentIds = (students ?? []).map((s) => s.id)
   if (studentIds.length === 0) return []
 
-  const { data: marks } = await supabase
-    .from('marks')
-    .select('id, student_id, subject, exam_type, score, max_score, tests(title)')
-    .in('student_id', studentIds)
-    .order('created_at', { ascending: false })
+  // A class accumulates far more than 1,000 marks (50 students × subjects × tests),
+  // so page through them rather than relying on a single capped request.
+  const marks = await fetchAllRows((from, to) =>
+    supabase
+      .from('marks')
+      .select('id, student_id, subject, exam_type, score, max_score, tests(title)')
+      .in('student_id', studentIds)
+      .order('created_at', { ascending: false })
+      .order('id')
+      .range(from, to),
+  )
 
   const studentById = new Map((students ?? []).map((s) => [s.id, s]))
 
-  return (marks ?? []).map((m) => {
+  return marks.map((m) => {
     const student = studentById.get(m.student_id)
     return {
       id: m.id,

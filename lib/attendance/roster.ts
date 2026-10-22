@@ -29,7 +29,7 @@ export async function fetchClassRoster(grade: string, section: string, supabaseO
 
   const [todayRes, termRes] = await Promise.all([
     supabase.from('attendance_records').select('student_id, status').eq('class_date', classDate).in('student_id', studentIds),
-    supabase.from('attendance_records').select('student_id, status').in('student_id', studentIds),
+    supabase.rpc('attendance_class_term', { p_grade: grade, p_section: section }),
   ])
 
   // profiles has no RLS policy letting staff read another user's row (see
@@ -58,10 +58,7 @@ export async function fetchClassRoster(grade: string, section: string, supabaseO
 
   const termStatsByStudent = new Map<string, { present: number; absent: number; late: number; total: number }>()
   for (const row of termRes.data ?? []) {
-    const cur = termStatsByStudent.get(row.student_id) ?? { present: 0, absent: 0, late: 0, total: 0 }
-    cur[row.status as 'present' | 'absent' | 'late']++
-    cur.total++
-    termStatsByStudent.set(row.student_id, cur)
+    termStatsByStudent.set(row.student_id, { present: Number(row.present), absent: Number(row.absent), late: Number(row.late), total: Number(row.total) })
   }
 
   return (students ?? []).map((s) => {

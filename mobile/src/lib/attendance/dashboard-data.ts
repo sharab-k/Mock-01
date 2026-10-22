@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase/client';
+import { fetchAllRows } from '@/lib/db/fetch-all';
 import { GRADES, sectionsForGrade } from '@/lib/students/constants';
 
 function isoDate(d: Date): string {
@@ -29,11 +30,13 @@ export async function fetchAttendanceDashboardData(): Promise<AttendanceDashboar
   const thisWeekDates = lastNDates(5);
   const priorWeekDates = lastNDates(5, 5);
 
-  const [studentsRes, todayRes, weekRes, priorWeekRes] = await Promise.all([
-    supabase.from('students').select('grade_level, section').is('deleted_at', null).eq('status', 'active'),
-    supabase.from('attendance_records').select('status, students(grade_level, section)').eq('class_date', today),
-    supabase.from('attendance_records').select('class_date, status').in('class_date', thisWeekDates),
-    supabase.from('attendance_records').select('class_date, status').in('class_date', priorWeekDates),
+  // Counts come from the database rather than downloading every attendance row
+  // (a school week is ~2,900+ rows, past the 1,000-row response limit).
+  const [students, todayRes, weekRes, priorWeekRes] = await Promise.all([
+    fetchAllRows((from, to) => supabase.from('students').select('grade_level, section').is('deleted_at', null).eq('status', 'active').order('id').range(from, to)),
+    supabase.rpc('attendance_class_day', { p_date: today }),
+    supabase.rpc('attendance_day_stats', { p_dates: thisWeekDates }),
+    supabase.rpc('attendance_day_stats', { p_dates: priorWeekDates }),
   ]);
 
   const classStats: Record<string, Record<string, ClassAttendanceStat>> = {};
@@ -41,24 +44,21 @@ export async function fetchAttendanceDashboardData(): Promise<AttendanceDashboar
     classStats[g] = {};
     for (const s of sectionsForGrade(g)) classStats[g][s] = { present: 0, absent: 0, late: 0, total: 0 };
   }
-  for (const row of studentsRes.data ?? []) {
+  for (const row of students) {
     if (classStats[row.grade_level]?.[row.section]) classStats[row.grade_level][row.section].total++;
   }
   for (const row of todayRes.data ?? []) {
-    const grade = row.students?.grade_level;
-    const section = row.students?.section;
-    if (grade && section && classStats[grade]?.[section] && row.status in classStats[grade][section]) {
-      (classStats[grade][section] as unknown as Record<string, number>)[row.status]++;
-    }
+    const stat = classStats[row.grade_level]?.[row.section];
+    if (stat && row.status in stat) (stat as unknown as Record<string, number>)[row.status] += Number(row.n);
   }
 
   const totalEnrolled = Object.values(classStats).flatMap((g) => Object.values(g)).reduce((a, c) => a + c.total, 0);
 
   const week: DayAttendanceStat[] = thisWeekDates.map((date) => {
-    const dayRows = (weekRes.data ?? []).filter((r) => r.class_date === date);
-    const present = dayRows.filter((r) => r.status === 'present').length;
-    const absent = dayRows.filter((r) => r.status === 'absent').length;
-    const late = dayRows.filter((r) => r.status === 'late').length;
+    const day = (weekRes.data ?? []).find((r) => r.class_date === date);
+    const present = Number(day?.present ?? 0);
+    const absent = Number(day?.absent ?? 0);
+    const late = Number(day?.late ?? 0);
     return {
       day: new Date(`${date}T00:00:00Z`).toLocaleDateString('en-GB', { weekday: 'short', timeZone: 'UTC' }),
       date: new Date(`${date}T00:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' }),
@@ -69,8 +69,7 @@ export async function fetchAttendanceDashboardData(): Promise<AttendanceDashboar
   });
 
   const priorRates = priorWeekDates.map((date) => {
-    const dayRows = (priorWeekRes.data ?? []).filter((r) => r.class_date === date);
-    const present = dayRows.filter((r) => r.status === 'present').length;
+    const present = Number((priorWeekRes.data ?? []).find((r) => r.class_date === date)?.present ?? 0);
     return totalEnrolled > 0 ? (present / totalEnrolled) * 100 : 0;
   });
   const lastWeekAvg = priorRates.length > 0 ? Math.round(priorRates.reduce((a, b) => a + b, 0) / priorRates.length) : 0;

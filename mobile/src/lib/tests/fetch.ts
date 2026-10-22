@@ -18,14 +18,11 @@ export type TestSummary = {
 export async function fetchTests(): Promise<TestSummary[]> {
   const [testsRes, marksRes] = await Promise.all([
     supabase.from('tests').select('id, subject_id, grade_level, section, title, max_score, test_date, subjects(name)').order('test_date', { ascending: false }),
-    supabase.from('marks').select('test_id').not('test_id', 'is', null),
+    supabase.rpc('tests_mark_counts'),
   ]);
 
-  const countByTest = new Map<string, number>();
-  for (const row of marksRes.data ?? []) {
-    if (!row.test_id) continue;
-    countByTest.set(row.test_id, (countByTest.get(row.test_id) ?? 0) + 1);
-  }
+  // Counted by the database (tests_mark_counts), not by downloading every test mark.
+  const countByTest = new Map<string, number>((marksRes.data ?? []).map((r) => [r.test_id, Number(r.entries)]));
 
   return (testsRes.data ?? []).map((t) => ({
     id: t.id,

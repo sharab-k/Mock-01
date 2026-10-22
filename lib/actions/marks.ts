@@ -216,3 +216,31 @@ export async function bulkSaveTestMarksAction(
 
   return { ok: true as const, inserted, updated, notified }
 }
+
+const ExistingMarksSchema = z.object({
+  grade: z.string().min(1).max(20),
+  section: z.string().min(1).max(20),
+  subject: z.string().min(1).max(100),
+  examType: z.enum(['monthly', 'half_yearly', 'final']),
+  examDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+})
+
+// The marks already saved for one class/subject/exam/date — pre-fills the entry
+// screen (the database does the filtering; see marks_existing).
+export async function fetchExistingMarksAction(
+  input: z.infer<typeof ExistingMarksSchema>,
+  supabaseOverride?: SupabaseClient<Database>,
+) {
+  const parsed = ExistingMarksSchema.safeParse(input)
+  if (!parsed.success) return { ok: false as const, error: 'Invalid request.' }
+
+  const { supabase, user, authorized } = await requireMarksCaller(supabaseOverride)
+  if (!authorized || !user) return { ok: false as const, error: 'Not authorized.' }
+
+  const { data, error } = await supabase.rpc('marks_existing', {
+    p_grade: parsed.data.grade, p_section: parsed.data.section, p_subject: parsed.data.subject,
+    p_exam_type: parsed.data.examType, p_date: parsed.data.examDate,
+  })
+  if (error) return { ok: false as const, error: 'Could not load saved marks.' }
+  return { ok: true as const, marks: (data ?? []).map((m) => ({ student_id: m.student_id, score: m.score, max_score: m.max_score })) }
+}

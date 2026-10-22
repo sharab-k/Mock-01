@@ -1,7 +1,7 @@
 import 'server-only'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/supabase'
-import { bulkSaveMarksAction } from '@/lib/actions/marks'
+import { saveMarksBatch, type BulkMarkRow } from '@/lib/marks/bulk-save'
 import { loadStudentLookup, resolveStudent } from '@/lib/uploads/students'
 import { gridToRows, parseDate, pick, readWorkbook, todayIso, type Grid } from '@/lib/uploads/sheet'
 import { parseCell, parseWideSheets, type WideBlock } from '@/lib/marks/wide-sheet'
@@ -35,10 +35,11 @@ const MAX_LIST = 500
 
 // Reads the file, works out which of the two layouts it is, validates every
 // mark, and either reports what it found (dryRun) or saves it through
-// bulkSaveMarksAction — the same path typed entry uses, so edit history, grade
+// saveMarksBatch (one database call per 500 marks) — edit history, grade
 // notices (when asked for) and the audit log all behave identically.
 export async function processMarksUpload(
   supabase: SupabaseClient<Database>,
+  userId: string,
   file: File,
   opts: UploadOptions,
 ): Promise<{ ok: true; result: MarksUploadResult } | { ok: false; error: string }> {
@@ -50,7 +51,7 @@ export async function processMarksUpload(
     ? await planWide(supabase, wide, opts)
     : await planRows(supabase, book.sheets[0], opts)
   if (!planned.ok) return planned
-  return { ok: true, result: await finish(supabase, planned.plan, opts) }
+  return { ok: true, result: await finish(supabase, userId, planned.plan, opts) }
 }
 
 type Plan = {
@@ -228,7 +229,7 @@ async function planRows(supabase: SupabaseClient<Database>, sheet: Grid, opts: U
 
 // ---- save (or just report) ------------------------------------------------------
 
-async function finish(supabase: SupabaseClient<Database>, plan: Plan, opts: UploadOptions): Promise<MarksUploadResult> {
+async function finish(supabase: SupabaseClient<Database>, userId: string, plan: Plan, opts: UploadOptions): Promise<MarksUploadResult> {
   const errors = [...plan.errors]
   let inserted = 0
   let updated = 0
@@ -240,22 +241,15 @@ async function finish(supabase: SupabaseClient<Database>, plan: Plan, opts: Uplo
   }
 
   if (!opts.dryRun) {
+    // One database call per 500 marks for the whole file (see lib/marks/bulk-save.ts).
+    const rows: BulkMarkRow[] = []
     for (const g of plan.groups.values()) {
-      const entries = Array.from(g.entries.values())
-      const outcome = await bulkSaveMarksAction(
-        {
-          subject: g.subject, examType: opts.examType, maxScore: g.maxScore, examDate: g.examDate, classLabel: 'Spreadsheet upload', notify: opts.notify,
-          entries: entries.map((e) => ({ studentId: e.studentId, studentName: e.studentName, score: e.score })),
-        },
-        supabase,
-      )
-      if (outcome.ok) {
-        inserted += outcome.inserted
-        updated += outcome.updated
-      } else {
-        for (const e of entries) errors.push({ row: e.row, message: `Not saved (${g.subject} ${g.examDate}): ${outcome.error}` })
-      }
+      for (const e of g.entries.values()) rows.push({ studentId: e.studentId, studentName: e.studentName, subject: g.subject, examDate: g.examDate, score: e.score, maxScore: g.maxScore })
     }
+    const outcome = await saveMarksBatch(supabase, userId, opts.examType, rows, { notify: opts.notify, label: 'Spreadsheet upload' })
+    inserted = outcome.inserted
+    updated = outcome.updated
+    if (!outcome.ok) errors.push({ row: 0, message: outcome.error })
   }
 
   errors.sort((a, b) => a.row - b.row)

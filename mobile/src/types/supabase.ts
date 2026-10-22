@@ -986,6 +986,66 @@ export type Database = {
         Args: { p_grade: string; p_section: string; p_year: number }
         Returns: number
       }
+      attendance_class_day: {
+        Args: { p_date: string }
+        Returns: {
+          grade_level: string
+          n: number
+          section: string
+          status: Database["public"]["Enums"]["attendance_status"]
+        }[]
+      }
+      attendance_class_term: {
+        Args: { p_grade: string; p_section: string }
+        Returns: {
+          absent: number
+          late: number
+          present: number
+          student_id: string
+          total: number
+        }[]
+      }
+      attendance_day_stats: {
+        Args: { p_dates: string[] }
+        Returns: {
+          absent: number
+          class_date: string
+          late: number
+          present: number
+        }[]
+      }
+      attendance_grade_rates: {
+        Args: never
+        Returns: {
+          attended: number
+          grade_level: string
+          total: number
+        }[]
+      }
+      attendance_student_stats: {
+        Args: never
+        Returns: {
+          present: number
+          student_id: string
+          total: number
+        }[]
+      }
+      attendance_weekly_rates: {
+        Args: { p_today: string }
+        Returns: {
+          attended: number
+          bucket: number
+          total: number
+        }[]
+      }
+      bulk_upsert_marks: {
+        Args: { p_rows: Json }
+        Returns: {
+          changed: Json
+          inserted: number
+          updated: number
+        }[]
+      }
       current_role: {
         Args: never
         Returns: Database["public"]["Enums"]["user_role"]
@@ -1039,7 +1099,54 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      marks_class_stats: {
+        Args: never
+        Returns: {
+          avg_pct: number
+          entries: number
+          grade_level: string
+          graded: number
+          section: string
+        }[]
+      }
+      marks_existing: {
+        Args: {
+          p_date: string
+          p_exam_type: Database["public"]["Enums"]["exam_type"]
+          p_grade: string
+          p_section: string
+          p_subject: string
+        }
+        Returns: {
+          max_score: number
+          score: number
+          student_id: string
+        }[]
+      }
+      marks_student_averages: {
+        Args: never
+        Returns: {
+          avg_pct: number
+          entry_count: number
+          student_id: string
+        }[]
+      }
+      marks_subject_stats: {
+        Args: never
+        Returns: {
+          avg_pct: number
+          entries: number
+          subject: string
+        }[]
+      }
       natural_sort_key: { Args: { t: string }; Returns: string }
+      tests_mark_counts: {
+        Args: never
+        Returns: {
+          entries: number
+          test_id: string
+        }[]
+      }
     }
     Enums: {
       attendance_status: "present" | "absent" | "late"
