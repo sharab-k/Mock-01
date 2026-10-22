@@ -474,7 +474,7 @@ New tests: 14 database integration tests prove the SQL aggregates equal hand cal
 | Marks entry | 1,916 ms | **744 ms** |
 | Class attendance (9-G1) | 2,550 ms | **590 ms** |
 | Attendance roster | 2,347 ms | **756 ms** |
-| Login → dashboard | 5,302 ms | **3,264 ms** (measured before the login-action fix; now lower) |
+| Login → dashboard | 5,302 ms | **1,348 ms** |
 
 **API routes:**
 
