@@ -59,6 +59,13 @@
         "projectId": "87d44163-d016-4e13-bfa1-c472e17d3a98"
       }
     },
-    "owner": "umar_siddiqui"
+    "owner": "umar_siddiqui",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/87d44163-d016-4e13-bfa1-c472e17d3a98",
+      "fallbackToCacheTimeout": 0
+    }
   }
 }

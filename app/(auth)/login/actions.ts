@@ -16,15 +16,15 @@ export async function login(formData: FormData) {
 
   const supabase = await createClient()
 
-  const { error } = await supabase.auth.signInWithPassword({ email, password })
+  const { data: signedIn, error } = await supabase.auth.signInWithPassword({ email, password })
 
-  if (error) {
+  if (error || !signedIn.user) {
     redirect('/login?error=invalid_credentials')
   }
 
-  // Read role and redirect to the correct portal
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login?error=invalid_credentials')
+  // The sign-in response already carries the verified user — no second round
+  // trip to Auth just to ask who just signed in. Read role and redirect.
+  const user = signedIn.user
 
   const { data: profile } = await supabase
     .from('profiles')

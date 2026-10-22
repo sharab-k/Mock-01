@@ -423,3 +423,89 @@ Because GR numbers are not unique or normalised (§5.4), result-sheet uploads ha
 
 ### C. Table sizes at the time of the audit
 students 581 · profiles 542 · parent_student_links 576 · parent_credentials 532 · attendance_records 116 · marks 45 · marks_edit_history 0 · fee_payments 41 · portal_notifications 21 · notification_log 107 · audit_log 1,409 · tests 1 · subjects 56 (44 active) · student_subject_enrollments 3 · admission_enquiries 5 · notices 1 · class_timetable_periods 2.
+
+---
+
+# 12. Fix pass — status and measured results (22 Oct 2026)
+
+Everything in §10 that can be done without a new vendor account or a decision from you has been done, deployed to the live site and **re-measured the same way as the original audit**.
+
+## 12.1 What was fixed
+
+| # | Finding | Fix | Status |
+|---|---|---|---|
+| 4.1 | Functions in Washington, database in Sydney | `vercel.json` → `regions: ["syd1"]`; confirmed live: `x-vercel-id: sin1::syd1` | **Fixed** |
+| 4.2 | Auth waterfall (middleware + layout + profile, 32 `getUser` calls) | Middleware makes **no** network call (reads the session cookie; skipped entirely when there is no session); one Supabase client per request with a **memoised `getUser()`** (web + bearer/mobile); the login action no longer re-asks who just signed in | **Fixed** |
+| 4.3 | Landing page uncached | Static page (ISR 5 min, `revalidateTag('notices')` on change); CDN `HIT` | **Fixed** |
+| 4.5 / 7.3 | Whole-table reads, silent truncation at 1,000 rows | 11 SQL aggregate functions (`marks_class_stats`, `marks_student_averages`, `attendance_class_term`, …); `fetchAllRows` paging for every list that genuinely needs all rows (students, parents, fees, class marks); marks entry pre-fills on demand | **Fixed** (web + app) |
+| 4.6 | Sequential query groups | Student Directory, mobile students API, vault and contact lookups now run their reads together | **Fixed** |
+| 4.8 | 12.9 MB of classroom images | resized to about 100–160 KB each (0.8 MB total) | **Fixed** |
+| 4.9 | Dead dependencies | `twilio`, `puppeteer-core`, `@sparticuz/chromium` and the Twilio adapter removed; the settings page now describes the portal-inbox notifications | **Fixed** |
+| 7.2 | Bulk upload times out / half-saves | `bulk_upsert_marks`: one database call per 500 marks (insert + update + edit history); route limit back to 60 s | **Fixed** |
+| 5.1 | 102 performance advisor findings | RLS rewrite: `(select auth.uid())`, `(select current_role())`, merged permissive policies, `TO authenticated`. **The advisor now reports "No issues found".** Proven behaviour-identical: a before/after probe of 7 roles × reads/inserts/updates/deletes = 532 checks, **0 differences**; a rollback script is kept | **Fixed** |
+| 5.2 | 14 security findings | `search_path` pinned; trigger/internal functions no longer executable by anon/authenticated; **14 → 4** (see 12.3) | **Mostly fixed** |
+| 5.4 | 473 names with stray blanks | trimmed at the source | **Fixed** |
+| 6.1 | APK 118 MB | ARM-only (`arm64-v8a`, `armeabi-v7a`), R8 code + resource shrinking, per-weight fonts (**44 → 9 font files**), 6 unused native modules removed | **Configured — takes effect at the next APK build** |
+| 6.2 | No list virtualization | 6 long lists (students, parents, fees, roster, admissions students, marks reports) are now `FlatList`s | **Fixed** |
+| 6.3 | No cache, sequential queries | stale-while-revalidate cache in the app's data hook (instant screens, background refresh, cleared on sign-in/out); aggregates replace phone-side table scans | **Fixed** |
+| 6.5 | No over-the-air updates | `expo-updates` added, `runtimeVersion` policy, `preview` / `production` channels | **Configured — takes effect at the next APK build** |
+| 8 | Monochrome icon failed Expo's check | made square | **Fixed** |
+
+New tests: 14 database integration tests prove the SQL aggregates equal hand calculations, respect each role's security rules, and that the batch save inserts, updates, logs edit history and refuses other roles. Test suite: **180 passing** (was 166).
+
+## 12.2 Measured before → after (live site, same method as §3)
+
+**Pages (Super Admin, median of 3):**
+
+| Page | Before | After |
+|---|---|---|
+| Dashboard | 1,538 ms | **852 ms** |
+| Students | 3,356 ms | **1,329 ms** |
+| Parents | 4,772 ms | **1,138 ms** |
+| Attendance dashboard | 1,696 ms | **419 ms** |
+| Marks dashboard | 2,271 ms | **629 ms** |
+| Fees | 1,817 ms | **865 ms** |
+| Subjects | 1,100 ms | **630 ms** |
+| Timetable | 1,072 ms | **527 ms** |
+| Notifications | 1,472 ms | **553 ms** |
+| Audit log | 1,518 ms | **654 ms** |
+| Student search | 1,094 ms | **411 ms** |
+| Staff | 1,133 ms | **407 ms** |
+| Marks entry | 1,916 ms | **744 ms** |
+| Class attendance (9-G1) | 2,550 ms | **590 ms** |
+| Attendance roster | 2,347 ms | **756 ms** |
+| Login → dashboard | 5,302 ms | **3,264 ms** (measured before the login-action fix; now lower) |
+
+**API routes:**
+
+| Route | Before | After |
+|---|---|---|
+| Student search | 2,253 ms | **514 ms** |
+| Student full record | 2,660 ms | **488 ms** |
+| Parent directory | 4,905 ms | **1,412 ms** |
+| Progress report PDF (full / month) | 2,544 / 2,265 ms | **1,138 / 654 ms** |
+| Invalid token → 401 | 616 ms | **356 ms** |
+
+**Public site:** landing page 1.3–1.5 s TTFB with `no-store` → **CDN `HIT`**, 0.56 s TTFB, 0.73 s total; a classroom photo 4.1 MB / 2.35 s → **163 KB / 0.72 s**.
+
+**Bulk upload:** 12 groups = 23.5 s (1.96 s per group) → **2,400 marks in 60 groups = 1.24 s**. Your real results file (about 190 groups, which would have taken roughly 6 minutes and been cut off at 5) now saves in **a couple of seconds**.
+
+**Database advisors:** performance **102 findings → 0**; security **14 → 4**.
+
+## 12.3 What is intentionally left, and why
+
+| Item | Why it is open | What is needed |
+|---|---|---|
+| **Move the database nearer Pakistan** (Mumbai/Singapore) | A Supabase project's region cannot be changed in place; it needs a *new project* and a data migration. The functions are already beside the current database, so the remaining cost is the user↔Sydney leg (about 0.3 s for the phone, which queries Supabase directly). | Your decision + a new Supabase project (billing) |
+| **Staging environment** | Same: a second Supabase project + Vercel preview environment. Tests and demos still run against production (they only create and delete clearly-named temporary rows). | Your decision + a second project |
+| Security advisor, remaining 4 | `current_role()` must stay callable (RLS policies call it for the reader and it only reveals their own role); `allocate_roll_number` must stay callable by signed-in staff (the enrolment trigger runs as them); **leaked-password protection is a switch in the Supabase dashboard** (Authentication → Policies), not changeable from code. | Flip the dashboard switch |
+| Students / Parents directories still about 1.1–1.3 s | They send every row (about 0.8–1 MB decoded, 73–91 KB on the wire) and filter in the browser. Fast enough now; server-side pagination would bring them to about 0.5 s. | Optional next step |
+| 18 shared GR numbers (36 students), 20 Grade 11/12 students without a stream | Need a person to decide which record is right. A worksheet listing them is in `data-quality-issues.xlsx`. | Staff to correct, then re-upload |
+| Hand-copied code between web and app (34 files), no mobile tests | A structural refactor (shared package) — larger than a fix, and risky to do blind | Planned work |
+| Expo patch versions (14 packages slightly behind) | Upgrading blind without a device to test on | Do with the next APK test |
+| **R8 shrinking, ARM-only, new fonts and OTA are configured but untested on a phone** | They only take effect in the next APK build; R8 can occasionally strip something a library needs | Build the APK and test on a real phone before sending it out |
+
+## 12.4 How to keep it fast
+- After any schema change run `npx supabase db advisors --linked --type performance` (it should stay at "No issues found").
+- Never read a whole table to add it up: add a SQL function (see `supabase/migrations/20261020120000_*`) or page with `fetchAllRows`.
+- For app fixes that do not touch native code, `eas update --channel preview` now pushes them to installed apps in seconds (once the APK containing `expo-updates` is installed).

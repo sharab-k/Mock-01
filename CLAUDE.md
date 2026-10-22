@@ -63,6 +63,18 @@ secrets, branch + PR always). Two more, specific to this project:
 9. **No public self-registration, anywhere.** Every account — admin, student, or parent — is
    provisioned by a higher role, not signed up. If a task implies adding a `/signup` page for
    students or parents, stop and flag it — that contradicts the SOW's credential-issuance model.
+10. **Never read a whole table to add it up.** PostgREST silently returns at most 1,000 rows per
+    request, so "download everything and sum it in JavaScript" is both slow and quietly wrong once
+    a table grows. Totals, averages and counts come from a SQL function (see
+    `supabase/migrations/20261020120000_*` — `SECURITY INVOKER`, so RLS still decides what is counted);
+    any list that genuinely needs every row goes through `fetchAllRows` (`lib/db/fetch-all.ts`).
+11. **Mind the round trips.** Vercel functions run in `syd1`, next to the Supabase database
+    (`vercel.json`) — keep them together, because every query is a network hop. Independent reads go
+    out together (`Promise.all`); auth is verified once per request (the server client memoises
+    `getUser()`); the middleware must not call Supabase for visitors without a session. After a
+    schema change, `npx supabase db advisors --linked --type performance` must stay at "No issues".
+    (Provider note: Twilio has been removed — parent notices are raised by a database trigger into
+    the parent's portal inbox.)
 
 ---
 
