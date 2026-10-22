@@ -11,10 +11,14 @@ import VisitSection from './components/VisitSection'
 import EnquirySection from './components/EnquirySection'
 import Footer from './components/Footer'
 import { LandingPageProvider } from './LandingPageContext'
-import { fetchVisibleNotices } from '@/lib/notices/fetch'
+import { fetchPublicNotices } from '@/lib/notices/public'
+
+// Rendered once and served from the CDN (rebuilt every 5 minutes, or at once when
+// a notice changes) instead of on every visit.
+export const revalidate = 300
 
 export default async function LandingPage() {
-  const notices = await fetchVisibleNotices()
+  const notices = await fetchPublicNotices()
 
   return (
     <LandingPageProvider>

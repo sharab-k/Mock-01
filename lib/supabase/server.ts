@@ -1,11 +1,17 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { cache } from 'react'
 import type { Database } from '@/types/supabase'
+import { withMemoizedGetUser } from '@/lib/supabase/memo-auth'
 
-export async function createClient() {
+// One client per request (React cache) with a memoised auth.getUser(): a page
+// render used to build a client and re-verify the user separately in the
+// middleware, the layout, the page and each data function — each a round trip
+// to Supabase. Now the first answer is reused for the rest of the request.
+export const createClient = cache(async () => {
   const cookieStore = await cookies()
 
-  return createServerClient<Database>(
+  const client = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
@@ -25,4 +31,5 @@ export async function createClient() {
       },
     },
   )
-}
+  return withMemoizedGetUser(client)
+})

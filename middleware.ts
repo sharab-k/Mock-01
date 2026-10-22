@@ -19,6 +19,19 @@ function withMobileApiCors(response: NextResponse): NextResponse {
   return response
 }
 
+// The `sub` (user id) claim of a JWT, read without verifying it — see the note at
+// its use below. Reading it directly avoids the library's "insecure session.user"
+// warning on every request.
+function jwtSubject(token: string): string | null {
+  try {
+    const payload = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')
+    const sub = (JSON.parse(atob(payload)) as { sub?: unknown }).sub
+    return typeof sub === 'string' ? sub : null
+  } catch {
+    return null
+  }
+}
+
 // Refreshes the Supabase session cookie on every matched request and, as a
 // convenience only, bounces an already-signed-in user away from / or /login
 // into their own portal root. This is NOT the access boundary — role gating
@@ -29,6 +42,12 @@ export async function middleware(request: NextRequest) {
     if (request.method === 'OPTIONS') return withMobileApiCors(new NextResponse(null, { status: 204 }))
     return withMobileApiCors(NextResponse.next({ request }))
   }
+
+  // Visitors with no Supabase session cookie (the whole public site, the login
+  // page for signed-out people) need nothing from Supabase: skip it entirely
+  // instead of paying a round trip to the database region on every page view.
+  const hasSession = request.cookies.getAll().some((c) => c.name.startsWith('sb-') && c.name.includes('-auth-token'))
+  if (!hasSession) return NextResponse.next({ request })
 
   let supabaseResponse = NextResponse.next({ request })
 
@@ -51,17 +70,23 @@ export async function middleware(request: NextRequest) {
     },
   )
 
-  // IMPORTANT: this call refreshes the session — do not remove it, and do not
-  // add logic between createServerClient and this call.
-  const { data: { user } } = await supabase.auth.getUser()
+  // IMPORTANT: this call refreshes the session cookie when it is close to
+  // expiring — do not remove it, and do not add logic between createServerClient
+  // and this call. getSession() reads the cookie locally (no network unless a
+  // refresh is due); it does not VALIDATE the token, which is fine here because
+  // this middleware is only UX (cookie refresh + the portal redirect below).
+  // Every page layout re-verifies with getUser(), and the database (RLS)
+  // rejects an invalid token on every query.
+  const { data: { session } } = await supabase.auth.getSession()
+  const userId = session ? jwtSubject(session.access_token) : null
 
   const isEntryPage = request.nextUrl.pathname === '/' || request.nextUrl.pathname === '/login'
 
-  if (user && isEntryPage) {
+  if (userId && isEntryPage) {
     const { data: profile } = await supabase
       .from('profiles')
       .select('role')
-      .eq('id', user.id)
+      .eq('id', userId)
       .single()
 
     const destination = profile ? ROLE_DESTINATIONS[profile.role] : undefined

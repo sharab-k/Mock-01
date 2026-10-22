@@ -1,6 +1,7 @@
 'use server'
 
 import { z } from 'zod'
+import { revalidateTag } from 'next/cache'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/server'
 import { logAction } from '@/lib/audit/log'
@@ -43,6 +44,7 @@ export async function createNoticeAction(
   if (error || !data) return { ok: false as const, error: 'Could not create the notice.' }
 
   await logAction(supabase, userId, `Published notice — ${parsed.data.title}`)
+  revalidateTag('notices') // refresh the cached public landing page
 
   return { ok: true as const, id: data.id, publishedAt: data.published_at }
 }
@@ -62,6 +64,7 @@ export async function updateNoticeAction(
   const { id, ...fields } = parsed.data
   const { error } = await supabase.from('notices').update(fields).eq('id', id)
   if (error) return { ok: false as const, error: 'Could not update the notice.' }
+  revalidateTag('notices')
   return { ok: true as const }
 }
 
@@ -86,6 +89,7 @@ export async function setNoticePublishedAction(
   if (error) return { ok: false as const, error: 'Could not update publish status.' }
 
   await logAction(supabase, userId, `${parsed.data.published ? 'Published' : 'Unpublished'} notice — ${data?.title ?? parsed.data.id}`)
+  revalidateTag('notices')
 
   return { ok: true as const }
 }

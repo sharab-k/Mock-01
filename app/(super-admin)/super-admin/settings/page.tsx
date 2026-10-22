@@ -11,11 +11,6 @@ const ROLE_PERMISSIONS = [
 ]
 
 export default function SuperAdminSettingsPage() {
-  const twilioConfigured = Boolean(
-    process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN &&
-    (process.env.TWILIO_WHATSAPP_FROM || process.env.TWILIO_SMS_FROM),
-  )
-
   return (
     <>
       <div>
@@ -23,7 +18,7 @@ export default function SuperAdminSettingsPage() {
           <ArrowLeft size={13} className="group-hover:-translate-x-0.5 transition-transform" /> Dashboard
         </Link>
         <h1 className="text-[20px] font-bold text-neutral-900">System Settings</h1>
-        <p className="text-[13px] text-neutral-500 mt-0.5">Academy information, notification provider, and role permissions</p>
+        <p className="text-[13px] text-neutral-500 mt-0.5">Academy information, parent notifications, and role permissions</p>
       </div>
 
       {/* Academy info */}
@@ -60,24 +55,17 @@ export default function SuperAdminSettingsPage() {
           <div className="w-9 h-9 rounded-xl bg-success-bg flex items-center justify-center">
             <MessageSquare size={16} className="text-success" />
           </div>
-          <h2 className="text-[14px] font-semibold text-neutral-900">Notification Provider</h2>
+          <h2 className="text-[14px] font-semibold text-neutral-900">Parent Notifications</h2>
         </div>
         <div className="flex items-center justify-between p-4 bg-neutral-50 rounded-xl">
           <div>
-            <p className="text-[13.5px] font-medium text-neutral-800">Twilio — WhatsApp Business API + SMS</p>
-            <p className="text-[12px] text-neutral-500 mt-0.5">Attendance and grade alerts route through one vendor, SMS as failover</p>
+            <p className="text-[13.5px] font-medium text-neutral-800">JE portal inbox</p>
+            <p className="text-[12px] text-neutral-500 mt-0.5">Absence and result notices are delivered to each parent&apos;s portal account by the database itself — no external provider</p>
           </div>
-          {twilioConfigured ? (
-            <span className="inline-flex items-center gap-1.5 text-[11.5px] font-semibold text-success bg-success-bg px-3 py-1.5 rounded-full border border-success/20 shrink-0">
-              <span className="w-1.5 h-1.5 rounded-full bg-success inline-block" />
-              Configured
-            </span>
-          ) : (
-            <span className="inline-flex items-center gap-1.5 text-[11.5px] font-semibold text-warning bg-warning-bg px-3 py-1.5 rounded-full border border-warning/20 shrink-0">
-              <span className="w-1.5 h-1.5 rounded-full bg-warning inline-block" />
-              Pending configuration
-            </span>
-          )}
+          <span className="inline-flex items-center gap-1.5 text-[11.5px] font-semibold text-success bg-success-bg px-3 py-1.5 rounded-full border border-success/20 shrink-0">
+            <span className="w-1.5 h-1.5 rounded-full bg-success inline-block" />
+            Active
+          </span>
         </div>
       </div>
 

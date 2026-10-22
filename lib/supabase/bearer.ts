@@ -1,6 +1,7 @@
 import 'server-only'
 import { createClient as createSupabaseClient, type SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/supabase'
+import { withMemoizedGetUser } from '@/lib/supabase/memo-auth'
 
 // Bearer-token client for the mobile app. Route Handlers hit by the native
 // client carry `Authorization: Bearer <access_token>` instead of the cookie
@@ -9,14 +10,16 @@ import type { Database } from '@/types/supabase'
 // the same as the cookie-based web client — this is NOT a service-role
 // bypass (contrast lib/supabase/admin.ts).
 export function createBearerClient(accessToken: string): SupabaseClient<Database> {
-  return createSupabaseClient<Database>(
+  // One client per request: the route verifies the token once and every
+  // function it hands the client to reuses that answer (see memo-auth.ts).
+  return withMemoizedGetUser(createSupabaseClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       global: { headers: { Authorization: `Bearer ${accessToken}` } },
       auth: { autoRefreshToken: false, persistSession: false },
     },
-  )
+  ))
 }
 
 export type BearerAuthResult =
