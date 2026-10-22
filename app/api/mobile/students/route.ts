@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { authenticateBearerRequest } from '@/lib/supabase/bearer'
-import { fetchParentEditContactsByStudentId } from '@/lib/admissions/parent-lookup'
+import { fetchAllParentEditContacts } from '@/lib/admissions/parent-lookup'
+import { fetchAllRows } from '@/lib/db/fetch-all'
 
 // Full student directory for the mobile Student Directory screen — mirrors
 // app/(super-admin)/super-admin/students/page.tsx's data shape exactly, so
@@ -14,28 +15,30 @@ export async function GET(request: Request) {
   const { data: profile } = await auth.supabase.from('profiles').select('role').eq('id', auth.userId).single()
   if (profile?.role !== 'super_admin') return NextResponse.json({ error: 'Not authorized.' }, { status: 403 })
 
-  const { data: rows } = await auth.supabase
-    .from('students')
-    .select(`
-      id, roll_number, registration_number, full_name, grade_level, section, program, status,
-      enrollment_date, is_late_enrollment, guardian_profession, previous_school, last_qualification,
-      address, gr_number, registration_fee, tuition_fee, stream
-    `)
-    .is('deleted_at', null)
-    .order('roll_sort', { ascending: true })
-
-  const studentIds = (rows ?? []).map((s) => s.id)
-  const contactByStudent = await fetchParentEditContactsByStudentId(studentIds)
-
   const now = new Date()
-  const { data: payments } = await auth.supabase
-    .from('fee_payments')
-    .select('student_id, status')
-    .eq('year', now.getFullYear())
-    .eq('month', now.getMonth() + 1)
+  // Students, parent contacts and this month's fees are independent reads —
+  // fetched together, and the student list is paged past PostgREST's silent
+  // 1,000-row response limit.
+  const [rows, contactByStudent, { data: payments }] = await Promise.all([
+    fetchAllRows((from, to) =>
+      auth.supabase
+        .from('students')
+        .select(`
+          id, roll_number, registration_number, full_name, grade_level, section, program, status,
+          enrollment_date, is_late_enrollment, guardian_profession, previous_school, last_qualification,
+          address, gr_number, registration_fee, tuition_fee, stream
+        `)
+        .is('deleted_at', null)
+        .order('roll_sort', { ascending: true })
+        .order('id')
+        .range(from, to),
+    ),
+    fetchAllParentEditContacts(),
+    auth.supabase.from('fee_payments').select('student_id, status').eq('year', now.getFullYear()).eq('month', now.getMonth() + 1),
+  ])
   const feeStatusByStudent = new Map((payments ?? []).map((p) => [p.student_id, p.status]))
 
-  const students = (rows ?? []).map((s) => ({
+  const students = rows.map((s) => ({
     id: s.id,
     roll_number: s.roll_number,
     registration_number: s.registration_number,

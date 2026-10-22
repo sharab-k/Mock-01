@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Modal, Pressable, FlatList, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import * as Clipboard from 'expo-clipboard';
@@ -139,13 +139,23 @@ export default function ParentDirectoryScreen() {
         )}
 
         {parents && (
-          <ScrollView contentContainerStyle={styles.list}>
+          <FlatList
+            data={filtered}
+            keyExtractor={(p) => p.key}
+            contentContainerStyle={styles.list}
+            keyboardShouldPersistTaps="handled"
+            initialNumToRender={12}
+            maxToRenderPerBatch={12}
+            windowSize={7}
+            removeClippedSubviews
+            ListHeaderComponent={
+              <View style={{ gap: Spacing.three }}>
             <TextField placeholder="Search parent, child, username or phone…" value={query} onChangeText={setQuery} autoCapitalize="none" />
-            {filtered.length === 0 && (
-              <ThemedText color="textSecondary" style={{ textAlign: 'center', marginTop: Spacing.four }}>No parents match this search.</ThemedText>
-            )}
-            {filtered.filter(Boolean).map((p) => (
-              <Pressable key={p.key} onPress={() => { setSelected(p); setCopiedAll(false); setRevealError(''); }}>
+              </View>
+            }
+            ListEmptyComponent={<ThemedText color="textSecondary" style={{ textAlign: 'center', marginTop: Spacing.four }}>No parents match this search.</ThemedText>}
+            renderItem={({ item: p }) => (
+              <Pressable onPress={() => { setSelected(p); setCopiedAll(false); setRevealError(''); }}>
                 <Card style={{ gap: Spacing.two }}>
                   <View style={styles.row}>
                     <Avatar name={p.name} size={36} />
@@ -165,8 +175,8 @@ export default function ParentDirectoryScreen() {
                   </View>
                 </Card>
               </Pressable>
-            ))}
-          </ScrollView>
+            )}
+          />
         )}
 
         <Modal visible={!!selected} animationType="slide" onRequestClose={() => setSelected(null)}>

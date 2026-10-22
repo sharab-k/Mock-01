@@ -77,7 +77,7 @@ async function loadDashboard(): Promise<DashboardData> {
 export default function SuperAdminDashboard() {
   const theme = useTheme();
   const { profile, signOut } = useAuth();
-  const state = useAsyncData(loadDashboard, []);
+  const state = useAsyncData(loadDashboard, [], { cacheKey: 'super-admin-dashboard' });
 
   if (state.status === 'loading') {
     return (

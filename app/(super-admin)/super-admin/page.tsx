@@ -1,5 +1,6 @@
 import SuperAdminDashboardContent from '@/components/dashboard/modules/SuperAdminDashboardContent'
 import { createClient } from '@/lib/supabase/server'
+import { fetchAllRows } from '@/lib/db/fetch-all'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { GRADES, sectionsForGrade } from '@/lib/students/constants'
 import { STAFF_ROLES } from '@/lib/staff/roles'
@@ -40,7 +41,7 @@ export default async function SuperAdminDashboard() {
     studentsRes, monthlyEnrollRes, subAdminCountRes, inactiveSubAdminRes,
     todaysAttRes, lastWeekAttRes, staffPreview, auditEntries,
   ] = await Promise.all([
-    supabase.from('students').select('grade_level, section').is('deleted_at', null).eq('status', 'active'),
+    fetchAllRows((from, to) => supabase.from('students').select('grade_level, section').is('deleted_at', null).eq('status', 'active').order('id').range(from, to)),
     supabase.from('students').select('id', { count: 'exact', head: true }).is('deleted_at', null).gte('created_at', startOfMonthIso()),
     admin.from('profiles').select('id', { count: 'exact', head: true }).in('role', STAFF_ROLES),
     admin.from('profiles').select('id', { count: 'exact', head: true }).in('role', STAFF_ROLES).eq('is_active', false),
@@ -55,7 +56,7 @@ export default async function SuperAdminDashboard() {
     classGrid[g] = {}
     for (const s of sectionsForGrade(g)) classGrid[g][s] = 0
   }
-  for (const row of studentsRes.data ?? []) {
+  for (const row of studentsRes) {
     if (classGrid[row.grade_level] && row.section in classGrid[row.grade_level]) {
       classGrid[row.grade_level][row.section]++
     }

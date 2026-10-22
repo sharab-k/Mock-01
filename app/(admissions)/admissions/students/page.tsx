@@ -1,19 +1,24 @@
 import AdmissionsStudentDirectoryContent, { type DirectoryStudent } from '@/components/dashboard/modules/AdmissionsStudentDirectoryContent'
 import { createClient } from '@/lib/supabase/server'
+import { fetchAllRows } from '@/lib/db/fetch-all'
 import { fetchParentEditContactsByStudentId } from '@/lib/admissions/parent-lookup'
 
 export default async function AdmissionsStudentsPage() {
   const supabase = await createClient()
-  const { data: rows } = await supabase
-    .from('students')
-    .select('id, roll_number, full_name, grade_level, section, status')
-    .is('deleted_at', null)
-    .order('roll_sort', { ascending: true })
+  const rows = await fetchAllRows((from, to) =>
+    supabase
+      .from('students')
+      .select('id, roll_number, full_name, grade_level, section, status')
+      .is('deleted_at', null)
+      .order('roll_sort', { ascending: true })
+      .order('id')
+      .range(from, to),
+  )
 
-  const studentIds = (rows ?? []).map((s) => s.id)
+  const studentIds = (rows).map((s) => s.id)
   const parentByStudent = await fetchParentEditContactsByStudentId(studentIds)
 
-  const students: DirectoryStudent[] = (rows ?? []).map((s) => ({
+  const students: DirectoryStudent[] = (rows).map((s) => ({
     id: s.id,
     full_name: s.full_name,
     roll_number: s.roll_number,

@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase/client';
+import { fetchAllRows } from '@/lib/db/fetch-all';
 import { STATUS_FROM_DB } from './enquiry-mapping';
 import type { Enquiry } from './enquiry-types';
 
@@ -73,13 +74,17 @@ export type DirectoryStudent = {
 // the web — lib/admissions/parent-lookup.ts) since it's not essential glance
 // info for a phone directory; roll/name/grade/section/status is enough.
 export async function fetchStudentDirectory(): Promise<DirectoryStudent[]> {
-  const { data: rows } = await supabase
-    .from('students')
-    .select('id, roll_number, full_name, grade_level, section, status')
-    .is('deleted_at', null)
-    .order('roll_sort', { ascending: true });
+  const rows = await fetchAllRows((from, to) =>
+    supabase
+      .from('students')
+      .select('id, roll_number, full_name, grade_level, section, status')
+      .is('deleted_at', null)
+      .order('roll_sort', { ascending: true })
+      .order('id')
+      .range(from, to),
+  );
 
-  return (rows ?? []).map((s) => ({
+  return rows.map((s) => ({
     id: s.id,
     full_name: s.full_name,
     roll_number: s.roll_number,

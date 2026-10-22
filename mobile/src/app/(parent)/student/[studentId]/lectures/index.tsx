@@ -24,7 +24,7 @@ function fmt(seconds: number): string {
 export default function LecturesListScreen() {
   const { studentId } = useLocalSearchParams<{ studentId: string }>();
   const theme = useTheme();
-  const lecturesState = useAsyncData(() => fetchStudentLectures(studentId), [studentId]);
+  const lecturesState = useAsyncData(() => fetchStudentLectures(studentId), [studentId], { cacheKey: `lectures:${studentId}` });
   const [subjectFilter, setSubjectFilter] = useState('All Subjects');
 
   const lectures = lecturesState.status === 'ready' ? lecturesState.data : null;

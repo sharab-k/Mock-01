@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase/client';
+import { fetchAllRows } from '@/lib/db/fetch-all';
 import { fetchStudentAverages } from './student-averages';
 import type { Tier } from './tier';
 
@@ -15,12 +16,16 @@ export type TieredStudent = {
 // Ported from the web's lib/marks/reports-data.ts — only students with at
 // least one mark can have a tier.
 export async function fetchTieredStudents(): Promise<TieredStudent[]> {
-  const { data: students } = await supabase
-    .from('students')
-    .select('id, full_name, roll_number, grade_level, section')
-    .is('deleted_at', null)
-    .eq('status', 'active')
-    .order('roll_sort', { ascending: true });
+  const students = await fetchAllRows((from, to) =>
+    supabase
+      .from('students')
+      .select('id, full_name, roll_number, grade_level, section')
+      .is('deleted_at', null)
+      .eq('status', 'active')
+      .order('roll_sort', { ascending: true })
+      .order('id')
+      .range(from, to),
+  );
 
   const averages = await fetchStudentAverages();
 

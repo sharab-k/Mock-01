@@ -17,7 +17,7 @@ import { GRADES, sectionsForGrade } from '@/lib/students/constants';
 export default function AttendanceDashboard() {
   const theme = useTheme();
   const { profile, signOut } = useAuth();
-  const state = useAsyncData(fetchAttendanceDashboardData, []);
+  const state = useAsyncData(fetchAttendanceDashboardData, [], { cacheKey: 'attendance-dashboard' });
 
   if (state.status === 'loading') {
     return (

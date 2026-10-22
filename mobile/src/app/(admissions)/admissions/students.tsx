@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, FlatList, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 
@@ -53,9 +53,17 @@ export default function AdmissionsStudentsScreen() {
           <TextField placeholder="Search by name or roll number" value={query} onChangeText={setQuery} autoCapitalize="none" />
         </View>
 
-        <ScrollView contentContainerStyle={styles.list}>
-          {filtered.map((s) => (
-            <Card key={s.id} style={styles.row}>
+        <FlatList
+          data={filtered}
+          keyExtractor={(s) => s.id}
+          contentContainerStyle={styles.list}
+          initialNumToRender={14}
+          maxToRenderPerBatch={14}
+          windowSize={7}
+          removeClippedSubviews
+          ListEmptyComponent={<ThemedText color="textSecondary">No students match this search.</ThemedText>}
+          renderItem={({ item: s }) => (
+            <Card style={styles.row}>
               <View style={{ flex: 1 }}>
                 <ThemedText variant="small">{s.full_name}</ThemedText>
                 <ThemedText variant="mono" color="textMuted" style={{ fontSize: 11 }}>
@@ -64,9 +72,8 @@ export default function AdmissionsStudentsScreen() {
               </View>
               <StatusPill tone={s.status === 'Active' ? 'success' : 'neutral'} label={s.status} />
             </Card>
-          ))}
-          {filtered.length === 0 && <ThemedText color="textSecondary">No students match this search.</ThemedText>}
-        </ScrollView>
+          )}
+        />
 
         <View style={styles.footer}>
           <Button label="Enrol Student" onPress={() => router.push('/students/new')} fullWidth />

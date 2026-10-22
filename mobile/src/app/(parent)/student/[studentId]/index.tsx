@@ -26,7 +26,7 @@ export default function StudentOverview() {
   const { studentId } = useLocalSearchParams<{ studentId: string }>();
   const theme = useTheme();
   const child = useLinkedChildContext();
-  const dataState = useAsyncData(() => fetchStudentDashboardData(studentId), [studentId]);
+  const dataState = useAsyncData(() => fetchStudentDashboardData(studentId), [studentId], { cacheKey: `student-dashboard:${studentId}` });
 
   const [downloading, setDownloading] = useState(false);
 

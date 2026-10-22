@@ -1,15 +1,20 @@
 import MarksStudentsListContent, { type MarksStudentRow } from '@/components/dashboard/modules/MarksStudentsListContent'
 import { createClient } from '@/lib/supabase/server'
+import { fetchAllRows } from '@/lib/db/fetch-all'
 import { fetchStudentAverages } from '@/lib/marks/student-averages'
 
 async function fetchStudents(): Promise<MarksStudentRow[]> {
   const supabase = await createClient()
-  const { data } = await supabase
-    .from('students')
-    .select('id, full_name, roll_number, grade_level, section')
-    .is('deleted_at', null)
-    .eq('status', 'active')
-    .order('roll_sort', { ascending: true })
+  const data = await fetchAllRows((from, to) =>
+    supabase
+      .from('students')
+      .select('id, full_name, roll_number, grade_level, section')
+      .is('deleted_at', null)
+      .eq('status', 'active')
+      .order('roll_sort', { ascending: true })
+      .order('id')
+      .range(from, to),
+  )
 
   const averages = await fetchStudentAverages()
 

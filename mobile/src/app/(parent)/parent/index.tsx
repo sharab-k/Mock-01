@@ -37,7 +37,7 @@ export default function ParentDashboard() {
   const theme = useTheme();
   const { profile, signOut } = useAuth();
 
-  const state = useAsyncData(loadDashboard, []);
+  const state = useAsyncData(loadDashboard, [], { cacheKey: 'parent-dashboard' });
   // Explicit override only — starts null and falls back to the first child
   // below, so switching siblings doesn't need an effect to sync state.
   const [explicitSelectedId, setExplicitSelectedId] = useState<string | null>(null);

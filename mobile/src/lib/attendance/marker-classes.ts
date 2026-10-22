@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase/client';
+import { fetchAllRows } from '@/lib/db/fetch-all';
 import { GRADE_SECTION_PAIRS } from '@/lib/students/constants';
 
 const INITIALS = (name: string) => name.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase();
@@ -11,12 +12,16 @@ export type MarkerClass = { id: string; grade: string; section: string; label: s
 // enrolled students today, so an empty class still shows up in the picker
 // instead of silently vanishing. No fixed timetable model in this app.
 export async function fetchMarkerClasses(): Promise<MarkerClass[]> {
-  const { data } = await supabase
-    .from('students')
-    .select('id, roll_number, full_name, grade_level, section')
-    .is('deleted_at', null)
-    .eq('status', 'active')
-    .order('roll_sort', { ascending: true });
+  const data = await fetchAllRows((from, to) =>
+    supabase
+      .from('students')
+      .select('id, roll_number, full_name, grade_level, section')
+      .is('deleted_at', null)
+      .eq('status', 'active')
+      .order('roll_sort', { ascending: true })
+      .order('id')
+      .range(from, to),
+  );
 
   const byClass = new Map<string, MarkerClass>();
   for (const { grade, section } of GRADE_SECTION_PAIRS) {

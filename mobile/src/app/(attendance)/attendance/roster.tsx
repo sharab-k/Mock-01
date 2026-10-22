@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, FlatList, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Search } from 'lucide-react-native';
 
@@ -65,28 +65,34 @@ export default function AttendanceRosterScreen() {
           />
         </View>
 
-        <ScrollView contentContainerStyle={styles.list}>
-          {filtered.length === 0 ? (
+        <FlatList
+          data={filtered}
+          keyExtractor={(r) => r.id}
+          contentContainerStyle={styles.list}
+          initialNumToRender={14}
+          maxToRenderPerBatch={14}
+          windowSize={7}
+          removeClippedSubviews
+          ListEmptyComponent={
             <View style={styles.centered}>
               <Search size={20} color={theme.textMuted} />
               <ThemedText color="textSecondary" style={{ marginTop: 8 }}>No students match this search.</ThemedText>
             </View>
-          ) : (
-            filtered.map((r) => (
-              <Card key={r.id} style={styles.row}>
-                <View style={{ flex: 1 }}>
-                  <ThemedText variant="small">{r.name}</ThemedText>
-                  <ThemedText variant="mono" color="textMuted" style={{ fontSize: 11 }}>
-                    {r.roll} · Grade {r.grade}-{r.section}
+          }
+          renderItem={({ item: r }) => (
+            <Card style={styles.row}>
+                  <View style={{ flex: 1 }}>
+                    <ThemedText variant="small">{r.name}</ThemedText>
+                    <ThemedText variant="mono" color="textMuted" style={{ fontSize: 11 }}>
+                      {r.roll} · Grade {r.grade}-{r.section}
+                    </ThemedText>
+                  </View>
+                  <ThemedText variant="bodyMedium" style={{ color: r.pct < 75 ? Semantic.danger : r.pct < 90 ? Semantic.warning : Semantic.success }}>
+                    {r.pct}%
                   </ThemedText>
-                </View>
-                <ThemedText variant="bodyMedium" style={{ color: r.pct < 75 ? Semantic.danger : r.pct < 90 ? Semantic.warning : Semantic.success }}>
-                  {r.pct}%
-                </ThemedText>
               </Card>
-            ))
           )}
-        </ScrollView>
+        />
       </SafeAreaView>
     </ThemedView>
   );

@@ -56,8 +56,11 @@ export async function parentsWithStoredPassword(parentIds: string[]): Promise<Se
   // query fails silently (data comes back null), which would show every parent
   // as "not on record". Ask in batches instead.
   const BATCH = 100
-  for (let i = 0; i < parentIds.length; i += BATCH) {
-    const { data, error } = await admin.from('parent_credentials').select('parent_id').in('parent_id', parentIds.slice(i, i + BATCH))
+  const batches: string[][] = []
+  for (let i = 0; i < parentIds.length; i += BATCH) batches.push(parentIds.slice(i, i + BATCH))
+  // Independent batches go out together (one round trip's time, not one per batch).
+  const results = await Promise.all(batches.map((ids) => admin.from('parent_credentials').select('parent_id').in('parent_id', ids)))
+  for (const { data, error } of results) {
     if (error) throw error
     for (const row of data ?? []) found.add(row.parent_id)
   }

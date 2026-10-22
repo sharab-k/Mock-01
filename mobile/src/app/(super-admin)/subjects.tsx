@@ -29,7 +29,7 @@ export default function SubjectsScreen() {
   const theme = useTheme();
   const { role } = useAuth();
   const canEnroll = role === 'super_admin';
-  const state = useAsyncData(fetchSubjects, []);
+  const state = useAsyncData(fetchSubjects, [], { cacheKey: 'subjects' });
   const [subjects, setSubjects] = useState<Subject[] | null>(null);
   const [addingForGrade, setAddingForGrade] = useState<Grade | null>(null);
   const [name, setName] = useState('');

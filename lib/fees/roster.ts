@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/server'
+import { fetchAllRows } from '@/lib/db/fetch-all'
 import type { Database } from '@/types/supabase'
 
 export type FeeRosterRow = {
@@ -26,13 +27,17 @@ export async function fetchFeeRoster(
 ): Promise<FeeRosterRow[]> {
   const supabase = supabaseOverride ?? await createClient()
 
-  const [studentsRes, paymentsRes] = await Promise.all([
-    supabase
-      .from('students')
-      .select('id, roll_number, gr_number, full_name, grade_level, section')
-      .is('deleted_at', null)
-      .eq('status', 'active')
-      .order('roll_sort', { ascending: true }),
+  const [students, paymentsRes] = await Promise.all([
+    fetchAllRows((from, to) =>
+      supabase
+        .from('students')
+        .select('id, roll_number, gr_number, full_name, grade_level, section')
+        .is('deleted_at', null)
+        .eq('status', 'active')
+        .order('roll_sort', { ascending: true })
+        .order('id')
+        .range(from, to),
+    ),
     supabase
       .from('fee_payments')
       .select('student_id, status')
@@ -42,7 +47,7 @@ export async function fetchFeeRoster(
 
   const statusByStudent = new Map((paymentsRes.data ?? []).map((p) => [p.student_id, p.status]))
 
-  return (studentsRes.data ?? []).map((s) => ({
+  return students.map((s) => ({
     id: s.id,
     full_name: s.full_name,
     roll_number: s.roll_number,

@@ -1,15 +1,20 @@
 import AttendanceRosterContent, { type RosterRow } from '@/components/dashboard/modules/AttendanceRosterContent'
 import { createClient } from '@/lib/supabase/server'
+import { fetchAllRows } from '@/lib/db/fetch-all'
 import { fetchAttendancePercentages } from '@/lib/attendance/attendance-stats'
 
 async function fetchRoster(): Promise<RosterRow[]> {
   const supabase = await createClient()
-  const { data } = await supabase
-    .from('students')
-    .select('id, roll_number, full_name, grade_level, section')
-    .is('deleted_at', null)
-    .eq('status', 'active')
-    .order('roll_sort', { ascending: true })
+  const data = await fetchAllRows((from, to) =>
+    supabase
+      .from('students')
+      .select('id, roll_number, full_name, grade_level, section')
+      .is('deleted_at', null)
+      .eq('status', 'active')
+      .order('roll_sort', { ascending: true })
+      .order('id')
+      .range(from, to),
+  )
 
   const pctByStudent = await fetchAttendancePercentages()
 

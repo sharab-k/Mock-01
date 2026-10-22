@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Pressable, FlatList, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
@@ -53,30 +53,35 @@ export default function MarksReportsScreen() {
           <ThemedText variant="small" color="textSecondary">Tier evaluation — {students.length} graded students</ThemedText>
         </View>
 
-        <ScrollView contentContainerStyle={styles.content}>
-          <View style={styles.tierGrid}>
-            {TIER_ORDER.map((tier) => {
-              const active = filter === tier;
-              return (
-                <Pressable
-                  key={tier}
-                  onPress={() => setFilter(active ? 'All' : tier)}
-                  style={{ flexGrow: 1, minWidth: '45%' }}>
-                  <Card style={[styles.tierCard, active && { borderColor: Ink[600], borderWidth: 1.5 }]}>
-                    <ThemedText variant="title" style={{ fontSize: 22 }}>{tierCounts[tier]}</ThemedText>
-                    <StatusPill tone={TIER_TONE[tier]} label={tier} />
-                  </Card>
-                </Pressable>
-              );
-            })}
-          </View>
-
-          <View style={{ gap: Spacing.two }}>
-            {filtered.length === 0 ? (
-              <ThemedText color="textSecondary">No students in this tier.</ThemedText>
-            ) : (
-              filtered.map((s) => (
-                <Card key={s.id} style={styles.studentRow}>
+        <FlatList
+          data={filtered}
+          keyExtractor={(s) => s.id}
+          contentContainerStyle={styles.content}
+          initialNumToRender={12}
+          maxToRenderPerBatch={12}
+          windowSize={7}
+          removeClippedSubviews
+          ListHeaderComponent={
+            <View style={styles.tierGrid}>
+              {TIER_ORDER.map((tier) => {
+                const active = filter === tier;
+                return (
+                  <Pressable
+                    key={tier}
+                    onPress={() => setFilter(active ? 'All' : tier)}
+                    style={{ flexGrow: 1, minWidth: '45%' }}>
+                    <Card style={[styles.tierCard, active && { borderColor: Ink[600], borderWidth: 1.5 }]}>
+                      <ThemedText variant="title" style={{ fontSize: 22 }}>{tierCounts[tier]}</ThemedText>
+                      <StatusPill tone={TIER_TONE[tier]} label={tier} />
+                    </Card>
+                  </Pressable>
+                );
+              })}
+            </View>
+          }
+          ListEmptyComponent={<ThemedText color="textSecondary">No students in this tier.</ThemedText>}
+          renderItem={({ item: s }) => (
+            <Card style={styles.studentRow}>
                   <View style={{ flex: 1 }}>
                     <ThemedText variant="small">{s.full_name}</ThemedText>
                     <ThemedText variant="mono" color="textMuted" style={{ fontSize: 11 }}>
@@ -86,11 +91,9 @@ export default function MarksReportsScreen() {
                   <ThemedText variant="mono" color="textSecondary">{s.average}%</ThemedText>
                   <StatusPill tone={TIER_TONE[s.tier]} label={s.tier} />
                   <ReportDownloadButton studentId={s.id} studentName={s.full_name} />
-                </Card>
-              ))
-            )}
-          </View>
-        </ScrollView>
+            </Card>
+          )}
+        />
       </SafeAreaView>
     </ThemedView>
   );

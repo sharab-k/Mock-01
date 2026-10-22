@@ -1,6 +1,7 @@
 import 'server-only'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { parentsWithStoredPassword } from '@/lib/auth/credential-vault'
+import { fetchAllRows } from '@/lib/db/fetch-all'
 
 export type ParentEditContact = { id: string; name: string; email: string; phone: string; secondaryPhone: string | null; whatsapp2: string | null }
 
@@ -16,13 +17,51 @@ export async function fetchParentEditContactsByStudentId(studentIds: string[]): 
   if (studentIds.length === 0) return contactByStudent
 
   const admin = createAdminClient()
-  const { data: links } = await admin
-    .from('parent_student_links')
-    .select('student_id, profiles(id, full_name, email, phone, secondary_phone, whatsapp_number_2)')
-    .in('student_id', studentIds)
+  // .in() puts every id in the request URL — a whole school's worth overflows it —
+  // so ask in batches, all at once.
+  const BATCH = 100
+  const batches: string[][] = []
+  for (let i = 0; i < studentIds.length; i += BATCH) batches.push(studentIds.slice(i, i + BATCH))
+  const results = await Promise.all(batches.map((ids) =>
+    admin
+      .from('parent_student_links')
+      .select('student_id, profiles(id, full_name, email, phone, secondary_phone, whatsapp_number_2)')
+      .in('student_id', ids),
+  ))
 
-  for (const link of links ?? []) {
-    if (link.profiles) {
+  for (const { data: links } of results) {
+    for (const link of links ?? []) {
+      if (link.profiles) {
+        contactByStudent.set(link.student_id, {
+        id: link.profiles.id,
+        name: link.profiles.full_name ?? '—',
+        email: link.profiles.email,
+        phone: link.profiles.phone ?? '',
+        secondaryPhone: link.profiles.secondary_phone,
+        whatsapp2: link.profiles.whatsapp_number_2,
+      })
+      }
+    }
+  }
+  return contactByStudent
+}
+
+// Every student's parent contact in ONE paged read (no id list in the URL, no
+// dependency on a prior student query) — lets the Student Directory fetch its
+// students, contacts and fees together.
+export async function fetchAllParentEditContacts(): Promise<Map<string, ParentEditContact>> {
+  const admin = createAdminClient()
+  const links = await fetchAllRows((from, to) =>
+    admin
+      .from('parent_student_links')
+      .select('student_id, profiles(id, full_name, email, phone, secondary_phone, whatsapp_number_2)')
+      .order('student_id')
+      .order('parent_id')
+      .range(from, to),
+  )
+  const contactByStudent = new Map<string, ParentEditContact>()
+  for (const link of links) {
+    if (link.profiles && !contactByStudent.has(link.student_id)) {
       contactByStudent.set(link.student_id, {
         id: link.profiles.id,
         name: link.profiles.full_name ?? '—',
@@ -56,12 +95,18 @@ export type ParentDirectoryRow = {
 // shape as the old lib/mock/students.ts buildParentDirectory() it replaces.
 export async function fetchParentDirectory(): Promise<ParentDirectoryRow[]> {
   const admin = createAdminClient()
-  const { data: links } = await admin
-    .from('parent_student_links')
-    .select('parent_id, profiles(full_name, email, phone, secondary_phone, whatsapp_number_2, is_active, created_at), students(full_name, roll_number, gr_number, grade_level, section)')
+  // Paged: PostgREST cuts a single response at 1,000 rows without saying so.
+  const links = await fetchAllRows((from, to) =>
+    admin
+      .from('parent_student_links')
+      .select('parent_id, profiles(full_name, email, phone, secondary_phone, whatsapp_number_2, is_active, created_at), students(full_name, roll_number, gr_number, grade_level, section)')
+      .order('parent_id')
+      .order('student_id')
+      .range(from, to),
+  )
 
   const byParent = new Map<string, ParentDirectoryRow>()
-  for (const link of links ?? []) {
+  for (const link of links) {
     if (!link.profiles || !link.students) continue
     if (!byParent.has(link.parent_id)) {
       byParent.set(link.parent_id, {

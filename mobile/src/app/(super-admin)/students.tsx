@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Trash2, X } from 'lucide-react-native';
@@ -81,16 +81,27 @@ export default function StudentDirectoryScreen() {
         {!error && !students && <View style={styles.centered}><ActivityIndicator color={theme.accent} /></View>}
 
         {students && (
-          <ScrollView contentContainerStyle={styles.list}>
-            <TextField placeholder="Search by name, roll, or G.R. no…" value={query} onChangeText={setQuery} autoCapitalize="none" />
-            <ChipSelect label="Grade" options={['All', ...GRADES] as const} value={gradeFilter} onChange={setGradeFilter} />
-            <ChipSelect label="Fee status" options={['All', 'Paid', 'Unpaid'] as const} value={feeFilter} onChange={setFeeFilter} />
-
-            {filtered.length === 0 && (
+          <FlatList
+            data={filtered}
+            keyExtractor={(s) => s.id}
+            contentContainerStyle={styles.list}
+            keyboardShouldPersistTaps="handled"
+            initialNumToRender={12}
+            maxToRenderPerBatch={12}
+            windowSize={7}
+            removeClippedSubviews
+            ListHeaderComponent={
+              <View style={{ gap: Spacing.three }}>
+                <TextField placeholder="Search by name, roll, or G.R. no…" value={query} onChangeText={setQuery} autoCapitalize="none" />
+                <ChipSelect label="Grade" options={['All', ...GRADES] as const} value={gradeFilter} onChange={setGradeFilter} />
+                <ChipSelect label="Fee status" options={['All', 'Paid', 'Unpaid'] as const} value={feeFilter} onChange={setFeeFilter} />
+              </View>
+            }
+            ListEmptyComponent={
               <ThemedText color="textSecondary" style={{ textAlign: 'center', marginTop: Spacing.four }}>No students match this filter.</ThemedText>
-            )}
-            {filtered.filter(Boolean).map((s) => (
-              <Pressable key={s.id} onPress={() => setEditTarget(s)}>
+            }
+            renderItem={({ item: s }) => (
+              <Pressable onPress={() => setEditTarget(s)}>
                 <Card style={{ gap: 6 }}>
                   <View style={styles.row}>
                     <Avatar name={s.full_name} size={36} />
@@ -108,8 +119,8 @@ export default function StudentDirectoryScreen() {
                   </View>
                 </Card>
               </Pressable>
-            ))}
-          </ScrollView>
+            )}
+          />
         )}
 
         {editTarget && (

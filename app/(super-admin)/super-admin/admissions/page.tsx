@@ -1,5 +1,6 @@
 import AdmissionsDashboardContent from '@/components/dashboard/modules/AdmissionsDashboardContent'
 import { createClient } from '@/lib/supabase/server'
+import { fetchAllRows } from '@/lib/db/fetch-all'
 import { GRADES, sectionsForGrade } from '@/lib/students/constants'
 import { STATUS_FROM_DB } from '@/lib/admissions/enquiry-mapping'
 import { countParentAccounts } from '@/lib/admissions/parent-lookup'
@@ -9,7 +10,7 @@ export default async function SuperAdminAdmissionsPage() {
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
 
   const [studentsRes, enquiriesRes, parentCount, pendingRes, newRegRes] = await Promise.all([
-    supabase.from('students').select('grade_level, section').is('deleted_at', null).eq('status', 'active'),
+    fetchAllRows((from, to) => supabase.from('students').select('grade_level, section').is('deleted_at', null).eq('status', 'active').order('id').range(from, to)),
     supabase.from('admission_enquiries').select('*').order('created_at', { ascending: false }).limit(5),
     countParentAccounts(),
     supabase.from('admission_enquiries').select('id', { count: 'exact', head: true }).in('status', ['unread', 'awaiting_visit']),
@@ -21,7 +22,7 @@ export default async function SuperAdminAdmissionsPage() {
     classGrid[g] = {}
     for (const s of sectionsForGrade(g)) classGrid[g][s] = 0
   }
-  for (const row of studentsRes.data ?? []) {
+  for (const row of studentsRes) {
     if (classGrid[row.grade_level] && row.section in classGrid[row.grade_level]) {
       classGrid[row.grade_level][row.section]++
     }

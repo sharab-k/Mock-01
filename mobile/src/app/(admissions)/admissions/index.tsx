@@ -20,7 +20,7 @@ import { STATUS_TONE } from '@/lib/admissions/enquiry-types';
 export default function AdmissionsDashboard() {
   const theme = useTheme();
   const { profile, signOut } = useAuth();
-  const state = useAsyncData(fetchAdmissionsDashboardData, []);
+  const state = useAsyncData(fetchAdmissionsDashboardData, [], { cacheKey: 'admissions-dashboard' });
 
   if (state.status === 'loading') {
     return (

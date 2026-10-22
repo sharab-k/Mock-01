@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase/client';
+import { clearAsyncCache } from '@/lib/use-async-data';
 import type { UserRole } from './role-destinations';
 
 export type AuthErrorCode = 'invalid_credentials' | 'account_inactive' | 'no_role' | 'unknown';
@@ -77,6 +78,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   async function signIn(email: string, password: string): Promise<{ error: AuthErrorCode | null }> {
+    clearAsyncCache(); // never show the previous person's cached screens
     const { error, data } = await supabase.auth.signInWithPassword({ email, password });
     if (error || !data.user) return { error: 'invalid_credentials' };
 
@@ -97,6 +99,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function signOut() {
+    clearAsyncCache();
     await supabase.auth.signOut();
   }
 

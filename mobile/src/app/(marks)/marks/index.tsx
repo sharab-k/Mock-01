@@ -23,7 +23,7 @@ const TIER_TONE: Record<Tier, 'success' | 'ink' | 'warning' | 'danger'> = {
 export default function MarksDashboard() {
   const theme = useTheme();
   const { profile, signOut } = useAuth();
-  const state = useAsyncData(fetchMarksDashboardData, []);
+  const state = useAsyncData(fetchMarksDashboardData, [], { cacheKey: 'marks-dashboard' });
 
   if (state.status === 'loading') {
     return (
