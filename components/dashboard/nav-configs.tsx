@@ -2,7 +2,7 @@ import {
   LayoutDashboard, Users, UserPlus, Inbox,
   CalendarCheck, BookOpen, Megaphone, Settings2, UserCog,
   ClipboardList, BarChart2, PenLine, PlayCircle,
-  GraduationCap, UsersRound, Wallet, CalendarClock, Bell, Search, Upload,
+  GraduationCap, UsersRound, Wallet, CalendarClock, Bell, Search, Upload, IdCard,
 } from 'lucide-react'
 import type { NavSection } from './types'
 
@@ -16,6 +16,7 @@ export const NAV_CONFIGS: Record<string, NavSection[]> = {
       items: [
         { label: 'Students', href: '/super-admin/students', icon: Users          },
         { label: 'Student Search', href: '/super-admin/search', icon: Search     },
+        { label: 'Student Cards', href: '/super-admin/cards', icon: IdCard },
         { label: 'Teachers', href: '/super-admin/teachers', icon: GraduationCap  },
         { label: 'Parents',  href: '/super-admin/parents',  icon: UsersRound     },
       ],
