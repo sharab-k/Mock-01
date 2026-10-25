@@ -93,10 +93,15 @@ export async function renderStudentCardPdf(data: StudentCardData): Promise<Uint8
     front.drawImage(photo, { x: PX, y: PY, width: PW, height: PH })
   } else {
     front.drawRectangle({ x: PX, y: PY, width: PW, height: PH, color: GREY })
-    // plain head-and-shoulders silhouette so an empty frame reads as "photo pending"
-    front.drawEllipse({ x: PX + PW / 2, y: PY + PH * 0.62, xScale: 11, yScale: 13, color: rgb(0.7, 0.7, 0.7) })
-    front.drawEllipse({ x: PX + PW / 2, y: PY + PH * 0.05, xScale: 22, yScale: 21, color: rgb(0.7, 0.7, 0.7) })
-    centered(front, 'PHOTO', PY + 5, 4.5, semi, rgb(0.45, 0.45, 0.45))
+    // head-and-shoulders silhouette kept inside the frame so an empty frame reads as "photo pending"
+    const sil = rgb(0.7, 0.7, 0.7)
+    const cx = PX + PW / 2
+    const bottom = H - PY // frame bottom edge in SVG (top-down) coordinates
+    front.drawEllipse({ x: cx, y: PY + PH * 0.64, xScale: 11, yScale: 12.5, color: sil })
+    front.drawSvgPath(
+      `M${PX + 7} ${bottom} C${PX + 7} ${bottom - 20} ${cx - 16} ${bottom - 27} ${cx} ${bottom - 27} C${cx + 16} ${bottom - 27} ${PX + PW - 7} ${bottom - 20} ${PX + PW - 7} ${bottom} Z`,
+      { x: 0, y: H, color: sil, borderWidth: 0 },
+    )
   }
   front.drawRectangle({ x: PX, y: PY, width: PW, height: PH, borderColor: rgb(0.82, 0.82, 0.82), borderWidth: 0.5 })
 
