@@ -29,7 +29,7 @@ export async function GET(request: Request) {
           address, gr_number, registration_fee, tuition_fee, stream
         `)
         .is('deleted_at', null)
-        .order('roll_sort', { ascending: true })
+        .order('list_sort', { ascending: true })
         .order('id')
         .range(from, to),
     ),

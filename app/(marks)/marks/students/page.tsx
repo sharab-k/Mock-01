@@ -11,7 +11,7 @@ async function fetchStudents(): Promise<MarksStudentRow[]> {
       .select('id, full_name, roll_number, grade_level, section')
       .is('deleted_at', null)
       .eq('status', 'active')
-      .order('roll_sort', { ascending: true })
+      .order('list_sort', { ascending: true })
       .order('id')
       .range(from, to),
   )

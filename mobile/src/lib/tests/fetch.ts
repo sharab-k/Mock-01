@@ -58,7 +58,7 @@ export async function fetchTestRoster(
     .eq('status', 'active')
     .eq('grade_level', test.grade_level)
     .eq('section', test.section)
-    .order('roll_sort', { ascending: true });
+    .order('list_sort', { ascending: true });
 
   const isElected = test.subjects?.type === 'elected';
   const [studentsRes, linkRes, marksRes] = await Promise.all([

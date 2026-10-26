@@ -22,7 +22,7 @@ export async function fetchClassRoster(grade: string, section: string, supabaseO
     .eq('section', section)
     .is('deleted_at', null)
     .eq('status', 'active')
-    .order('roll_sort', { ascending: true })
+    .order('list_sort', { ascending: true })
 
   const studentIds = (students ?? []).map((s) => s.id)
   if (studentIds.length === 0) return []

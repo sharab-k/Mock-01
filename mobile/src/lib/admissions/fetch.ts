@@ -79,7 +79,7 @@ export async function fetchStudentDirectory(): Promise<DirectoryStudent[]> {
       .from('students')
       .select('id, roll_number, full_name, grade_level, section, status')
       .is('deleted_at', null)
-      .order('roll_sort', { ascending: true })
+      .order('list_sort', { ascending: true })
       .order('id')
       .range(from, to),
   );

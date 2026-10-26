@@ -716,6 +716,7 @@ export type Database = {
           id: string
           is_late_enrollment: boolean
           last_qualification: string | null
+          list_sort: string | null
           photo_path: string | null
           photo_updated_at: string | null
           photo_updated_by: string | null
@@ -744,6 +745,7 @@ export type Database = {
           id?: string
           is_late_enrollment?: boolean
           last_qualification?: string | null
+          list_sort?: string | null
           photo_path?: string | null
           photo_updated_at?: string | null
           photo_updated_by?: string | null
@@ -772,6 +774,7 @@ export type Database = {
           id?: string
           is_late_enrollment?: boolean
           last_qualification?: string | null
+          list_sort?: string | null
           photo_path?: string | null
           photo_updated_at?: string | null
           photo_updated_by?: string | null
@@ -1097,6 +1100,7 @@ export type Database = {
           id: string
           is_late_enrollment: boolean
           last_qualification: string | null
+          list_sort: string | null
           photo_path: string | null
           photo_updated_at: string | null
           photo_updated_by: string | null

@@ -49,7 +49,7 @@ export async function searchStudents(
     .select('id, full_name, roll_number, gr_number, grade_level, section, status')
     .is('deleted_at', null)
     .or(`full_name.ilike.%${q}%,gr_number.ilike.%${q}%,roll_number.ilike.%${q}%`)
-    .order('roll_sort', { ascending: true })
+    .order('list_sort', { ascending: true })
     .limit(30)
   if (error) return { ok: false, error: 'Search failed. Please try again.' }
 

@@ -7,6 +7,7 @@ import { StatusBar } from 'expo-status-bar';
 import { FontsToLoad } from '@/constants/fonts';
 import { AuthProvider } from '@/lib/auth/auth-context';
 import { ErrorBoundary } from '@/components/error-boundary';
+import { ReportChoiceHost } from '@/components/report-choice-host';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -18,6 +19,7 @@ function RootLayoutInner() {
       <StatusBar style="dark" />
       <ErrorBoundary>
         <Stack screenOptions={{ headerShown: false }} />
+        <ReportChoiceHost />
       </ErrorBoundary>
     </ThemeProvider>
   );

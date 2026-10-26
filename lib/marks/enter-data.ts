@@ -10,7 +10,7 @@ export type EnterRosterStudent = { id: string; full_name: string; roll_number: s
 export async function fetchMarksEntryData(): Promise<{ roster: EnterRosterStudent[] }> {
   const supabase = await createClient()
   const students = await fetchAllRows((from, to) =>
-    supabase.from('students').select('id, full_name, roll_number, grade_level, section').is('deleted_at', null).eq('status', 'active').order('roll_sort', { ascending: true }).order('id').range(from, to),
+    supabase.from('students').select('id, full_name, roll_number, grade_level, section').is('deleted_at', null).eq('status', 'active').order('list_sort', { ascending: true }).order('id').range(from, to),
   )
 
   return {
