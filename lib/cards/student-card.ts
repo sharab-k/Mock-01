@@ -77,10 +77,14 @@ export async function renderStudentCardPdf(data: StudentCardData): Promise<Uint8
 
   // The emblem is no longer printed at the top: it is a faint watermark scaled to
   // the card's full height (the square emblem is centred and the page edge crops
-  // the sides). Drawn first so the bands, text and photo sit on top of it; its
+  // the sides), with "SCIENCE & COMMERCE" beneath it. Drawn first so the bands, text and photo sit on top of it; its
   // white background is invisible on the white card at this opacity.
   const watermark = (page: PDFPage) => {
     page.drawImage(emblem, { x: (W - H) / 2, y: 0, width: H, height: H, opacity: 0.07 })
+    // the school's tagline, as part of the same watermark, centred near the foot
+    const tag = 'SCIENCE & COMMERCE'
+    const size = fit(tag, bold, 12, 112)
+    page.drawText(tag, { x: (W - bold.widthOfTextAtSize(tag, size)) / 2, y: 26, size, font: bold, color: INK, opacity: 0.1 })
   }
 
   // ---- Front ------------------------------------------------------------------
