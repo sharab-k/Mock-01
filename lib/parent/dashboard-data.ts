@@ -41,19 +41,19 @@ export async function fetchParentChildren(): Promise<ParentChild[]> {
     .map((l) => l.students)
     .filter((s): s is NonNullable<typeof s> => !!s)
 
-  const children: ParentChild[] = []
-  for (const s of students) {
-    const academic = await fetchChildAcademicData(supabase, s.id)
-    children.push({
+  // One family's children are independent — read them together, not one after
+  // another (each child is its own pair of queries). Promise.all keeps the order.
+  const children: ParentChild[] = await Promise.all(
+    students.map(async (s) => ({
       id: s.id,
       name: s.full_name,
       roll: s.roll_number,
       grade: s.grade_level,
       section: s.section,
       initials: INITIALS(s.full_name),
-      ...academic,
-    })
-  }
+      ...(await fetchChildAcademicData(supabase, s.id)),
+    })),
+  )
 
   return children
 }
