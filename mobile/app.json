@@ -37,6 +37,14 @@
       "expo-secure-store",
       "expo-sharing",
       [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/android-icon-monochrome.png",
+          "color": "#233357",
+          "defaultChannel": "default"
+        }
+      ],
+      [
         "expo-build-properties",
         {
           "android": {

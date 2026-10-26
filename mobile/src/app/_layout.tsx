@@ -8,8 +8,11 @@ import { FontsToLoad } from '@/constants/fonts';
 import { AuthProvider } from '@/lib/auth/auth-context';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { ReportChoiceHost } from '@/components/report-choice-host';
+import { PushNotificationsHost } from '@/components/push-notifications-host';
+import { configureNotificationHandler } from '@/lib/notifications/push';
 
 SplashScreen.preventAutoHideAsync();
+configureNotificationHandler();
 
 // Web is light-only (CLAUDE.md §6) — mobile matches it exactly, always,
 // regardless of the device's system theme setting (see hooks/use-theme.ts).
@@ -20,6 +23,7 @@ function RootLayoutInner() {
       <ErrorBoundary>
         <Stack screenOptions={{ headerShown: false }} />
         <ReportChoiceHost />
+        <PushNotificationsHost />
       </ErrorBoundary>
     </ThemeProvider>
   );

@@ -495,6 +495,41 @@ export type Database = {
           },
         ]
       }
+      push_tokens: {
+        Row: {
+          created_at: string
+          id: string
+          platform: string
+          token: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          platform?: string
+          token: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          platform?: string
+          token?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "push_tokens_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       portal_notifications: {
         Row: {
           body: string
@@ -1002,6 +1037,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      register_push_token: {
+        Args: { p_platform?: string; p_token: string }
+        Returns: undefined
+      }
+      unregister_push_token: {
+        Args: { p_token: string }
+        Returns: undefined
+      }
       allocate_roll_number: {
         Args: { p_grade: string; p_section: string; p_year: number }
         Returns: number

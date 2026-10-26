@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase/client';
 import { clearAsyncCache } from '@/lib/use-async-data';
+import { unregisterPush } from '@/lib/notifications/push';
 import type { UserRole } from './role-destinations';
 
 export type AuthErrorCode = 'invalid_credentials' | 'account_inactive' | 'no_role' | 'unknown';
@@ -100,6 +101,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function signOut() {
     clearAsyncCache();
+    await unregisterPush(); // while the session still exists: stop pushes to this phone
     await supabase.auth.signOut();
   }
 
