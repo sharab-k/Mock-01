@@ -25,7 +25,7 @@ export async function fetchActiveStudents() {
       .select('id, roll_number, full_name, grade_level, section')
       .is('deleted_at', null)
       .eq('status', 'active')
-      .order('roll_sort', { ascending: true })
+      .order('list_sort', { ascending: true })
       .order('id')
       .range(from, to),
   );

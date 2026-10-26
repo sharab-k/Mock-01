@@ -14,7 +14,7 @@ export async function fetchSubjectEnrollmentRoster(
   if (!subject) return { ok: false, error: 'Subject not found.' };
 
   const [studentsRes, enrolledRes, excludedRes] = await Promise.all([
-    supabase.from('students').select('id, full_name, roll_number, section').is('deleted_at', null).eq('status', 'active').eq('grade_level', subject.grade_level).order('roll_sort', { ascending: true }),
+    supabase.from('students').select('id, full_name, roll_number, section').is('deleted_at', null).eq('status', 'active').eq('grade_level', subject.grade_level).order('list_sort', { ascending: true }),
     supabase.from('student_subject_enrollments').select('student_id').eq('subject_id', subjectId),
     supabase.from('student_subject_exclusions').select('student_id').eq('subject_id', subjectId),
   ]);

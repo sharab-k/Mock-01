@@ -8,10 +8,15 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { ChipSelect } from '@/components/ui/chip-select';
+import { recentMonths } from '@/lib/reports/months';
 import { Ink, Radius, Semantic, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { uploadSheet } from '@/lib/api/client';
 import { EXAM_LABEL, type ExamType, type MarksUploadResult, type UploadRowError } from '@/lib/marks/upload-types';
+
+const MONTHS = recentMonths(12);
+const ANY_MONTH = 'Any month';
 
 const EXAMS: { value: ExamType; hint: string }[] = [
   { value: 'monthly', hint: 'Monthly tests' },
@@ -48,6 +53,7 @@ export function MarksBulkUploadModal({ visible, onClose }: { visible: boolean; o
   const [examType, setExamType] = useState<ExamType | null>(null);
   const [asset, setAsset] = useState<DocumentPicker.DocumentPickerAsset | null>(null);
   const [notify, setNotify] = useState(false);
+  const [examMonth, setExamMonth] = useState('');
   const [step, setStep] = useState<Step>('setup');
   const [error, setError] = useState('');
   const [result, setResult] = useState<MarksUploadResult | null>(null);
@@ -55,7 +61,7 @@ export function MarksBulkUploadModal({ visible, onClose }: { visible: boolean; o
   const busy = step === 'checking' || step === 'saving';
 
   function reset() {
-    setExamType(null); setAsset(null); setNotify(false); setStep('setup'); setError(''); setResult(null);
+    setExamType(null); setAsset(null); setNotify(false); setExamMonth(''); setStep('setup'); setError(''); setResult(null);
   }
 
   function close() {
@@ -87,7 +93,7 @@ export function MarksBulkUploadModal({ visible, onClose }: { visible: boolean; o
     const res = await uploadSheet<MarksUploadResult>(
       'marks',
       { uri: asset.uri, name: asset.name, mimeType: asset.mimeType, file: asset.file },
-      { examType, dryRun: dryRun ? '1' : '0', notify: notify ? '1' : '0' },
+      { examType, dryRun: dryRun ? '1' : '0', notify: notify ? '1' : '0', ...(examMonth ? { examMonth } : {}) },
     );
     if (!res.ok) {
       setError(res.error);
@@ -131,7 +137,13 @@ export function MarksBulkUploadModal({ visible, onClose }: { visible: boolean; o
                 </View>
 
                 <View style={{ gap: Spacing.two }}>
-                  <ThemedText variant="label" color="textMuted">2 · CHOOSE THE RESULTS FILE</ThemedText>
+                  <ChipSelect
+                    label="2 · MONTH THE EXAM WAS HELD IN (OPTIONAL)"
+                    options={[ANY_MONTH, ...MONTHS.map((m) => m.label)]}
+                    value={MONTHS.find((m) => m.key === examMonth)?.label ?? ANY_MONTH}
+                    onChange={(label) => setExamMonth(MONTHS.find((m) => m.label === label)?.key ?? '')}
+                  />
+                  <ThemedText variant="label" color="textMuted">3 · CHOOSE THE RESULTS FILE</ThemedText>
                   <Button variant="secondary" label={asset ? `Chosen: ${asset.name}` : 'Choose .xlsx or .csv file'} onPress={pick} />
                   <ThemedText variant="small" color="textMuted">
                     Dates, subjects, G.R. numbers, names and marks are read automatically — one column per test (date on top, then its total, then the subject), one row per student.

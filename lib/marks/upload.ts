@@ -5,6 +5,7 @@ import { saveMarksBatch, type BulkMarkRow } from '@/lib/marks/bulk-save'
 import { loadStudentLookup, resolveStudent } from '@/lib/uploads/students'
 import { gridToRows, parseDate, pick, readWorkbook, todayIso, type Grid } from '@/lib/uploads/sheet'
 import { parseCell, parseWideSheets, type WideBlock } from '@/lib/marks/wide-sheet'
+import { dateInMonth, monthOptionLabel } from '@/lib/reports/months'
 import { buildMatcher, gradesForSheet, type MatchStudent } from '@/lib/marks/student-match'
 import { EXAM_LABEL, type ExamType, type MarksUploadResult, type UploadRowError } from '@/lib/marks/upload-types'
 import { chooseAlternative, isKnownAbbreviation, subjectNameFor, totalFor, type SubjectEntry } from '@/lib/marks/wide-subjects'
@@ -12,7 +13,8 @@ import { chooseAlternative, isKnownAbbreviation, subjectNameFor, totalFor, type 
 export type { UploadRowError, ExamType, MarksUploadResult }
 export { EXAM_LABEL }
 
-export type UploadOptions = { examType: ExamType; dryRun: boolean; notify: boolean }
+/** examMonth ('YYYY-MM', optional): the month this exam was held in. Marks dated in another month are refused; rows with no date use it. */
+export type UploadOptions = { examType: ExamType; dryRun: boolean; notify: boolean; examMonth?: string | null }
 
 type Pending = { row: number; studentId: string; studentName: string; score: number }
 type GroupMap = Map<string, { subject: string; maxScore: number; examDate: string; entries: Map<string, Pending> }>
@@ -129,6 +131,7 @@ async function planWide(supabase: SupabaseClient<Database>, blocks: WideBlock[],
     const where = `[${block.sheet}] `
     const usable = block.columns.filter((c) => {
       if (c.date > today) { errors.push({ row: block.headerRow, message: `${where}Column dated ${c.date} is in the future — skipped.` }); return false }
+      if (opts.examMonth && !c.date.startsWith(opts.examMonth)) { errors.push({ row: block.headerRow, message: `${where}Column dated ${c.date} is not in ${monthOptionLabel(opts.examMonth)} — skipped.` }); return false }
       if (c.alts.length === 0) { errors.push({ row: block.headerRow, message: `${where}Column dated ${c.date} has no subject — skipped.` }); return false }
       const bad = c.alts.find((a) => !isKnownAbbreviation(a))
       if (bad) { unknownAbbrs.add(bad); errors.push({ row: block.headerRow, message: `${where}Column ${c.date} · "${c.header}": subject "${bad}" is not recognised — column skipped.` }); return false }
@@ -218,9 +221,10 @@ async function planRows(supabase: SupabaseClient<Database>, sheet: Grid, opts: U
     if (score > maxScore) { fail(`Marks ${score} are above the total ${maxScore}.`); continue }
 
     const dateRaw = pick(r.cells, DATE_COLS)
-    const examDate = parseDate(dateRaw)
+    const examDate = parseDate(dateRaw) ?? (!dateRaw && opts.examMonth ? dateInMonth(opts.examMonth, `${opts.examMonth}-01`, today) : null)
     if (!examDate) { fail(`Exam date is missing or not a valid date (got "${dateRaw || 'blank'}"). Use DD/MM/YYYY or YYYY-MM-DD.`); continue }
     if (examDate > today) { fail(`Exam date ${examDate} is in the future.`); continue }
+    if (opts.examMonth && !examDate.startsWith(opts.examMonth)) { fail(`Exam date ${examDate} is not in ${monthOptionLabel(opts.examMonth)}.`); continue }
 
     addEntry(groups, seen, errors, '', { row: r.rowNumber, studentId: resolved.student.id, studentName: resolved.student.fullName, score, subject, maxScore, examDate })
   }

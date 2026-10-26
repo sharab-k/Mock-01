@@ -17,6 +17,7 @@ import { bulkSaveMarksAction } from '@/lib/actions/marks';
 import { fetchExistingMarks, fetchMarksEntryData, type EnterRosterStudent } from '@/lib/marks/enter-data';
 import { GRADES, sectionsForGrade } from '@/lib/students/constants';
 import { fetchSubjects, type Subject } from '@/lib/subjects/fetch';
+import { dateInMonth, monthOptionLabel, recentMonths } from '@/lib/reports/months';
 
 const EXAM_TYPES = [
   { value: 'monthly' as const, label: 'Monthly' },
@@ -24,6 +25,7 @@ const EXAM_TYPES = [
   { value: 'final' as const, label: 'Final' },
 ];
 const EXAM_TYPE_LABELS = EXAM_TYPES.map((e) => e.label);
+const EXAM_MONTHS = recentMonths(12);
 
 export default function MarksEnterScreen() {
   const theme = useTheme();
@@ -162,6 +164,12 @@ export default function MarksEnterScreen() {
               options={EXAM_TYPE_LABELS}
               value={EXAM_TYPES.find((e) => e.value === examType)!.label}
               onChange={(label) => setExamType(EXAM_TYPES.find((e) => e.label === label)!.value)}
+            />
+            <ChipSelect
+              label="Exam month"
+              options={EXAM_MONTHS.map((m) => m.label)}
+              value={monthOptionLabel(examDate.slice(0, 7))}
+              onChange={(label) => { const m = EXAM_MONTHS.find((x) => x.label === label); if (m) setExamDate(dateInMonth(m.key, examDate, todayIso)); }}
             />
             <TextField label="Exam date (YYYY-MM-DD)" value={examDate} onChangeText={(v) => setExamDate(v.replace(/[^\d-]/g, '').slice(0, 10))} keyboardType="numbers-and-punctuation" autoCapitalize="none" />
             <TextField label="Total marks" value={maxScore} onChangeText={(v) => setMaxScore(v.replace(/\D/g, '').slice(0, 4))} keyboardType="number-pad" />

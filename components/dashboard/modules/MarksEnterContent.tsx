@@ -8,6 +8,7 @@ import { GRADES, sectionsForGrade, INITIALS } from '@/lib/students/constants'
 import { bulkSaveMarksAction, fetchExistingMarksAction } from '@/lib/actions/marks'
 import type { EnterRosterStudent } from '@/lib/marks/enter-data'
 import type { Subject } from '@/lib/actions/subjects'
+import { dateInMonth, recentMonths } from '@/lib/reports/months'
 
 const EXAM_TYPES: { value: 'monthly' | 'half_yearly' | 'final'; label: string }[] = [
   { value: 'monthly', label: 'Monthly' },
@@ -36,6 +37,7 @@ export default function MarksEnterContent({ basePath = '/marks', roster: fullRos
   const [status, setStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   const [error, setError] = useState('')
   const [bulkOpen, setBulkOpen] = useState(false)
+  const examMonths = useMemo(() => recentMonths(18), [])
 
   const roster = useMemo(
     () => fullRoster.filter((s) => s.grade === grade && s.section === section),
@@ -129,7 +131,7 @@ export default function MarksEnterContent({ basePath = '/marks', roster: fullRos
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl border border-neutral-200 shadow-1 p-4 grid grid-cols-2 sm:grid-cols-6 gap-3">
+      <div className="bg-white rounded-2xl border border-neutral-200 shadow-1 p-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3">
         <div>
           <label className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5">Grade</label>
           <select value={grade} onChange={(e) => setGrade(e.target.value as typeof grade)} className="w-full text-[13px] border border-neutral-200 rounded-xl px-3 py-2.5 text-neutral-700 bg-white focus:outline-none focus:ring-1 focus:ring-ink-300 cursor-pointer">
@@ -153,6 +155,13 @@ export default function MarksEnterContent({ basePath = '/marks', roster: fullRos
           <label className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5">Exam Type</label>
           <select value={examType} onChange={(e) => setExamType(e.target.value as typeof examType)} className="w-full text-[13px] border border-neutral-200 rounded-xl px-3 py-2.5 text-neutral-700 bg-white focus:outline-none focus:ring-1 focus:ring-ink-300 cursor-pointer">
             {EXAM_TYPES.map((e) => <option key={e.value} value={e.value}>{e.label}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5">Exam Month</label>
+          <select value={examDate.slice(0, 7)} onChange={(e) => setExamDate(dateInMonth(e.target.value, examDate, todayIso))} className="w-full text-[13px] border border-neutral-200 rounded-xl px-3 py-2.5 text-neutral-700 bg-white focus:outline-none focus:ring-1 focus:ring-ink-300 cursor-pointer">
+            {!examMonths.some((m) => m.key === examDate.slice(0, 7)) && <option value={examDate.slice(0, 7)}>{examDate.slice(0, 7)}</option>}
+            {examMonths.map((m) => <option key={m.key} value={m.key}>{m.label}</option>)}
           </select>
         </div>
         <div>

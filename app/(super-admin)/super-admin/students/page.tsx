@@ -18,7 +18,7 @@ export default async function SuperAdminStudentsPage() {
         .from('students')
         .select('id, roll_number, registration_number, full_name, grade_level, section, program, status, enrollment_date, is_late_enrollment, guardian_profession, previous_school, last_qualification, address, gr_number, registration_fee, tuition_fee, stream')
         .is('deleted_at', null)
-        .order('roll_sort', { ascending: true })
+        .order('list_sort', { ascending: true })
         .order('id')
         .range(from, to),
     ),

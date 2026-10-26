@@ -1,7 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { X, FileSpreadsheet, Loader2, CheckCircle2, AlertCircle, ChevronDown, Download } from 'lucide-react'
+import { recentMonths } from '@/lib/reports/months'
 import { EXAM_LABEL, type ExamType, type MarksUploadResult, type UploadRowError } from '@/lib/marks/upload-types'
 
 const EXAMS: { value: ExamType; hint: string }[] = [
@@ -61,6 +62,8 @@ export default function MarksBulkUploadModal({ onClose }: { onClose: () => void 
   const [file, setFile] = useState<File | null>(null)
   const [examType, setExamType] = useState<ExamType | null>(null)
   const [notify, setNotify] = useState(false)
+  const [examMonth, setExamMonth] = useState('')
+  const months = useMemo(() => recentMonths(18), [])
   const [step, setStep] = useState<Step>('setup')
   const [error, setError] = useState('')
   const [result, setResult] = useState<MarksUploadResult | null>(null)
@@ -81,6 +84,7 @@ export default function MarksBulkUploadModal({ onClose }: { onClose: () => void 
       body.append('examType', examType)
       body.append('dryRun', dryRun ? '1' : '0')
       body.append('notify', notify ? '1' : '0')
+      if (examMonth) body.append('examMonth', examMonth)
       const res = await fetch('/api/uploads/marks', { method: 'POST', body })
       const json = await res.json().catch(() => null)
       if (!res.ok) {
@@ -128,7 +132,16 @@ export default function MarksBulkUploadModal({ onClose }: { onClose: () => void 
               </div>
 
               <div>
-                <p className="text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-2">2 · Choose the results file</p>
+                <p className="text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-2">2 · Which month was it held in? <span className="normal-case font-normal text-neutral-400">(optional)</span></p>
+                <select value={examMonth} onChange={(e) => setExamMonth(e.target.value)} className="w-full sm:w-72 text-[13px] border border-neutral-200 rounded-xl px-3 py-2.5 text-neutral-700 bg-white focus:outline-none focus:ring-1 focus:ring-ink-300 cursor-pointer">
+                  <option value="">Any month — use the dates in the file</option>
+                  {months.map((m) => <option key={m.key} value={m.key}>{m.label}</option>)}
+                </select>
+                <p className="text-[12px] text-neutral-500 mt-2">When a month is chosen, marks dated in any other month are not saved, and rows with no date use that month.</p>
+              </div>
+
+              <div>
+                <p className="text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-2">3 · Choose the results file</p>
                 <label className="inline-flex items-center gap-2 text-[13px] font-medium px-3.5 py-2 rounded-xl border border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50 cursor-pointer">
                   <FileSpreadsheet size={14} /> {file?.name || 'Choose .xlsx or .csv file'}
                   <input type="file" accept=".xlsx,.csv" className="hidden" onChange={(e) => { setFile(e.target.files?.[0] ?? null); setError('') }} />
