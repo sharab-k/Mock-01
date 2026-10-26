@@ -75,16 +75,18 @@ export async function renderStudentCardPdf(data: StudentCardData): Promise<Uint8
     return size
   }
 
-  const brand = (page: PDFPage, dy: number) => {
-    page.drawImage(emblem, { x: 37.5, y: 210.5 - dy, width: 23, height: 23 })
-    text(page, 'JE ACADEMY', 64.7, 221.7 - dy, fit('JE ACADEMY', semi, 4.91, 31), semi)
-    text(page, 'SCIENCE & COMMERCE', 64.7, 218.1 - dy, fit('SCIENCE & COMMERCE', medium, 2.91, 32.2), medium)
+  // The emblem is no longer printed at the top: it is a faint watermark scaled to
+  // the card's full height (the square emblem is centred and the page edge crops
+  // the sides). Drawn first so the bands, text and photo sit on top of it; its
+  // white background is invisible on the white card at this opacity.
+  const watermark = (page: PDFPage) => {
+    page.drawImage(emblem, { x: (W - H) / 2, y: 0, width: H, height: H, opacity: 0.07 })
   }
 
   // ---- Front ------------------------------------------------------------------
   const front = doc.addPage([W, H])
+  watermark(front)
   chrome(front, 'front')
-  brand(front, 0)
 
   // Photo frame 58.6 x 70.3 (5:6), the processed upload fills it exactly.
   const PX = 41.9, PY = 133.6, PW = 58.6, PH = 70.3
@@ -135,8 +137,8 @@ export async function renderStudentCardPdf(data: StudentCardData): Promise<Uint8
 
   // ---- Back -------------------------------------------------------------------
   const back = doc.addPage([W, H])
+  watermark(back)
   chrome(back, 'back')
-  brand(back, 16.2)
   centered(back, 'TERMS AND', 177.9, 8.23, bold)
   centered(back, 'CONDITIONS', 168.4, 8.23, bold)
 
