@@ -30,7 +30,7 @@ export async function POST(request: Request) {
   if (!EXAM_TYPES.includes(examType)) return NextResponse.json({ error: 'Choose the exam: Monthly, Half-Yearly or Final.' }, { status: 400 })
 
   const monthRaw = String(form?.get('examMonth') ?? '')
-  if (monthRaw && !/^d{4}-(0[1-9]|1[0-2])$/.test(monthRaw)) return NextResponse.json({ error: 'The exam month is not valid.' }, { status: 400 })
+  if (monthRaw && !/^\d{4}-(0[1-9]|1[0-2])$/.test(monthRaw)) return NextResponse.json({ error: 'The exam month is not valid.' }, { status: 400 })
 
   const outcome = await processMarksUpload(supabase, user.id, file, {
     examType,
