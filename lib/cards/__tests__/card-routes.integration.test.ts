@@ -55,8 +55,8 @@ beforeAll(async () => {
 }, 60_000)
 
 afterAll(async () => {
-  const { data } = await admin.from('students').select('photo_path').eq('id', studentId).maybeSingle()
-  if (data?.photo_path) await admin.storage.from('student-photos').remove([data.photo_path])
+  const { data: files } = await admin.storage.from('student-photos').list(studentId)
+  if (files?.length) await admin.storage.from('student-photos').remove(files.map((f) => `${studentId}/${f.name}`))
   await admin.from('parent_student_links').delete().eq('student_id', studentId)
   await admin.from('students').delete().eq('id', studentId)
   for (const r of roles) await admin.auth.admin.deleteUser(ids[r])
@@ -94,6 +94,8 @@ describe('student ID card routes (live)', { timeout: 60_000 }, () => {
   })
 
   it('two parallel first uploads: exactly one wins', async () => {
+    const { data: cur } = await admin.from('students').select('photo_path').eq('id', studentId).single()
+    if (cur?.photo_path) await admin.storage.from('student-photos').remove([cur.photo_path])
     await admin.from('students').update({ photo_path: null }).eq('id', studentId)
     const [a, b] = await Promise.all([post('parent', await png('#112233')), post('parent', await png('#445566'))])
     expect([a.status, b.status].sort()).toEqual([200, 409])
