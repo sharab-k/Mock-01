@@ -28,7 +28,7 @@ export async function fetchClassRoster(grade: string, section: string, supabaseO
   if (studentIds.length === 0) return []
 
   const [todayRes, termRes] = await Promise.all([
-    supabase.from('attendance_records').select('student_id, status').eq('class_date', classDate).in('student_id', studentIds),
+    supabase.from('attendance_records').select('student_id, status').eq('class_date', classDate).eq('subject', '').in('student_id', studentIds),
     supabase.rpc('attendance_class_term', { p_grade: grade, p_section: section }),
   ])
 

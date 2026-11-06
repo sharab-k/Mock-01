@@ -1,6 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
 import { GRADE_SECTION_PAIRS } from '@/lib/students/constants'
-import { isSubjectGrade } from '@/lib/attendance/first-year-subjects'
 import type { MarkerClass } from '@/components/dashboard/AttendanceMarker'
 
 const INITIALS = (name: string) => name.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase()
@@ -21,8 +20,7 @@ export async function fetchMarkerClasses(): Promise<MarkerClass[]> {
     .order('list_sort', { ascending: true })
 
   const byClass = new Map<string, MarkerClass>()
-  // First and Second Year are marked by faculty and subject on their own screens, not here.
-  for (const { grade, section } of GRADE_SECTION_PAIRS.filter((p) => !isSubjectGrade(p.grade))) {
+  for (const { grade, section } of GRADE_SECTION_PAIRS) {
     byClass.set(`${grade}-${section}`, { id: `${grade}-${section}`, label: `Grade ${grade} · Section ${section}`, students: [] })
   }
   for (const s of data ?? []) {

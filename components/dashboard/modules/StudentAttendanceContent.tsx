@@ -2,15 +2,16 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, CheckCircle2, Clock3, XCircle } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, CircleMinus, Clock3, XCircle } from 'lucide-react'
 import type { AttendanceMonth } from '@/lib/student/attendance-history'
 
-type AttStatus = 'Present' | 'Late' | 'Absent'
+type AttStatus = 'Present' | 'Late' | 'Absent' | 'Leave'
 
 const ATT_CFG: Record<AttStatus, { icon: typeof CheckCircle2; ring: string; bg: string; text: string }> = {
   Present: { icon: CheckCircle2, ring: 'border-success', bg: 'bg-success-bg', text: 'text-success' },
   Late:    { icon: Clock3,       ring: 'border-warning', bg: 'bg-warning-bg', text: 'text-warning' },
   Absent:  { icon: XCircle,      ring: 'border-danger',  bg: 'bg-danger-bg',  text: 'text-danger'  },
+  Leave:   { icon: CircleMinus,  ring: 'border-ink-300', bg: 'bg-ink-100',    text: 'text-ink-700' },
 }
 
 export default function StudentAttendanceContent({ studentId, months }: { studentId: string; months: AttendanceMonth[] }) {

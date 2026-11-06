@@ -4,7 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import StatCard from '@/components/dashboard/StatCard'
 import SyllabusPieChart from '@/components/dashboard/SyllabusPieChart'
-import { CalendarCheck, BookOpen, PlayCircle, ClipboardList, CheckCircle2, Clock3, XCircle, X, UploadCloud, FileCheck2 } from 'lucide-react'
+import { CalendarCheck, BookOpen, PlayCircle, ClipboardList, CheckCircle2, Clock3, XCircle, CircleMinus, X, UploadCloud, FileCheck2 } from 'lucide-react'
 import type { StudentDashboardData } from '@/lib/student/dashboard-data'
 import { gradeTextClass } from '@/lib/marks/letter-grade'
 
@@ -27,12 +27,13 @@ const INITIAL_ASSIGNMENTS: Assignment[] = [
   { subject: 'Chemistry',   title: 'Atomic Models Assignment',  due: '5 Feb 2026',  status: 'Not Started' },
 ]
 
-type AttStatus = 'Present' | 'Late' | 'Absent'
+type AttStatus = 'Present' | 'Late' | 'Absent' | 'Leave'
 
 const ATT_CFG: Record<AttStatus, { icon: typeof CheckCircle2; ring: string; bg: string; text: string; label: string }> = {
   Present: { icon: CheckCircle2, ring: 'border-success',  bg: 'bg-success-bg',  text: 'text-success', label: 'Present' },
   Late:    { icon: Clock3,       ring: 'border-warning',  bg: 'bg-warning-bg',  text: 'text-warning', label: 'Late'    },
   Absent:  { icon: XCircle,      ring: 'border-danger',   bg: 'bg-danger-bg',   text: 'text-danger',  label: 'Absent'  },
+  Leave:   { icon: CircleMinus,  ring: 'border-ink-300',  bg: 'bg-ink-100',     text: 'text-ink-700', label: 'Leave'   },
 }
 
 const EXAM_PILL: Record<string, string> = {

@@ -33,7 +33,7 @@ async function submit(role: R, body: Record<string, unknown>) {
   })
   return { status: res.status, json: (await res.json()) as { ok?: boolean; error?: string; notifiedCount?: number } }
 }
-const rec = (key: keyof typeof student, status: 'present' | 'absent' | 'late') => ({ studentId: student[key], studentName: `Subj ${key}`, status })
+const rec = (key: keyof typeof student, status: 'present' | 'absent' | 'late' | 'leave') => ({ studentId: student[key], studentName: `Subj ${key}`, status })
 
 const rowsFor = async (subject: string) =>
   (await admin.from('attendance_records').select('student_id, status, subject').eq('class_date', DATE).eq('subject', subject).in('student_id', Object.values(student))).data ?? []
@@ -164,6 +164,40 @@ describe('subject-wise attendance (live)', { timeout: 60_000 }, () => {
     const res = await submit('attendance_admin', { classDate: DATE, records: [rec('ninth', 'present')] })
     expect(res.status).toBe(200)
     expect(await rowsFor('')).toHaveLength(1)
+  })
+
+  it('First and Second Year can also be marked whole-day, one by one, beside their subject rows', async () => {
+    const res = await submit('attendance_admin', { classDate: DATE, records: [rec('pe', 'late'), rec('y2pm', 'present')] })
+    expect(res.status).toBe(200)
+    const whole = await rowsFor('')
+    expect(whole.filter((r) => r.student_id === student.pe)[0]?.status).toBe('late')
+    expect(whole.filter((r) => r.student_id === student.y2pm)[0]?.status).toBe('present')
+    // the subject rows of the same student on the same day are untouched
+    const { data } = await admin.from('attendance_records').select('subject, status').eq('student_id', student.pe).eq('class_date', DATE)
+    const bySubject = Object.fromEntries((data ?? []).map((r) => [r.subject, r.status]))
+    expect(bySubject).toMatchObject({ '': 'late', Physics: 'absent', Mathematics: 'present' })
+  })
+
+  it('Leave is recorded without an absence alert and is left out of the attendance totals', async () => {
+    const before = ((await admin.from('portal_notifications').select('id', { count: 'exact', head: true }).eq('student_id', student.pm).eq('kind', 'absence')).count) ?? 0
+    const res = await submit('attendance_admin', { classDate: DATE, records: [rec('pm', 'leave')] })
+    expect(res.status).toBe(200)
+    expect(res.json.notifiedCount ?? 0).toBe(0)
+    expect(((await admin.from('portal_notifications').select('id', { count: 'exact', head: true }).eq('student_id', student.pm).eq('kind', 'absence')).count) ?? 0).toBe(before)
+    expect((await rowsFor('')).find((r) => r.student_id === student.pm)?.status).toBe('leave')
+
+    const all = (await admin.from('attendance_records').select('status').eq('student_id', student.pm)).data ?? []
+    expect(all.some((r) => r.status === 'leave')).toBe(true)
+    const stats = (await admin.rpc('attendance_student_stats')).data?.find((r) => r.student_id === student.pm)
+    expect(Number(stats?.total)).toBe(all.filter((r) => r.status !== 'leave').length) // leave is not a day that could have been attended
+    const term = (await admin.rpc('attendance_class_term', { p_grade: '11', p_section: 'A' })).data?.find((r) => r.student_id === student.pm)
+    expect(Number(term?.total)).toBe(all.filter((r) => r.status !== 'leave').length)
+  })
+
+  it('Leave can be changed back to present', async () => {
+    expect((await submit('attendance_admin', { classDate: DATE, records: [rec('pm', 'present')] })).status).toBe(200)
+    expect((await rowsFor('')).find((r) => r.student_id === student.pm)?.status).toBe('present')
+    await admin.from('attendance_records').delete().eq('student_id', student.pm).eq('subject', '') // leave the shared fixtures as the later tests expect
   })
 
   it('a marks admin cannot mark attendance', async () => {

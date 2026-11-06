@@ -209,6 +209,331 @@ export type Database = {
           },
         ]
       }
+      complaint_history: {
+        Row: {
+          action_date: string | null
+          action_taken: string | null
+          actor_id: string | null
+          complaint_id: string
+          created_at: string
+          id: string
+          response: string | null
+          status: Database["public"]["Enums"]["complaint_status"]
+        }
+        Insert: {
+          action_date?: string | null
+          action_taken?: string | null
+          actor_id?: string | null
+          complaint_id: string
+          created_at?: string
+          id?: string
+          response?: string | null
+          status: Database["public"]["Enums"]["complaint_status"]
+        }
+        Update: {
+          action_date?: string | null
+          action_taken?: string | null
+          actor_id?: string | null
+          complaint_id?: string
+          created_at?: string
+          id?: string
+          response?: string | null
+          status?: Database["public"]["Enums"]["complaint_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "complaint_history_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "complaint_history_complaint_id_fkey"
+            columns: ["complaint_id"]
+            isOneToOne: false
+            referencedRelation: "complaints"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      complaints: {
+        Row: {
+          action_date: string | null
+          action_taken: string | null
+          complaint_no: number
+          details: string
+          id: string
+          parent_id: string | null
+          response: string | null
+          status: Database["public"]["Enums"]["complaint_status"]
+          student_id: string
+          subject: string
+          submitted_at: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          action_date?: string | null
+          action_taken?: string | null
+          complaint_no?: never
+          details: string
+          id?: string
+          parent_id?: string | null
+          response?: string | null
+          status?: Database["public"]["Enums"]["complaint_status"]
+          student_id: string
+          subject: string
+          submitted_at?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          action_date?: string | null
+          action_taken?: string | null
+          complaint_no?: never
+          details?: string
+          id?: string
+          parent_id?: string | null
+          response?: string | null
+          status?: Database["public"]["Enums"]["complaint_status"]
+          student_id?: string
+          subject?: string
+          submitted_at?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "complaints_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "complaints_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "complaints_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      expense_heads: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+        }
+        Relationships: []
+      }
+      expenses: {
+        Row: {
+          amount: number
+          created_at: string
+          created_by: string | null
+          description: string | null
+          expense_no: number
+          head_id: string
+          id: string
+          method: Database["public"]["Enums"]["fee_method"]
+          payee: string
+          reference: string | null
+          spent_on: string
+          void_reason: string | null
+          voided_at: string | null
+          voided_by: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          expense_no?: never
+          head_id: string
+          id?: string
+          method?: Database["public"]["Enums"]["fee_method"]
+          payee: string
+          reference?: string | null
+          spent_on?: string
+          void_reason?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          expense_no?: never
+          head_id?: string
+          id?: string
+          method?: Database["public"]["Enums"]["fee_method"]
+          payee?: string
+          reference?: string | null
+          spent_on?: string
+          void_reason?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expenses_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_head_id_fkey"
+            columns: ["head_id"]
+            isOneToOne: false
+            referencedRelation: "expense_heads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_voided_by_fkey"
+            columns: ["voided_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fee_charges: {
+        Row: {
+          amount: number
+          created_at: string
+          created_by: string | null
+          discount: number
+          due_date: string | null
+          head_id: string
+          id: string
+          month: number | null
+          note: string | null
+          student_id: string
+          updated_at: string
+          voided_at: string | null
+          voided_by: string | null
+          year: number
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          created_by?: string | null
+          discount?: number
+          due_date?: string | null
+          head_id: string
+          id?: string
+          month?: number | null
+          note?: string | null
+          student_id: string
+          updated_at?: string
+          voided_at?: string | null
+          voided_by?: string | null
+          year: number
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          discount?: number
+          due_date?: string | null
+          head_id?: string
+          id?: string
+          month?: number | null
+          note?: string | null
+          student_id?: string
+          updated_at?: string
+          voided_at?: string | null
+          voided_by?: string | null
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fee_charges_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fee_charges_head_id_fkey"
+            columns: ["head_id"]
+            isOneToOne: false
+            referencedRelation: "fee_heads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fee_charges_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fee_charges_voided_by_fkey"
+            columns: ["voided_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fee_heads: {
+        Row: {
+          created_at: string
+          default_amount: number | null
+          id: string
+          is_active: boolean
+          is_monthly: boolean
+          name: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          default_amount?: number | null
+          id?: string
+          is_active?: boolean
+          is_monthly?: boolean
+          name: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          default_amount?: number | null
+          id?: string
+          is_active?: boolean
+          is_monthly?: boolean
+          name?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       fee_payments: {
         Row: {
           created_at: string
@@ -250,6 +575,144 @@ export type Database = {
           },
           {
             foreignKeyName: "fee_payments_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fee_receipts: {
+        Row: {
+          amount: number
+          charge_id: string
+          created_at: string
+          id: string
+          method: Database["public"]["Enums"]["fee_method"]
+          note: string | null
+          paid_on: string
+          receipt_no: number
+          received_by: string | null
+          reference: string | null
+          student_id: string
+          void_reason: string | null
+          voided_at: string | null
+          voided_by: string | null
+        }
+        Insert: {
+          amount: number
+          charge_id: string
+          created_at?: string
+          id?: string
+          method?: Database["public"]["Enums"]["fee_method"]
+          note?: string | null
+          paid_on?: string
+          receipt_no?: never
+          received_by?: string | null
+          reference?: string | null
+          student_id: string
+          void_reason?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
+        }
+        Update: {
+          amount?: number
+          charge_id?: string
+          created_at?: string
+          id?: string
+          method?: Database["public"]["Enums"]["fee_method"]
+          note?: string | null
+          paid_on?: string
+          receipt_no?: never
+          received_by?: string | null
+          reference?: string | null
+          student_id?: string
+          void_reason?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fee_receipts_charge_id_fkey"
+            columns: ["charge_id"]
+            isOneToOne: false
+            referencedRelation: "fee_charge_balances"
+            referencedColumns: ["charge_id"]
+          },
+          {
+            foreignKeyName: "fee_receipts_charge_id_fkey"
+            columns: ["charge_id"]
+            isOneToOne: false
+            referencedRelation: "fee_charges"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fee_receipts_received_by_fkey"
+            columns: ["received_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fee_receipts_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fee_receipts_voided_by_fkey"
+            columns: ["voided_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fee_vouchers: {
+        Row: {
+          amount: number
+          due_date: string
+          generated_at: string
+          generated_by: string | null
+          id: string
+          month: number
+          student_id: string
+          voucher_no: number
+          year: number
+        }
+        Insert: {
+          amount: number
+          due_date: string
+          generated_at?: string
+          generated_by?: string | null
+          id?: string
+          month: number
+          student_id: string
+          voucher_no?: never
+          year: number
+        }
+        Update: {
+          amount?: number
+          due_date?: string
+          generated_at?: string
+          generated_by?: string | null
+          id?: string
+          month?: number
+          student_id?: string
+          voucher_no?: never
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fee_vouchers_generated_by_fkey"
+            columns: ["generated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fee_vouchers_student_id_fkey"
             columns: ["student_id"]
             isOneToOne: false
             referencedRelation: "students"
@@ -598,6 +1061,141 @@ export type Database = {
         }
         Relationships: []
       }
+      ptm_bookings: {
+        Row: {
+          cancelled_at: string | null
+          created_at: string
+          id: string
+          meeting_id: string
+          note: string | null
+          parent_id: string | null
+          slot_id: string
+          student_id: string
+        }
+        Insert: {
+          cancelled_at?: string | null
+          created_at?: string
+          id?: string
+          meeting_id: string
+          note?: string | null
+          parent_id?: string | null
+          slot_id: string
+          student_id: string
+        }
+        Update: {
+          cancelled_at?: string | null
+          created_at?: string
+          id?: string
+          meeting_id?: string
+          note?: string | null
+          parent_id?: string | null
+          slot_id?: string
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ptm_bookings_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "ptm_meetings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ptm_bookings_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ptm_bookings_slot_id_fkey"
+            columns: ["slot_id"]
+            isOneToOne: false
+            referencedRelation: "ptm_slots"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ptm_bookings_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ptm_meetings: {
+        Row: {
+          briefing: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          is_published: boolean
+          meeting_date: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          briefing?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_published?: boolean
+          meeting_date: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          briefing?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_published?: boolean
+          meeting_date?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ptm_meetings_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ptm_slots: {
+        Row: {
+          ends_at: string
+          id: string
+          meeting_id: string
+          starts_at: string
+          with_whom: string | null
+        }
+        Insert: {
+          ends_at: string
+          id?: string
+          meeting_id: string
+          starts_at: string
+          with_whom?: string | null
+        }
+        Update: {
+          ends_at?: string
+          id?: string
+          meeting_id?: string
+          starts_at?: string
+          with_whom?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ptm_slots_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "ptm_meetings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       roll_number_counters: {
         Row: {
           academic_year: number
@@ -618,6 +1216,53 @@ export type Database = {
           section?: string
         }
         Relationships: []
+      }
+      rule_documents: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_published: boolean
+          published_at: string | null
+          sort_order: number
+          storage_path: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_published?: boolean
+          published_at?: string | null
+          sort_order?: number
+          storage_path: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_published?: boolean
+          published_at?: string | null
+          sort_order?: number
+          storage_path?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rule_documents_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       student_subject_enrollments: {
         Row: {
@@ -720,6 +1365,7 @@ export type Database = {
           is_late_enrollment: boolean
           last_qualification: string | null
           list_sort: string | null
+          monthly_discount: number
           photo_path: string | null
           photo_updated_at: string | null
           photo_updated_by: string | null
@@ -749,6 +1395,7 @@ export type Database = {
           is_late_enrollment?: boolean
           last_qualification?: string | null
           list_sort?: string | null
+          monthly_discount?: number
           photo_path?: string | null
           photo_updated_at?: string | null
           photo_updated_by?: string | null
@@ -778,6 +1425,7 @@ export type Database = {
           is_late_enrollment?: boolean
           last_qualification?: string | null
           list_sort?: string | null
+          monthly_discount?: number
           photo_path?: string | null
           photo_updated_at?: string | null
           photo_updated_by?: string | null
@@ -1002,7 +1650,64 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      fee_charge_balances: {
+        Row: {
+          amount: number | null
+          charge_id: string | null
+          discount: number | null
+          due: number | null
+          due_date: string | null
+          head_id: string | null
+          month: number | null
+          note: string | null
+          outstanding: number | null
+          paid: number | null
+          status: string | null
+          student_id: string | null
+          year: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fee_charges_head_id_fkey"
+            columns: ["head_id"]
+            isOneToOne: false
+            referencedRelation: "fee_heads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fee_charges_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fee_voucher_status: {
+        Row: {
+          due: number | null
+          due_date: string | null
+          generated_amount: number | null
+          generated_at: string | null
+          id: string | null
+          month: number | null
+          outstanding: number | null
+          paid: number | null
+          status: string | null
+          student_id: string | null
+          voucher_no: number | null
+          year: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fee_vouchers_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       allocate_roll_number: {
@@ -1104,6 +1809,7 @@ export type Database = {
           is_late_enrollment: boolean
           last_qualification: string | null
           list_sort: string | null
+          monthly_discount: number
           photo_path: string | null
           photo_updated_at: string | null
           photo_updated_by: string | null
@@ -1125,6 +1831,59 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      expense_breakdown: {
+        Args: { p_from: string; p_head: string; p_to: string }
+        Returns: {
+          kind: string
+          label: string
+          n: number
+          total: number
+        }[]
+      }
+      fee_generate_monthly_charges: {
+        Args: { p_due: string; p_month: number; p_year: number }
+        Returns: number
+      }
+      fee_generate_vouchers: {
+        Args: {
+          p_due: string
+          p_month: number
+          p_student_ids: string[]
+          p_year: number
+        }
+        Returns: number
+      }
+      fee_overview: {
+        Args: { p_from: string; p_to: string }
+        Returns: {
+          collected: number
+          outstanding: number
+          receipt_count: number
+        }[]
+      }
+      fee_sync_monthly_status: {
+        Args: { p_charge: string }
+        Returns: undefined
+      }
+      finance_by_period: {
+        Args: { p_from: string; p_to: string; p_unit: string }
+        Returns: {
+          expenses: number
+          income: number
+          period: string
+        }[]
+      }
+      finance_totals: {
+        Args: { p_from: string; p_to: string }
+        Returns: {
+          expense_count: number
+          expenses: number
+          income: number
+          net: number
+          outstanding: number
+          receipt_count: number
+        }[]
       }
       marks_class_stats: {
         Args: never
@@ -1167,6 +1926,7 @@ export type Database = {
         }[]
       }
       natural_sort_key: { Args: { t: string }; Returns: string }
+      ptm_taken_slots: { Args: { p_meeting: string }; Returns: string[] }
       tests_mark_counts: {
         Args: never
         Returns: {
@@ -1176,7 +1936,8 @@ export type Database = {
       }
     }
     Enums: {
-      attendance_status: "present" | "absent" | "late"
+      attendance_status: "present" | "absent" | "late" | "leave"
+      complaint_status: "pending" | "in_progress" | "resolved"
       enquiry_status:
         | "unread"
         | "contacted"
@@ -1184,6 +1945,7 @@ export type Database = {
         | "enrolled"
         | "declined"
       exam_type: "monthly" | "half_yearly" | "final" | "custom"
+      fee_method: "cash" | "bank_transfer" | "cheque" | "online" | "other"
       fee_status: "paid" | "unpaid"
       notice_audience: "All" | "Students" | "Parents" | "Staff"
       notice_category: "Academic" | "Event" | "Holiday" | "Admissions"
@@ -1335,7 +2097,8 @@ export const Constants = {
   },
   public: {
     Enums: {
-      attendance_status: ["present", "absent", "late"],
+      attendance_status: ["present", "absent", "late", "leave"],
+      complaint_status: ["pending", "in_progress", "resolved"],
       enquiry_status: [
         "unread",
         "contacted",
@@ -1344,6 +2107,7 @@ export const Constants = {
         "declined",
       ],
       exam_type: ["monthly", "half_yearly", "final", "custom"],
+      fee_method: ["cash", "bank_transfer", "cheque", "online", "other"],
       fee_status: ["paid", "unpaid"],
       notice_audience: ["All", "Students", "Parents", "Staff"],
       notice_category: ["Academic", "Event", "Holiday", "Admissions"],

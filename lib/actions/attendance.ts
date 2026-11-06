@@ -22,7 +22,7 @@ function today(): string {
   return new Date().toISOString().slice(0, 10)
 }
 
-const AttendanceStatusSchema = z.enum(['present', 'absent', 'late'])
+const AttendanceStatusSchema = z.enum(['present', 'absent', 'late', 'leave'])
 
 // First and Second Year's subject-wise attendance names the subject; '' / omitted is the
 // whole-day marking every other grade uses.

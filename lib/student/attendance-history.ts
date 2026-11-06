@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 
-export type AttendanceDay = { date: number; status: 'Present' | 'Late' | 'Absent'; /** First Year's subject-wise records only; '' for whole-day. */ subject: string }
+export type AttendanceDay = { date: number; status: 'Present' | 'Late' | 'Absent' | 'Leave'; /** First Year's subject-wise records only; '' for whole-day. */ subject: string }
 export type AttendanceMonth = { label: string; year: number; monthIndex: number; days: AttendanceDay[] }
 
 export async function fetchAttendanceHistory(studentId: string): Promise<AttendanceMonth[]> {
@@ -18,7 +18,7 @@ export async function fetchAttendanceHistory(studentId: string): Promise<Attenda
     if (!byMonth.has(key)) byMonth.set(key, [])
     byMonth.get(key)!.push({
       date: d.getUTCDate(),
-      status: row.status === 'present' ? 'Present' : row.status === 'late' ? 'Late' : 'Absent',
+      status: row.status === 'present' ? 'Present' : row.status === 'late' ? 'Late' : row.status === 'leave' ? 'Leave' : 'Absent',
       subject: row.subject,
     })
   }

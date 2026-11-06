@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useLocalSearchParams } from 'expo-router';
-import { CheckCircle2, Clock3, XCircle } from 'lucide-react-native';
+import { router, useLocalSearchParams, type Href } from 'expo-router';
+import { monthTitle, shiftMonth } from '@/lib/attendance/month';
+import { CheckCircle2, CircleMinus, Clock3, XCircle } from 'lucide-react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -16,14 +17,15 @@ import {
 } from '@/lib/attendance/first-year-subjects';
 import { fetchSubjectRoster, type SubjectRoster } from '@/lib/attendance/subject-roster';
 
-type Status = 'present' | 'absent' | 'late';
+type Status = 'present' | 'absent' | 'late' | 'leave';
 
 const STATUS_CONFIG: Record<Status, { label: string; icon: typeof CheckCircle2; color: string; bg: string }> = {
   present: { label: 'Present', icon: CheckCircle2, color: Semantic.success, bg: Semantic.successBg },
   absent: { label: 'Absent', icon: XCircle, color: Semantic.danger, bg: Semantic.dangerBg },
   late: { label: 'Late', icon: Clock3, color: Semantic.warning, bg: Semantic.warningBg },
+  leave: { label: 'Leave', icon: CircleMinus, color: Ink[700], bg: Ink[100] },
 };
-const STATUSES: Status[] = ['present', 'absent', 'late'];
+const STATUSES: Status[] = ['present', 'absent', 'late', 'leave'];
 
 const INITIALS = (name: string) => name.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase();
 
@@ -108,6 +110,7 @@ export function SubjectAttendanceScreen({ grade }: { grade: SubjectGrade }) {
     present: students.filter((s) => records[s.id] === 'present').length,
     absent: students.filter((s) => records[s.id] === 'absent').length,
     late: students.filter((s) => records[s.id] === 'late').length,
+    leave: students.filter((s) => records[s.id] === 'leave').length,
   };
 
   async function handleSubmit() {
@@ -135,6 +138,9 @@ export function SubjectAttendanceScreen({ grade }: { grade: SubjectGrade }) {
           <View>
             <ThemedText variant="title" style={{ fontSize: 20, lineHeight: 26 }}>{yearLabel} · By subject</ThemedText>
             <ThemedText variant="small" color="textSecondary">Only students who study the subject are listed</ThemedText>
+            <Pressable onPress={() => router.push(`/class/${grade}/${section}` as Href)} accessibilityRole="button" style={{ marginTop: 6 }}>
+              <ThemedText variant="small" style={{ color: Ink[700] }}>Mark whole day (one by one) instead →</ThemedText>
+            </Pressable>
           </View>
 
           <Card style={{ gap: Spacing.three }}>
@@ -147,6 +153,15 @@ export function SubjectAttendanceScreen({ grade }: { grade: SubjectGrade }) {
 
             <View style={{ gap: 6 }}>
               <ThemedText variant="label" color="textSecondary">2 · DATE AND DAY</ThemedText>
+              <View style={styles.monthRow}>
+                <Pressable onPress={() => setClassDate(shiftMonth(classDate, -1, isoDaysAgo(0)))} accessibilityRole="button" accessibilityLabel="Previous month" hitSlop={8}>
+                  <ThemedText variant="small" style={{ color: Ink[700] }}>‹ Prev</ThemedText>
+                </Pressable>
+                <ThemedText variant="small">{monthTitle(classDate)}</ThemedText>
+                <Pressable onPress={() => setClassDate(shiftMonth(classDate, 1, isoDaysAgo(0)))} accessibilityRole="button" accessibilityLabel="Next month" hitSlop={8} disabled={classDate >= isoDaysAgo(0)}>
+                  <ThemedText variant="small" style={{ color: classDate >= isoDaysAgo(0) ? '#B5AEA6' : Ink[700] }}>Next ›</ThemedText>
+                </Pressable>
+              </View>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row}>
                 {dates.map((d) => <Chip key={d} label={dayLabel(d)} active={d === classDate} onPress={() => setClassDate(d)} />)}
               </ScrollView>
@@ -256,6 +271,7 @@ export function SubjectAttendanceScreen({ grade }: { grade: SubjectGrade }) {
 }
 
 const styles = StyleSheet.create({
+  monthRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 4 },
   container: { flex: 1 },
   safeArea: { flex: 1 },
   content: { padding: Spacing.four, gap: Spacing.three, paddingBottom: Spacing.five },

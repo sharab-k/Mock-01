@@ -13,7 +13,7 @@ import { getMobileApi } from '@/lib/api/client';
 import { gradeTone } from '@/lib/marks/letter-grade';
 import { StudentIdCard } from '@/components/student-id-card';
 
-type Day = { date: string; status: 'present' | 'absent' | 'late' };
+type Day = { date: string; status: 'present' | 'absent' | 'late' | 'leave' };
 type Mark = { id: string; date: string; subject: string; title: string; score: number; max: number; pct: number; grade: string };
 type Record = {
   student: { id: string; fullName: string; rollNumber: string; grNumber: string | null; registrationNumber: string; grade: string; section: string; program: string; stream: string | null; status: string; enrollmentDate: string; address: string | null; guardianProfession: string | null; previousSchool: string | null; lastQualification: string | null };
@@ -28,7 +28,7 @@ type Record = {
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const monthKey = (iso: string) => `${MONTHS[Number(iso.slice(5, 7)) - 1]} ${iso.slice(0, 4)}`;
 const fmtDate = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-const DAY_TONE = { present: 'success', late: 'warning', absent: 'danger' } as const;
+const DAY_TONE = { present: 'success', late: 'warning', absent: 'danger', leave: 'neutral' } as const;
 
 function groupBy<T>(items: T[], key: (t: T) => string): [string, T[]][] {
   const map = new Map<string, T[]>();
@@ -116,9 +116,9 @@ export default function StudentRecordScreen() {
               {attByMonth.length === 0 && <ThemedText color="textSecondary">No attendance recorded yet.</ThemedText>}
               {attByMonth.map(([month, days]) => (
                 <View key={month} style={{ marginTop: Spacing.three }}>
-                  <ThemedText variant="label" color="textMuted">{month} · {days.filter((d) => d.status !== 'absent').length}/{days.length} attended</ThemedText>
+                  <ThemedText variant="label" color="textMuted">{month} · {days.filter((d) => d.status === 'present' || d.status === 'late').length}/{days.filter((d) => d.status !== 'leave').length} attended</ThemedText>
                   <View style={styles.wrapRow}>
-                    {days.map((d) => <StatusPill key={d.date} tone={DAY_TONE[d.status]} label={`${d.date.slice(8)} ${d.status[0].toUpperCase()}`} />)}
+                    {days.map((d) => <StatusPill key={d.date} tone={DAY_TONE[d.status]} label={`${d.date.slice(8)} ${d.status === 'leave' ? 'LV' : d.status[0].toUpperCase()}`} />)}
                   </View>
                 </View>
               ))}

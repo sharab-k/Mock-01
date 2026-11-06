@@ -10,10 +10,11 @@ import { Semantic, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { fetchAttendanceHistory, type AttendanceMonth } from '@/lib/student/attendance-history';
 
-const STATUS_COLOR: Record<'Present' | 'Late' | 'Absent', string> = {
+const STATUS_COLOR: Record<'Present' | 'Late' | 'Absent' | 'Leave', string> = {
   Present: Semantic.success,
   Late: Semantic.warning,
   Absent: Semantic.danger,
+  Leave: '#6F83AE', // ink-400: excused, not a warning colour
 };
 
 export default function StudentAttendanceScreen() {

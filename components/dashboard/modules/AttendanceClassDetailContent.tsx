@@ -3,6 +3,8 @@
 import { useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { YEAR_LABEL, YEAR_SLUG, isSubjectGrade } from '@/lib/attendance/first-year-subjects'
+import { moveToMonth } from '@/lib/attendance/class-date'
 import StatCard from '@/components/dashboard/StatCard'
 import {
   ArrowLeft, UserCheck, UserX, Clock, Percent,
@@ -12,7 +14,7 @@ import { markAttendanceAction } from '@/lib/actions/attendance'
 import { GRADES, sectionsForGrade, type Grade, type Section } from '@/lib/students/constants'
 import { lateCutoffLabel } from '@/lib/attendance/late-policy'
 
-export type Status = 'unmarked' | 'present' | 'absent' | 'late'
+export type Status = 'unmarked' | 'present' | 'absent' | 'late' | 'leave'
 
 export type RosterStudent = {
   id: string
@@ -28,14 +30,15 @@ export type RosterStudent = {
   termAttendance: { present: number; absent: number; late: number; total: number }
 }
 
-const STATUS_LABEL: Record<Status, string> = { unmarked: 'Unmarked', present: 'Present', absent: 'Absent', late: 'Late' }
+const STATUS_LABEL: Record<Status, string> = { unmarked: 'Unmarked', present: 'Present', absent: 'Absent', late: 'Late', leave: 'Leave' }
 const STATUS_STYLE: Record<Status, { pill: string; dot: string }> = {
   unmarked: { pill: 'bg-neutral-100 text-neutral-500', dot: 'bg-neutral-300' },
   present:  { pill: 'bg-success-bg text-success', dot: 'bg-success' },
   absent:   { pill: 'bg-danger-bg text-danger',   dot: 'bg-danger'  },
   late:     { pill: 'bg-warning-bg text-warning', dot: 'bg-warning' },
+  leave:    { pill: 'bg-ink-100 text-ink-700',    dot: 'bg-ink-500'   },
 }
-const NEXT_STATUS: Record<Status, 'present' | 'absent'> = { unmarked: 'present', present: 'absent', absent: 'present', late: 'present' }
+const NEXT_STATUS: Record<Status, 'present' | 'absent'> = { unmarked: 'present', present: 'absent', absent: 'present', late: 'present', leave: 'present' }
 const INITIALS = (name: string) => name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
 
 type Props = {
@@ -71,7 +74,7 @@ export default function AttendanceClassDetailContent({ grade, section, basePath 
     )
   }
 
-  const setStatus = async (id: string, status: 'present' | 'absent' | 'late') => {
+  const setStatus = async (id: string, status: 'present' | 'absent' | 'late' | 'leave') => {
     const student = roster.find(s => s.id === id)
     if (!student || pending[id]) return
     const previous = student.status
@@ -110,15 +113,17 @@ export default function AttendanceClassDetailContent({ grade, section, basePath 
   const presentCount = roster.filter(s => s.status === 'present').length
   const absentCount  = roster.filter(s => s.status === 'absent').length
   const lateCount    = roster.filter(s => s.status === 'late').length
+  const leaveCount   = roster.filter(s => s.status === 'leave').length
   const total        = roster.length
-  const rate         = total > 0 ? Math.round((presentCount / total) * 100) : 0
+  const counted      = total - leaveCount // approved leave is excused, so it is not in the rate
+  const rate         = counted > 0 ? Math.round((presentCount / counted) * 100) : 0
   const EMPTY        = total === 0
 
   const STATS = [
     { label: 'Present',         value: String(presentCount), icon: <UserCheck size={22} />, iconBg: 'bg-success-bg', iconColor: 'text-success', sub: `of ${total} in class`, subUp: true },
     { label: 'Absent',          value: String(absentCount),  icon: <UserX size={22} />,     iconBg: 'bg-danger-bg',  iconColor: 'text-danger',  sub: 'Absence alerts sent automatically' },
     { label: 'Late',            value: String(lateCount),    icon: <Clock size={22} />,     iconBg: 'bg-warning-bg', iconColor: 'text-warning', sub: lateCutoffLabel(grade, section) },
-    { label: 'Attendance Rate', value: `${rate}%`,           icon: <Percent size={22} />,   iconBg: 'bg-ink-100',    iconColor: 'text-ink-600', sub: `Grade ${grade} · Section ${section}` },
+    { label: 'Attendance Rate', value: `${rate}%`,           icon: <Percent size={22} />,   iconBg: 'bg-ink-100',    iconColor: 'text-ink-600', sub: leaveCount > 0 ? `${leaveCount} on leave (excused)` : `Grade ${grade} · Section ${section}` },
   ]
 
   const selected = selectedId ? roster.find(s => s.id === selectedId) ?? null : null
@@ -155,6 +160,12 @@ export default function AttendanceClassDetailContent({ grade, section, basePath 
         <Link href={basePath} className="inline-flex items-center gap-1.5 text-[12.5px] font-medium text-neutral-500 hover:text-ink-700 transition-colors no-underline mb-4 group">
           <ArrowLeft size={13} className="group-hover:-translate-x-0.5 transition-transform" /> Attendance
         </Link>
+        {isSubjectGrade(grade) && (
+          <div className="mb-4 flex items-center justify-between gap-3 flex-wrap rounded-xl border border-ink-100 bg-ink-50 px-4 py-2.5">
+            <p className="text-[12.5px] text-ink-700"><span className="font-semibold">Whole-day attendance</span> · marking each student once for the day</p>
+            <Link href={`${basePath}/${YEAR_SLUG[grade]}?section=${encodeURIComponent(section)}`} className="text-[12.5px] font-semibold text-ink-700 hover:text-ink-900 no-underline">Mark {YEAR_LABEL[grade]} by subject instead →</Link>
+          </div>
+        )}
         <div className="flex items-start justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-ink-700 flex items-center justify-center shrink-0">
@@ -167,6 +178,22 @@ export default function AttendanceClassDetailContent({ grade, section, basePath 
               </p>
             </div>
           </div>
+          <div className="flex items-end gap-3 flex-wrap">
+            <div>
+              <label className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5" htmlFor="att-month">Month</label>
+              <input
+                id="att-month"
+                type="month"
+                value={classDate.slice(0, 7)}
+                max={todayStr.slice(0, 7)}
+                onChange={(e) => {
+                  if (!e.target.value) return
+                  const next = moveToMonth(classDate, e.target.value, todayStr)
+                  router.push(next === todayStr ? pathname : `${pathname}?date=${next}`)
+                }}
+                className="text-[13px] font-mono border border-neutral-200 rounded-xl px-3 py-2 text-neutral-700 bg-white focus:outline-none focus:ring-1 focus:ring-ink-300"
+              />
+            </div>
           <div>
             <label className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5">Attendance date</label>
             <input
@@ -176,6 +203,7 @@ export default function AttendanceClassDetailContent({ grade, section, basePath 
               onChange={(e) => e.target.value && router.push(e.target.value === todayStr ? pathname : `${pathname}?date=${e.target.value}`)}
               className="text-[13px] font-mono border border-neutral-200 rounded-xl px-3 py-2 text-neutral-700 bg-white focus:outline-none focus:ring-1 focus:ring-ink-300"
             />
+          </div>
           </div>
         </div>
       </div>
@@ -328,6 +356,7 @@ export default function AttendanceClassDetailContent({ grade, section, basePath 
               <div className="flex items-center gap-3">
                 <button onClick={() => { setStatus(selected.id, 'present'); setSelectedId(null) }} className="flex-1 py-3 text-[13px] font-semibold bg-success text-white rounded-xl hover:bg-success/90 transition-colors">Mark Present</button>
                 <button onClick={() => { setStatus(selected.id, 'absent'); setSelectedId(null) }} className="flex-1 py-3 text-[13px] font-semibold bg-danger-bg text-danger rounded-xl hover:bg-danger/10 transition-colors">Mark Absent</button>
+                <button onClick={() => { setStatus(selected.id, 'leave'); setSelectedId(null) }} className="flex-1 py-3 text-[13px] font-semibold bg-ink-100 text-ink-700 rounded-xl hover:bg-ink-200 transition-colors">Mark Leave</button>
               </div>
             </div>
           </div>

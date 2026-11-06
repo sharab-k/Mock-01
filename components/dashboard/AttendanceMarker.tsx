@@ -1,10 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import { CheckCircle2, XCircle, Clock3, ChevronDown, Send, RotateCcw } from 'lucide-react'
+import { CheckCircle2, XCircle, Clock3, CircleMinus, ChevronDown, Send, RotateCcw } from 'lucide-react'
 import { submitClassAttendanceAction } from '@/lib/actions/attendance'
 
-type Status = 'present' | 'absent' | 'late'
+type Status = 'present' | 'absent' | 'late' | 'leave'
 
 export type MarkerStudent = {
   name: string
@@ -47,6 +47,13 @@ const STATUS_CONFIG: Record<Status, {
     inactive: 'bg-warning-bg text-warning border-warning/20 hover:border-warning/40',
     dot:      'bg-warning',
   },
+  leave: {
+    label:    'Leave',
+    icon:     CircleMinus,
+    active:   'bg-ink-700 text-white border-ink-700 shadow-sm',
+    inactive: 'bg-ink-50 text-ink-700 border-ink-200 hover:border-ink-300',
+    dot:      'bg-ink-500',
+  },
 }
 
 function initRecord(students: MarkerStudent[]): Record<string, Status> {
@@ -83,6 +90,7 @@ export default function AttendanceMarker({ classes, onSubmitted }: Props) {
     present: Object.values(classRecord).filter(s => s === 'present').length,
     absent:  Object.values(classRecord).filter(s => s === 'absent').length,
     late:    Object.values(classRecord).filter(s => s === 'late').length,
+    leave:   Object.values(classRecord).filter(s => s === 'leave').length,
   }
 
   function setStatus(id: string, status: Status) {
@@ -161,19 +169,19 @@ export default function AttendanceMarker({ classes, onSubmitted }: Props) {
 
       {/* Summary bar */}
       <div className="flex items-center gap-0 border-b border-neutral-100">
-        {(['present', 'absent', 'late'] as Status[]).map((s, i) => {
+        {(['present', 'absent', 'late', 'leave'] as Status[]).map((s, i) => {
           const cfg = STATUS_CONFIG[s]
           const Icon = cfg.icon
           return (
             <div
               key={s}
-              className={`flex-1 flex items-center gap-2.5 px-5 py-3 ${i < 2 ? 'border-r border-neutral-100' : ''}`}
+              className={`flex-1 flex items-center gap-2.5 px-5 py-3 ${i < 3 ? 'border-r border-neutral-100' : ''}`}
             >
               <span className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
-                s === 'present' ? 'bg-success-bg' : s === 'absent' ? 'bg-danger-bg' : 'bg-warning-bg'
+                s === 'present' ? 'bg-success-bg' : s === 'absent' ? 'bg-danger-bg' : s === 'leave' ? 'bg-ink-100' : 'bg-warning-bg'
               }`}>
                 <Icon size={14} className={
-                  s === 'present' ? 'text-success' : s === 'absent' ? 'text-danger' : 'text-warning'
+                  s === 'present' ? 'text-success' : s === 'absent' ? 'text-danger' : s === 'leave' ? 'text-ink-700' : 'text-warning'
                 } />
               </span>
               <div>
@@ -235,7 +243,7 @@ export default function AttendanceMarker({ classes, onSubmitted }: Props) {
 
               {/* Status buttons */}
               <div className="flex items-center gap-2 shrink-0">
-                {(['present', 'absent', 'late'] as Status[]).map((status) => {
+                {(['present', 'absent', 'late', 'leave'] as Status[]).map((status) => {
                   const cfg = STATUS_CONFIG[status]
                   const Icon = cfg.icon
                   const isActive = current === status
@@ -264,7 +272,7 @@ export default function AttendanceMarker({ classes, onSubmitted }: Props) {
       {/* Footer — submit */}
       <div className="flex items-center justify-between px-6 py-4 border-t border-neutral-100 bg-neutral-50/50">
         <div className="flex items-center gap-3">
-          {(['present', 'absent', 'late'] as Status[]).map(s => (
+          {(['present', 'absent', 'late', 'leave'] as Status[]).map(s => (
             <span key={s} className="flex items-center gap-1.5 text-[12px] text-neutral-600">
               <span className={`w-2 h-2 rounded-full ${STATUS_CONFIG[s].dot}`} />
               {counts[s]} {STATUS_CONFIG[s].label}

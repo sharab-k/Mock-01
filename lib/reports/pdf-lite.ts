@@ -59,7 +59,7 @@ function scoreColor(score: number, max: number) {
 }
 
 function statusColor(status: string) {
-  return status === 'present' ? C.success : status === 'late' ? C.warning : C.danger
+  return status === 'present' ? C.success : status === 'late' ? C.warning : status === 'leave' ? C.ink700 : C.danger
 }
 
 function formatDate(iso: string): string {

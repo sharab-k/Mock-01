@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Redirect, router, useLocalSearchParams, type Href } from 'expo-router';
+import { router, useLocalSearchParams, type Href } from 'expo-router';
+import { monthTitle, shiftMonth } from '@/lib/attendance/month';
 import { MessageSquare, MessageSquareWarning } from 'lucide-react-native';
 
 import { TextField } from '@/components/ui/text-field';
@@ -17,10 +18,10 @@ import { markAttendanceAction, sendAbsenceAlertAction } from '@/lib/actions/atte
 import { fetchClassRoster, type RosterStatus, type RosterStudent } from '@/lib/attendance/class-roster';
 import { lateCutoffLabel } from '@/lib/attendance/late-policy';
 
-const STATUS_TONE = { unmarked: 'neutral', present: 'success', absent: 'danger', late: 'warning' } as const;
+const STATUS_TONE = { unmarked: 'neutral', present: 'success', absent: 'danger', late: 'warning', leave: 'neutral' } as const;
 // Same cycle as the web class view: a tap flips between present and absent
 // (late/unmarked go to present first).
-const NEXT_STATUS: Record<RosterStatus, 'present' | 'absent'> = { unmarked: 'present', present: 'absent', absent: 'present', late: 'present' };
+const NEXT_STATUS: Record<RosterStatus, 'present' | 'absent'> = { unmarked: 'present', present: 'absent', absent: 'present', late: 'present', leave: 'present' };
 
 function today(): string {
   return new Date().toISOString().slice(0, 10);
@@ -32,9 +33,6 @@ function today(): string {
 // their alert status with Send / Resend.
 export default function ClassDetailScreen() {
   const { grade, section } = useLocalSearchParams<{ grade: string; section: string }>();
-  // First and Second Year attend by faculty and subject, never for a whole day.
-  if (grade === '11') return <Redirect href={`/attendance/first-year?section=${section}` as Href} />;
-  if (grade === '12') return <Redirect href={`/attendance/second-year?section=${section}` as Href} />;
   return <ClassDetailBody grade={grade} section={section} />;
 }
 
@@ -62,10 +60,11 @@ function ClassDetailBody({ grade, section }: { grade: string; section: string })
     setRoster((prev) => (prev ? prev.map((s) => (s.id === id ? { ...s, ...patch } : s)) : prev));
   }
 
-  async function cycleStatus(student: RosterStudent) {
+  // Approved leave is excused: no absence alert, and it is left out of the attendance rate. A second tap puts the student back to present.
+  async function cycleStatus(student: RosterStudent, to?: 'leave') {
     if (pending[student.id]) return;
     const previous = student.status;
-    const status = NEXT_STATUS[previous];
+    const status = to === 'leave' ? (previous === 'leave' ? 'present' : 'leave') : NEXT_STATUS[previous];
     setPending((p) => ({ ...p, [student.id]: true }));
     patchStudent(student.id, { status });
 
@@ -90,7 +89,25 @@ function ClassDetailBody({ grade, section }: { grade: string; section: string })
           <ScreenHeader title={`Grade ${grade} · Section ${section}`} subtitle={`${classDate === today() ? 'Today' : classDate} · Late: ${lateCutoffLabel(grade, section)}`} onBack={() => router.back()} />
         </View>
 
+        {(grade === '11' || grade === '12') && (
+          <Pressable
+            onPress={() => router.replace(`/attendance/${grade === '11' ? 'first-year' : 'second-year'}?section=${section}` as Href)}
+            accessibilityRole="button"
+            style={{ marginHorizontal: Spacing.four, marginBottom: Spacing.two }}>
+            <ThemedText variant="small" style={{ color: Ink[700] }}>Whole-day marking · Mark {grade === '11' ? 'First' : 'Second'} Year by subject instead →</ThemedText>
+          </Pressable>
+        )}
+
         <View style={{ paddingHorizontal: Spacing.four }}>
+          <View style={styles.monthRow}>
+            <Pressable onPress={() => setClassDate(shiftMonth(classDate, -1, today()))} accessibilityRole="button" accessibilityLabel="Previous month" hitSlop={8}>
+              <ThemedText variant="small" style={{ color: Ink[700] }}>‹ Prev</ThemedText>
+            </Pressable>
+            <ThemedText variant="small">{monthTitle(classDate)}</ThemedText>
+            <Pressable onPress={() => setClassDate(shiftMonth(classDate, 1, today()))} accessibilityRole="button" accessibilityLabel="Next month" hitSlop={8} disabled={classDate >= today()}>
+              <ThemedText variant="small" style={{ color: classDate >= today() ? '#B5AEA6' : Ink[700] }}>Next ›</ThemedText>
+            </Pressable>
+          </View>
           <TextField label="Attendance date (YYYY-MM-DD)" value={classDate} onChangeText={(v) => setClassDate(v.replace(/[^\d-]/g, '').slice(0, 10))} keyboardType="numbers-and-punctuation" autoCapitalize="none" />
         </View>
 
@@ -128,6 +145,9 @@ function ClassDetailBody({ grade, section }: { grade: string; section: string })
                       <StatusPill tone={STATUS_TONE[s.status]} label={s.status === 'unmarked' ? 'Tap to mark' : undefined} />
                     </Pressable>
                   </View>
+                  <Pressable onPress={() => cycleStatus(s, 'leave')} disabled={pending[s.id]} hitSlop={8} accessibilityRole="button" accessibilityLabel={s.status === 'leave' ? `Remove leave for ${s.name}` : `Mark ${s.name} on leave`}>
+                    <ThemedText variant="small" style={{ color: Ink[700] }}>{s.status === 'leave' ? 'On leave — tap to undo' : 'Mark on leave'}</ThemedText>
+                  </Pressable>
                   <ThemedText variant="small" color="textMuted">
                     Term: {s.termAttendance.present}P · {s.termAttendance.absent}A · {s.termAttendance.late}L / {s.termAttendance.total}
                   </ThemedText>
@@ -158,6 +178,7 @@ function ClassDetailBody({ grade, section }: { grade: string; section: string })
 }
 
 const styles = StyleSheet.create({
+  monthRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 4 },
   container: { flex: 1 },
   safeArea: { flex: 1 },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },

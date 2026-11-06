@@ -67,7 +67,7 @@ export async function searchStudents(
   }
 }
 
-export type AttendanceDay = { date: string; status: 'present' | 'absent' | 'late'; /** First Year's subject-wise records only; '' for whole-day. */ subject: string }
+export type AttendanceDay = { date: string; status: 'present' | 'absent' | 'late' | 'leave'; /** First Year's subject-wise records only; '' for whole-day. */ subject: string }
 export type MarkEntry = {
   id: string
   /** The day the exam was held. */
@@ -108,7 +108,7 @@ export type StudentRecord = {
   subjects: StudentSubjectRow[]
   attendance: {
     days: AttendanceDay[]
-    summary: { present: number; absent: number; late: number; total: number; pct: number | null }
+    summary: { present: number; absent: number; late: number; leave: number; total: number; pct: number | null }
   }
   marks: MarkEntry[]
   marksSummary: { average: number | null; tier: Tier | null; grade: LetterGrade | null; bySubject: SubjectAverage[] }
@@ -163,7 +163,8 @@ export async function fetchStudentRecord(
   const present = days.filter((d) => d.status === 'present').length
   const late = days.filter((d) => d.status === 'late').length
   const absent = days.filter((d) => d.status === 'absent').length
-  const total = days.length
+  const leave = days.filter((d) => d.status === 'leave').length
+  const total = days.length - leave // approved leave is excused, not a day that could have been attended
 
   const marks: MarkEntry[] = markRows
     .map((m) => {
@@ -227,7 +228,7 @@ export async function fetchStudentRecord(
         whatsapp2: l.profiles.whatsapp_number_2,
       }] : [])),
       subjects: subjectsRes.ok ? subjectsRes.subjects.filter((x) => x.enrolled) : [],
-      attendance: { days, summary: { present, absent, late, total, pct: total > 0 ? Math.round(((present + late) / total) * 100) : null } },
+      attendance: { days, summary: { present, absent, late, leave, total, pct: total > 0 ? Math.round(((present + late) / total) * 100) : null } },
       marks,
       marksSummary: { average, tier: average !== null ? tierOf(average) : null, grade: average !== null ? letterGrade(average, 100) : null, bySubject },
       fees: (feeRes.data ?? []).map((f) => ({ year: f.year, month: f.month, status: f.status })),

@@ -4,7 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import {
   CalendarCheck, BookOpen, Bell, ChevronRight, ArrowLeft,
-  CheckCircle2, Clock3, XCircle, ShieldCheck, Mail, FileDown,
+  CheckCircle2, Clock3, XCircle, CircleMinus, ShieldCheck, Mail, FileDown,
   Loader2, GraduationCap,
 } from 'lucide-react'
 import type { ParentChild, AttStatus } from '@/lib/parent/dashboard-data'
@@ -19,6 +19,7 @@ const ATT_CFG: Record<AttStatus, { icon: typeof CheckCircle2; ring: string; bg: 
   Present: { icon: CheckCircle2, ring: 'border-success', bg: 'bg-success-bg', text: 'text-success', dot: 'bg-success' },
   Late:    { icon: Clock3,       ring: 'border-warning', bg: 'bg-warning-bg', text: 'text-warning', dot: 'bg-warning' },
   Absent:  { icon: XCircle,      ring: 'border-danger',  bg: 'bg-danger-bg',  text: 'text-danger',  dot: 'bg-danger'  },
+  Leave:   { icon: CircleMinus,  ring: 'border-ink-300', bg: 'bg-ink-100',    text: 'text-ink-700', dot: 'bg-ink-500' },
 }
 
 const scoreBar = (s: number, m: number) => {

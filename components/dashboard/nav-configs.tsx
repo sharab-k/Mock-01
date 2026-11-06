@@ -2,7 +2,7 @@ import {
   LayoutDashboard, Users, UserPlus, Inbox,
   CalendarCheck, BookOpen, Megaphone, Settings2, UserCog,
   ClipboardList, BarChart2, PenLine, PlayCircle,
-  GraduationCap, UsersRound, Wallet, CalendarClock, Bell, Search, Upload, IdCard,
+  GraduationCap, UsersRound, Wallet, CalendarClock, Bell, Search, Upload, IdCard, Receipt, Layers, Ticket, HandCoins, Landmark, MessageSquareWarning, ScrollText, Users2,
 } from 'lucide-react'
 import type { NavSection } from './types'
 
@@ -34,13 +34,26 @@ export const NAV_CONFIGS: Record<string, NavSection[]> = {
         { label: 'Subjects',   href: '/super-admin/subjects',   icon: ClipboardList           },
         { label: 'Timetable',  href: '/super-admin/timetable',  icon: CalendarClock            },
         { label: 'Sent Alerts', href: '/super-admin/notifications', icon: Bell                },
-        { label: 'Fees',       href: '/super-admin/fees',       icon: Wallet                  },
+      ],
+    },
+    {
+      title: 'Finance',
+      items: [
+        { label: 'Fees',       href: '/super-admin/fees',          icon: Wallet  },
+        { label: 'Payments',   href: '/super-admin/fees/payments', icon: Receipt },
+        { label: 'Vouchers',   href: '/super-admin/vouchers',      icon: Ticket  },
+        { label: 'Fee Heads',  href: '/super-admin/fees/heads',    icon: Layers  },
+        { label: 'Expenses',   href: '/super-admin/expenses',      icon: HandCoins },
+        { label: 'Income & Expense', href: '/super-admin/finance', icon: Landmark },
       ],
     },
     {
       title: 'System',
       items: [
         { label: 'Notices',      href: '/super-admin/notices',  icon: Megaphone },
+        { label: 'Complaints',   href: '/super-admin/complaints', icon: MessageSquareWarning },
+        { label: 'Rules & Regulations', href: '/super-admin/rules', icon: ScrollText },
+        { label: 'Parent Meetings', href: '/super-admin/meetings', icon: Users2 },
         { label: 'Staff Accounts',href: '/super-admin/staff',   icon: UserCog   },
         { label: 'Settings',     href: '/super-admin/settings', icon: Settings2 },
       ],
@@ -61,7 +74,12 @@ export const NAV_CONFIGS: Record<string, NavSection[]> = {
     },
     {
       title: 'Communication',
-      items: [{ label: 'Notices', href: '/admissions/notices', icon: Megaphone }],
+      items: [
+        { label: 'Notices', href: '/admissions/notices', icon: Megaphone },
+        { label: 'Complaints', href: '/admissions/complaints', icon: MessageSquareWarning },
+        { label: 'Rules & Regulations', href: '/admissions/rules', icon: ScrollText },
+        { label: 'Parent Meetings', href: '/admissions/meetings', icon: Users2 },
+      ],
     },
   ],
 
@@ -110,6 +128,10 @@ export const NAV_CONFIGS: Record<string, NavSection[]> = {
     {
       items: [
         { label: 'Dashboard',     href: '/parent',               icon: LayoutDashboard },
+        { label: 'Fees',          href: '/parent/fees',          icon: Wallet          },
+        { label: 'Complaints',    href: '/parent/complaints',    icon: MessageSquareWarning },
+        { label: 'Rules',         href: '/parent/rules',         icon: ScrollText      },
+        { label: 'Meetings',      href: '/parent/meetings',      icon: Users2          },
         { label: 'Notifications', href: '/parent/notifications', icon: Bell            },
       ],
     },
