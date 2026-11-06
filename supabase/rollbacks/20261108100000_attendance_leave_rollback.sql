@@ -1,0 +1,4 @@
+-- Postgres cannot drop a value from an enum. To roll back: first change every 'leave' row
+-- (UPDATE public.attendance_records SET status = 'absent' WHERE status = 'leave'), then restore the
+-- four functions from 20261020120000_aggregates_bulk_marks_hardening.sql. The unused enum value
+-- is harmless once no row carries it.
