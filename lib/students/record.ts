@@ -67,7 +67,7 @@ export async function searchStudents(
   }
 }
 
-export type AttendanceDay = { date: string; status: 'present' | 'absent' | 'late' }
+export type AttendanceDay = { date: string; status: 'present' | 'absent' | 'late'; /** First Year's subject-wise records only; '' for whole-day. */ subject: string }
 export type MarkEntry = {
   id: string
   /** The day the exam was held. */
@@ -152,14 +152,14 @@ export async function fetchStudentRecord(
 
   const admin = createAdminClient()
   const [attRows, markRows, feeRes, parentRes, subjectsRes] = await Promise.all([
-    fetchAll((from, to) => supabase.from('attendance_records').select('class_date, status').eq('student_id', studentId).order('class_date', { ascending: false }).range(from, to)),
+    fetchAll((from, to) => supabase.from('attendance_records').select('class_date, status, subject').eq('student_id', studentId).order('class_date', { ascending: false }).range(from, to)),
     fetchAll((from, to) => supabase.from('marks').select('id, subject, exam_type, score, max_score, term, exam_date, tests(title)').eq('student_id', studentId).range(from, to)),
     supabase.from('fee_payments').select('year, month, status').eq('student_id', studentId).order('year', { ascending: false }).order('month', { ascending: false }),
     admin.from('parent_student_links').select('profiles(full_name, email, phone, secondary_phone, whatsapp_number_2)').eq('student_id', studentId),
     fetchStudentSubjects(studentId, supabase),
   ])
 
-  const days: AttendanceDay[] = attRows.map((r) => ({ date: r.class_date, status: r.status as AttendanceDay['status'] }))
+  const days: AttendanceDay[] = attRows.map((r) => ({ date: r.class_date, status: r.status as AttendanceDay['status'], subject: r.subject }))
   const present = days.filter((d) => d.status === 'present').length
   const late = days.filter((d) => d.status === 'late').length
   const absent = days.filter((d) => d.status === 'absent').length

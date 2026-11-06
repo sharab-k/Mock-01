@@ -12,8 +12,9 @@ export const EXAM_TYPE_ORDER = ['monthly', 'half_yearly', 'final', 'custom'] as 
 // it's what tells one class test from another on the report.
 export type RawMarkRow = { subject: string; exam_type: string; score: number; max_score: number; test_title?: string | null; exam_date?: string | null }
 export type RawAttendanceRow = { status: string }
-export type RawAttendanceLogRow = { status: string; class_date: string }
-export type AttendanceLogRow = { date: string; status: 'present' | 'late' | 'absent' }
+export type RawAttendanceLogRow = { status: string; class_date: string; subject?: string }
+// `subject` is only present on First Year's subject-wise records.
+export type AttendanceLogRow = { date: string; status: 'present' | 'late' | 'absent'; subject?: string }
 export type AttendanceLogMonth = { label: string; rows: AttendanceLogRow[] }
 
 export type ReportMark = { subject: string; score: number; maxScore: number; grade: string; date?: string | null }
@@ -65,7 +66,7 @@ export function buildAttendanceLog(attRows: RawAttendanceLogRow[]): AttendanceLo
     const d = new Date(`${row.class_date}T00:00:00Z`)
     const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth()).padStart(2, '0')}`
     if (!byMonth.has(key)) byMonth.set(key, [])
-    byMonth.get(key)!.push({ date: row.class_date, status: row.status as AttendanceLogRow['status'] })
+    byMonth.get(key)!.push({ date: row.class_date, status: row.status as AttendanceLogRow['status'], ...(row.subject ? { subject: row.subject } : {}) })
   }
 
   return Array.from(byMonth.entries())
@@ -123,7 +124,7 @@ export function buildAttendanceMonths(attRows: RawAttendanceLogRow[], reportKey:
   for (const row of attRows) {
     const key = monthKeyOf(row.class_date)
     if (key > reportKey) continue
-    byMonth.set(key, [...(byMonth.get(key) ?? []), { date: row.class_date, status: row.status as AttendanceLogRow['status'] }])
+    byMonth.set(key, [...(byMonth.get(key) ?? []), { date: row.class_date, status: row.status as AttendanceLogRow['status'], ...(row.subject ? { subject: row.subject } : {}) }])
   }
   return Array.from(byMonth.entries())
     .sort(([a], [b]) => b.localeCompare(a))

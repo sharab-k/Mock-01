@@ -13,7 +13,7 @@ export type ChildAcademicData = {
   attendancePct: number
   avgScore: number
   marks: { subject: string; exam: string; date: string; score: number; max: number; grade: string }[]
-  attendance: { day: string; date: string; status: AttStatus }[]
+  attendance: { day: string; date: string; status: AttStatus; /** First Year's subject-wise records only; '' for whole-day. */ subject: string }[]
   monthlyTrend: { month: string; attendance: number; avgScore: number }[]
 }
 
@@ -43,7 +43,7 @@ function inRange(iso: string, start: Date, end: Date): boolean {
 // actually authorize this read, not application logic.
 export async function fetchChildAcademicData(supabase: SupabaseClient<Database>, studentId: string): Promise<ChildAcademicData> {
   const [attendanceRes, marksRes] = await Promise.all([
-    supabase.from('attendance_records').select('class_date, status').eq('student_id', studentId).order('class_date', { ascending: false }),
+    supabase.from('attendance_records').select('class_date, status, subject').eq('student_id', studentId).order('class_date', { ascending: false }),
     supabase.from('marks').select('subject, exam_type, score, max_score, exam_date, tests(title)').eq('student_id', studentId).order('exam_date', { ascending: false }),
   ])
 
@@ -55,6 +55,7 @@ export async function fetchChildAcademicData(supabase: SupabaseClient<Database>,
     day: new Date(`${r.class_date}T00:00:00Z`).toLocaleDateString('en-GB', { weekday: 'short', timeZone: 'UTC' }),
     date: new Date(`${r.class_date}T00:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' }),
     status: (r.status === 'present' ? 'Present' : r.status === 'late' ? 'Late' : 'Absent') as AttStatus,
+    subject: r.subject,
   }))
 
   const markRows = marksRes.data ?? []

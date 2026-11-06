@@ -66,7 +66,7 @@ export async function fetchReportData(studentId: string, monthParam?: string | n
   if (!student) return null
 
   const [attendanceRes, marksRes, feesRes] = await Promise.all([
-    admin.from('attendance_records').select('status, class_date').eq('student_id', studentId).lte('class_date', endDate),
+    admin.from('attendance_records').select('status, class_date, subject').eq('student_id', studentId).lte('class_date', endDate),
     admin.from('marks').select('subject, exam_type, score, max_score, exam_date, tests(title)').eq('student_id', studentId).lte('exam_date', endDate),
     admin.from('fee_payments').select('year, month, status').eq('student_id', studentId),
   ])

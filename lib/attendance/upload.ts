@@ -40,7 +40,9 @@ export async function processAttendanceUpload(
   const today = todayIso()
   const lookup = await loadStudentLookup(supabase, rows.map((r) => pick(r.cells, GR_COLS)), rows.map((r) => pick(r.cells, ROLL_COLS)))
 
-  const records = new Map<string, { student_id: string; class_date: string; status: 'present' | 'absent' | 'late'; marked_by: string }>()
+  // A spreadsheet row is a whole-day record (subject ''); First Year's subject-wise
+  // marking is done in the app, one subject at a time.
+  const records = new Map<string, { student_id: string; class_date: string; subject: string; status: 'present' | 'absent' | 'late'; marked_by: string }>()
   for (const r of rows) {
     const fail = (message: string) => errors.push({ row: r.rowNumber, message })
     const resolved = resolveStudent(lookup, pick(r.cells, GR_COLS), pick(r.cells, ROLL_COLS))
@@ -57,7 +59,7 @@ export async function processAttendanceUpload(
 
     const key = `${resolved.student.id}|${classDate}`
     if (records.has(key)) { fail(`Duplicate: ${resolved.student.fullName} already appears for ${classDate}.`); continue }
-    records.set(key, { student_id: resolved.student.id, class_date: classDate, status, marked_by: userId })
+    records.set(key, { student_id: resolved.student.id, class_date: classDate, subject: '', status, marked_by: userId })
   }
 
   const all = Array.from(records.values())
@@ -65,7 +67,7 @@ export async function processAttendanceUpload(
   let absent = 0
   for (let i = 0; i < all.length; i += 500) {
     const chunk = all.slice(i, i + 500)
-    const { error } = await supabase.from('attendance_records').upsert(chunk, { onConflict: 'student_id,class_date' })
+    const { error } = await supabase.from('attendance_records').upsert(chunk, { onConflict: 'student_id,class_date,subject' })
     if (error) {
       errors.push({ row: 0, message: `A batch of ${chunk.length} records could not be saved. Please try the upload again.` })
       continue

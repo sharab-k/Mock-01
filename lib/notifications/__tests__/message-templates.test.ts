@@ -8,6 +8,13 @@ describe('parent message formats', () => {
     )
   })
 
+  it('subject-wise absence names the class; whole-day wording is untouched', () => {
+    expect(absenceAlertMessage('Ayesha Khan', '11A15', '2026-11-05', 'Physics')).toBe(
+      'Notification of Absence.\n\nDear Parents,\nAyesha Khan, having GR# 11A15, is absent today (5 November 2026) from the Physics class. Kindly ensure they cover the missed work.\n\nRegards,\nJ.E Academy.',
+    )
+    expect(absenceAlertMessage('Ayesha Khan', '9B15', '2026-10-02', '')).toBe(absenceAlertMessage('Ayesha Khan', '9B15', '2026-10-02'))
+  })
+
   it('result notice uses the same formal layout with the GR number and score', () => {
     expect(gradeAlertMessage('Ayesha Khan', '9B15', 'PHYSICS', 'Chapter 4 Quiz', 45, 50)).toBe(
       'Notification of Result.\n\nDear Parents,\nAyesha Khan, having GR# 9B15, has scored 45/50 in PHYSICS (Chapter 4 Quiz).\n\nRegards,\nJ.E Academy.',

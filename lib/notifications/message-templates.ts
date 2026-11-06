@@ -11,8 +11,12 @@ function absenceDateLabel(classDate: string): string {
   return new Date(`${classDate}T00:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })
 }
 
-export function absenceAlertMessage(studentName: string, rollNumber: string, classDate: string): string {
-  return `${absenceAlertPrefix(studentName)}having GR# ${rollNumber}, is absent today (${absenceDateLabel(classDate)}). Kindly ensure they cover the missed work.\n\nRegards,\nJ.E Academy.`
+// `subject` is set for First Year's subject-wise attendance and is empty for the
+// whole-day marking of every other grade — it must match the database trigger
+// notify_parents_on_absence (20261106120000_subject_wise_attendance.sql).
+export function absenceAlertMessage(studentName: string, rollNumber: string, classDate: string, subject = ''): string {
+  const what = subject ? ` from the ${subject} class` : ''
+  return `${absenceAlertPrefix(studentName)}having GR# ${rollNumber}, is absent today (${absenceDateLabel(classDate)})${what}. Kindly ensure they cover the missed work.\n\nRegards,\nJ.E Academy.`
 }
 
 // Same formal school format as the absence notice, so every message a parent

@@ -116,6 +116,7 @@ export default function StudentOverview() {
                 data.attendance.map((a, i) => (
                   <View key={i} style={styles.listRow}>
                     <ThemedText variant="small" color="textSecondary" style={{ width: 90 }}>{a.day}, {a.date}</ThemedText>
+                    {a.subject ? <ThemedText variant="small" style={{ flex: 1 }}>{a.subject}</ThemedText> : null}
                     <StatusPill tone={STATUS_TONE[a.status]} label={a.status} />
                   </View>
                 ))

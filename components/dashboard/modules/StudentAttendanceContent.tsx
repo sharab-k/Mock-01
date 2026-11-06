@@ -71,11 +71,12 @@ export default function StudentAttendanceContent({ studentId, months }: { studen
                 const cfg = ATT_CFG[d.status]
                 const Icon = cfg.icon
                 return (
-                  <div key={`${d.date}-${i}`} className="flex flex-col items-center gap-1">
+                  <div key={`${d.date}-${d.subject}-${i}`} className="flex flex-col items-center gap-1" title={d.subject ? `${d.subject} · ${d.status}` : d.status}>
                     <div className={`w-9 h-9 rounded-full border-2 flex items-center justify-center ${cfg.ring} ${cfg.bg}`}>
                       <Icon size={13} strokeWidth={2.5} className={cfg.text} />
                     </div>
                     <span className="text-[9.5px] font-mono text-neutral-400">{d.date}</span>
+                    {d.subject && <span className="text-[8.5px] text-neutral-400 -mt-0.5">{d.subject.slice(0, 4)}</span>}
                   </div>
                 )
               })}
