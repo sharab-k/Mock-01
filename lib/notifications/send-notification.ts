@@ -103,12 +103,14 @@ export async function notifyAbsence(input: {
   studentName: string
   rollNumber: string
   classDate: string
+  /** First Year's subject-wise attendance; empty/omitted for whole-day marking. */
+  subject?: string
   createdBy: string | null
 }): Promise<{ parents: number }> {
   const parents = (await getLinkedParentsBatch([input.studentId])).get(input.studentId) ?? []
   if (parents.length === 0) return { parents: 0 }
 
-  const message = absenceAlertMessage(input.studentName.trim(), input.rollNumber, input.classDate)
+  const message = absenceAlertMessage(input.studentName.trim(), input.rollNumber, input.classDate, input.subject)
   await savePortalNotifications(parents.map((p) => ({
     parentId: p.id, parentName: p.name, studentId: input.studentId, kind: 'absence', title: 'Notification of Absence', body: message, createdBy: input.createdBy,
   })))

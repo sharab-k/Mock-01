@@ -5,6 +5,8 @@ type Status = 'present' | 'absent' | 'late';
 export type SubmitClassAttendanceInput = {
   classDate?: string;
   classLabel?: string;
+  /** First Year's subject-wise attendance; omit for whole-day marking. */
+  subject?: string;
   records: { studentId: string; studentName: string; status: Status }[];
 };
 
@@ -20,6 +22,7 @@ export type MarkAttendanceInput = {
   studentName: string;
   status: Status;
   classDate?: string;
+  subject?: string;
 };
 
 export async function markAttendanceAction(input: MarkAttendanceInput) {
@@ -30,6 +33,6 @@ export async function markAttendanceAction(input: MarkAttendanceInput) {
 // /api/notifications route the web's roster button calls (bearer-authed by
 // resolveRequestClient). `sent` means saved to the parent portal(s); WhatsApp/SMS
 // is attempted in the background on top of that.
-export async function sendAbsenceAlertAction(input: { studentId: string; studentName: string; classDate: string }) {
+export async function sendAbsenceAlertAction(input: { studentId: string; studentName: string; classDate: string; subject?: string }) {
   return callMobileApi<{ notified: number; sent: boolean }>('/api/notifications', input);
 }

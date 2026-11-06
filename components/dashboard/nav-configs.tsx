@@ -26,6 +26,7 @@ export const NAV_CONFIGS: Record<string, NavSection[]> = {
       items: [
         { label: 'Admissions', href: '/super-admin/admissions', icon: Inbox,        badge: 14 },
         { label: 'Attendance', href: '/super-admin/attendance', icon: CalendarCheck           },
+        { label: 'First Year Attendance', href: '/super-admin/attendance/first-year', icon: BookOpen },
         { label: 'Marks',      href: '/super-admin/marks',      icon: BookOpen                },
         { label: 'Upload Marks', href: '/super-admin/marks/upload', icon: Upload              },
         { label: 'Upload Attendance', href: '/super-admin/attendance/upload', icon: Upload      },
@@ -71,6 +72,7 @@ export const NAV_CONFIGS: Record<string, NavSection[]> = {
       title: 'Attendance',
       items: [
         { label: 'Mark Today', href: '/attendance/mark',    icon: CalendarCheck },
+        { label: 'First Year (by subject)', href: '/attendance/first-year', icon: BookOpen },
         { label: 'Roster',     href: '/attendance/roster',  icon: ClipboardList },
         { label: 'Upload Attendance', href: '/attendance/upload', icon: Upload },
         { label: 'Reports',    href: '/attendance/reports', icon: BarChart2     },

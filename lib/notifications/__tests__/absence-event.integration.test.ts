@@ -22,7 +22,7 @@ const count = async (sid: string) =>
   (await admin.from('portal_notifications').select('id', { count: 'exact', head: true }).eq('student_id', sid).eq('kind', 'absence')).count ?? 0
 
 async function mark(sid: string, date: string, status: 'present' | 'absent' | 'late') {
-  const { error } = await admin.from('attendance_records').upsert({ student_id: sid, class_date: date, status }, { onConflict: 'student_id,class_date' })
+  const { error } = await admin.from('attendance_records').upsert({ student_id: sid, class_date: date, status }, { onConflict: 'student_id,class_date,subject' })
   expect(error).toBeNull()
 }
 

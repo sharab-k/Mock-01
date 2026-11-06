@@ -187,7 +187,7 @@ export default function ParentDashboardContent({ kids, notices, unreadNotificati
               {data.attendance.map((d, i) => {
                 const cfg = ATT_CFG[d.status]
                 return (
-                  <div key={`${d.day}-${i}`} className="flex flex-col items-center gap-1.5">
+                  <div key={`${d.day}-${i}`} className="flex flex-col items-center gap-1.5" title={d.subject ? `${d.subject} · ${d.status}` : d.status}>
                     <span className={`w-2 h-2 rounded-full ${cfg.dot}`} />
                     <span className="text-[9px] text-neutral-400 font-mono">{d.day[0]}</span>
                   </div>
@@ -320,6 +320,7 @@ export default function ParentDashboardContent({ kids, notices, unreadNotificati
                           <div className="text-center">
                             <span className="block text-[11px] font-semibold text-neutral-700">{d.day}</span>
                             <span className="block text-[10px] font-mono text-neutral-400">{d.date.split(' ')[0]}</span>
+                            {d.subject && <span className="block text-[9px] text-neutral-400">{d.subject.slice(0, 4)}</span>}
                           </div>
                         </div>
                       )

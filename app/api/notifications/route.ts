@@ -7,6 +7,7 @@ const BodySchema = z.object({
   studentId: z.string().uuid(),
   studentName: z.string().min(1),
   classDate: z.string().min(1),
+  subject: z.string().max(40).optional(),
 })
 
 // Thin external entry point for the notification pipeline (CLAUDE.md §8's
@@ -35,6 +36,7 @@ export async function POST(request: Request) {
     studentName: parsed.data.studentName,
     rollNumber: student?.roll_number ?? '',
     classDate: parsed.data.classDate,
+    subject: parsed.data.subject,
     createdBy: user.id,
   })
 

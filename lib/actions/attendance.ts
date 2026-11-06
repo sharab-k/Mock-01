@@ -5,6 +5,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/server'
 import { getLinkedParentsBatch } from '@/lib/notifications/send-notification'
 import { logAction } from '@/lib/audit/log'
+import { FIRST_YEAR_GRADE, isFirstYearSubject, studentTakesSubject } from '@/lib/attendance/first-year-subjects'
 import type { Database } from '@/types/supabase'
 
 async function requireAttendanceCaller(supabaseOverride?: SupabaseClient<Database>) {
@@ -23,10 +24,15 @@ function today(): string {
 
 const AttendanceStatusSchema = z.enum(['present', 'absent', 'late'])
 
+// First Year's subject-wise attendance names the subject; '' / omitted is the
+// whole-day marking every other grade uses.
+const SubjectSchema = z.string().refine((s) => s === '' || isFirstYearSubject(s), 'Unknown subject.')
+
 const MarkOneSchema = z.object({
   studentId: z.string().uuid(),
   studentName: z.string().min(1),
   status: AttendanceStatusSchema,
+  subject: SubjectSchema.optional(),
   // Back-dated marking is allowed; a day that hasn't happened yet is not.
   classDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine((d) => d <= today(), 'Date cannot be in the future.').optional(),
 })
@@ -42,12 +48,14 @@ async function markOneAttendance(
   input: z.infer<typeof MarkOneSchema>,
 ): Promise<{ ok: true; notified: boolean } | { ok: false; error: string }> {
   const classDate = input.classDate ?? today()
+  const subject = input.subject ?? ''
 
   const { data: existing } = await supabase
     .from('attendance_records')
     .select('id, status')
     .eq('student_id', input.studentId)
     .eq('class_date', classDate)
+    .eq('subject', subject)
     .maybeSingle()
 
   // Fires whenever a mark newly becomes 'absent' for the day — a fresh
@@ -60,8 +68,8 @@ async function markOneAttendance(
   const { error } = await supabase
     .from('attendance_records')
     .upsert(
-      { student_id: input.studentId, class_date: classDate, status: input.status, marked_by: markedBy },
-      { onConflict: 'student_id,class_date' },
+      { student_id: input.studentId, class_date: classDate, subject, status: input.status, marked_by: markedBy },
+      { onConflict: 'student_id,class_date,subject' },
     )
 
   if (error) return { ok: false, error: 'Could not save attendance.' }
@@ -89,16 +97,39 @@ export async function markAttendanceAction(
   const { supabase, user, authorized } = await requireAttendanceCaller(supabaseOverride)
   if (!authorized || !user) return { ok: false as const, error: 'Not authorized.' }
 
+  const subject = parsed.data.subject ?? ''
+  if (subject) {
+    const refused = await subjectMismatch(supabase, [parsed.data.studentId], subject)
+    if (refused) return { ok: false as const, error: refused }
+  }
+
   const result = await markOneAttendance(supabase, user.id, parsed.data)
   if (result.ok) {
-    await logAction(supabase, user.id, `Marked attendance — ${parsed.data.studentName} · ${parsed.data.status}`)
+    await logAction(supabase, user.id, `Marked attendance — ${parsed.data.studentName} · ${subject ? `${subject} · ` : ''}${parsed.data.status}`)
   }
   return result
+}
+
+// A subject-wise record is only valid for a First Year student who actually
+// studies that subject (the faculty comes from students.stream). Checked here, on
+// top of the page's own filtering, so a stale page or a hand-built request can't
+// mark Biology for a Pre-Engineering student.
+async function subjectMismatch(supabase: SupabaseClient<Database>, studentIds: string[], subject: string): Promise<string | null> {
+  const { data } = await supabase.from('students').select('id, full_name, grade_level, stream').in('id', studentIds)
+  const byId = new Map((data ?? []).map((s) => [s.id, s]))
+  for (const id of studentIds) {
+    const s = byId.get(id)
+    if (!s) return 'Student not found.'
+    if (s.grade_level !== FIRST_YEAR_GRADE) return `${s.full_name} is not a First Year student.`
+    if (!studentTakesSubject(s.stream, subject)) return `${s.full_name} does not study ${subject}.`
+  }
+  return null
 }
 
 const SubmitClassSchema = z.object({
   classDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine((d) => d <= today(), 'Date cannot be in the future.').optional(),
   classLabel: z.string().optional(),
+  subject: SubjectSchema.optional(),
   records: z.array(z.object({
     studentId: z.string().uuid(),
     studentName: z.string().min(1),
@@ -117,14 +148,20 @@ export async function submitClassAttendanceAction(
   if (!authorized || !user) return { ok: false as const, error: 'Not authorized.' }
 
   const classDate = parsed.data.classDate ?? today()
+  const subject = parsed.data.subject ?? ''
+  if (subject) {
+    const refused = await subjectMismatch(supabase, parsed.data.records.map((r) => r.studentId), subject)
+    if (refused) return { ok: false as const, error: refused }
+  }
+
   let notifiedCount = 0
 
   for (const record of parsed.data.records) {
-    const result = await markOneAttendance(supabase, user.id, { ...record, classDate })
+    const result = await markOneAttendance(supabase, user.id, { ...record, classDate, subject })
     if (result.ok && result.notified) notifiedCount++
   }
 
-  await logAction(supabase, user.id, `Marked attendance — ${parsed.data.classLabel ?? 'roster'} · ${classDate} · ${parsed.data.records.length} students`)
+  await logAction(supabase, user.id, `Marked attendance — ${parsed.data.classLabel ?? 'roster'} · ${subject ? `${subject} · ` : ''}${classDate} · ${parsed.data.records.length} students`)
 
   return { ok: true as const, notifiedCount }
 }

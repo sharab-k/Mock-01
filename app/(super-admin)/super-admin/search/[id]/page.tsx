@@ -93,7 +93,7 @@ export default async function StudentRecordPage({ params }: { params: Promise<{ 
         )}
       </Section>
 
-      <Section title={`Attendance — ${attendance.summary.total} days recorded`}>
+      <Section title={`Attendance — ${attendance.summary.total} records`}>
         <div className="mb-3 flex flex-wrap gap-4 text-sm">
           <span className="text-success">Present {attendance.summary.present}</span>
           <span className="text-warning">Late {attendance.summary.late}</span>
@@ -106,8 +106,8 @@ export default async function StudentRecordPage({ params }: { params: Promise<{ 
               {month} <span className="font-normal text-neutral-600">· {days.filter((d) => d.status !== 'absent').length}/{days.length} attended</span>
             </summary>
             <div className="mt-2 flex flex-wrap gap-1.5">
-              {days.map((d) => (
-                <span key={d.date} className={`rounded px-2 py-0.5 font-mono text-xs ${STATUS_CLASS[d.status]}`} title={d.status}>{d.date.slice(8)} {d.status[0].toUpperCase()}</span>
+              {days.map((d, i) => (
+                <span key={`${d.date}-${d.subject}-${i}`} className={`rounded px-2 py-0.5 font-mono text-xs ${STATUS_CLASS[d.status]}`} title={d.subject ? `${d.subject} · ${d.status}` : d.status}>{d.date.slice(8)} {d.status[0].toUpperCase()}{d.subject ? ` ${d.subject.slice(0, 3)}` : ''}</span>
               ))}
             </div>
           </details>

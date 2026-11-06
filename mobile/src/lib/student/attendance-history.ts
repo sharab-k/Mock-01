@@ -1,13 +1,14 @@
 import { supabase } from '@/lib/supabase/client';
 
-export type AttendanceDay = { date: number; status: 'Present' | 'Late' | 'Absent' };
+// `subject` is set on First Year's subject-wise records, '' on whole-day ones.
+export type AttendanceDay = { date: number; status: 'Present' | 'Late' | 'Absent'; subject: string };
 export type AttendanceMonth = { label: string; year: number; monthIndex: number; days: AttendanceDay[] };
 
 // Ported from the web's lib/student/attendance-history.ts.
 export async function fetchAttendanceHistory(studentId: string): Promise<AttendanceMonth[]> {
   const { data } = await supabase
     .from('attendance_records')
-    .select('class_date, status')
+    .select('class_date, status, subject')
     .eq('student_id', studentId)
     .order('class_date', { ascending: true });
 
@@ -19,6 +20,7 @@ export async function fetchAttendanceHistory(studentId: string): Promise<Attenda
     byMonth.get(key)!.push({
       date: d.getUTCDate(),
       status: row.status === 'present' ? 'Present' : row.status === 'late' ? 'Late' : 'Absent',
+      subject: row.subject,
     });
   }
 

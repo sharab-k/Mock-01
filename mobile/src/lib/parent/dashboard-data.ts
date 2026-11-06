@@ -18,7 +18,7 @@ export type ParentChild = {
   attendancePct: number;
   avgScore: number;
   marks: { subject: string; exam: string; date: string; score: number; max: number; grade: string }[];
-  attendance: { day: string; date: string; status: AttStatus }[];
+  attendance: { day: string; date: string; status: AttStatus; subject: string }[];
   monthlyTrend: { month: string; attendance: number; avgScore: number }[];
   /** Current calendar month's fee status — absence of a fee_payments row means unpaid. */
   feeStatus: 'paid' | 'unpaid';

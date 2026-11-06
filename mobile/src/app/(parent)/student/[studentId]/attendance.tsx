@@ -50,9 +50,10 @@ export default function StudentAttendanceScreen() {
               <Card key={`${month.year}-${month.monthIndex}`} style={{ gap: 10 }}>
                 <ThemedText variant="bodyMedium">{month.label} {month.year}</ThemedText>
                 <View style={styles.grid}>
-                  {month.days.map((day) => (
-                    <View key={day.date} style={[styles.dayChip, { backgroundColor: theme.surfaceElement }]}>
+                  {month.days.map((day, i) => (
+                    <View key={`${day.date}-${day.subject}-${i}`} style={[styles.dayChip, { backgroundColor: theme.surfaceElement }]}>
                       <ThemedText variant="mono" style={{ fontSize: 12 }}>{day.date}</ThemedText>
+                      {day.subject ? <ThemedText variant="small" color="textMuted" style={{ fontSize: 9 }}>{day.subject.slice(0, 4)}</ThemedText> : null}
                       <View style={[styles.dot, { backgroundColor: STATUS_COLOR[day.status] }]} />
                     </View>
                   ))}

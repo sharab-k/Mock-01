@@ -1,6 +1,7 @@
 import { supabase } from '@/lib/supabase/client';
 import { fetchAllRows } from '@/lib/db/fetch-all';
 import { GRADE_SECTION_PAIRS } from '@/lib/students/constants';
+import { FIRST_YEAR_GRADE } from '@/lib/attendance/first-year-subjects';
 
 const INITIALS = (name: string) => name.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase();
 
@@ -24,7 +25,8 @@ export async function fetchMarkerClasses(): Promise<MarkerClass[]> {
   );
 
   const byClass = new Map<string, MarkerClass>();
-  for (const { grade, section } of GRADE_SECTION_PAIRS) {
+  // First Year is marked by faculty and subject on its own tab, not here.
+  for (const { grade, section } of GRADE_SECTION_PAIRS.filter((p) => p.grade !== FIRST_YEAR_GRADE)) {
     byClass.set(`${grade}-${section}`, { id: `${grade}-${section}`, grade, section, label: `Grade ${grade} · Section ${section}`, students: [] });
   }
   for (const s of data ?? []) {

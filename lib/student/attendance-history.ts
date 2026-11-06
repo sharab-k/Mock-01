@@ -1,13 +1,13 @@
 import { createClient } from '@/lib/supabase/server'
 
-export type AttendanceDay = { date: number; status: 'Present' | 'Late' | 'Absent' }
+export type AttendanceDay = { date: number; status: 'Present' | 'Late' | 'Absent'; /** First Year's subject-wise records only; '' for whole-day. */ subject: string }
 export type AttendanceMonth = { label: string; year: number; monthIndex: number; days: AttendanceDay[] }
 
 export async function fetchAttendanceHistory(studentId: string): Promise<AttendanceMonth[]> {
   const supabase = await createClient()
   const { data } = await supabase
     .from('attendance_records')
-    .select('class_date, status')
+    .select('class_date, status, subject')
     .eq('student_id', studentId)
     .order('class_date', { ascending: true })
 
@@ -19,6 +19,7 @@ export async function fetchAttendanceHistory(studentId: string): Promise<Attenda
     byMonth.get(key)!.push({
       date: d.getUTCDate(),
       status: row.status === 'present' ? 'Present' : row.status === 'late' ? 'Late' : 'Absent',
+      subject: row.subject,
     })
   }
 

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router, useLocalSearchParams } from 'expo-router';
+import { Redirect, router, useLocalSearchParams, type Href } from 'expo-router';
 import { MessageSquare, MessageSquareWarning } from 'lucide-react-native';
 
 import { TextField } from '@/components/ui/text-field';
@@ -32,6 +32,12 @@ function today(): string {
 // their alert status with Send / Resend.
 export default function ClassDetailScreen() {
   const { grade, section } = useLocalSearchParams<{ grade: string; section: string }>();
+  // First Year attends by faculty and subject, never for a whole day.
+  if (grade === '11') return <Redirect href={`/attendance/first-year?section=${section}` as Href} />;
+  return <ClassDetailBody grade={grade} section={section} />;
+}
+
+function ClassDetailBody({ grade, section }: { grade: string; section: string }) {
   const theme = useTheme();
   const [classDate, setClassDate] = useState(today());
   const classDateValid = /^\d{4}-\d{2}-\d{2}$/.test(classDate) && !Number.isNaN(Date.parse(classDate)) && classDate <= today();

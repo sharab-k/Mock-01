@@ -230,7 +230,9 @@ export async function renderReportPdf(data: ReportData): Promise<Uint8Array> {
         y -= 14
         ensure(16)
       }
-      page.drawText(safe(`${formatLogDate(r.date)} ${ATTENDANCE_LABEL[r.status] ?? r.status}`, mono), {
+      // First Year's subject-wise rows carry a 3-letter subject code (PHY, MAT, BIO…).
+      const subjectCode = r.subject ? ` ${r.subject.slice(0, 3).toUpperCase()}` : ''
+      page.drawText(safe(`${formatLogDate(r.date)} ${ATTENDANCE_LABEL[r.status] ?? r.status}${subjectCode}`, mono), {
         x: M + col * cellW, y, size: 8.5, font: mono, color: statusColor(r.status),
       })
     })
