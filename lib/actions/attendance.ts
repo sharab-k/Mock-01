@@ -5,7 +5,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/server'
 import { getLinkedParentsBatch } from '@/lib/notifications/send-notification'
 import { logAction } from '@/lib/audit/log'
-import { FIRST_YEAR_GRADE, isFirstYearSubject, studentTakesSubject } from '@/lib/attendance/first-year-subjects'
+import { YEAR_LABEL, isAttendanceSubject, isSubjectGrade, studentTakesSubject } from '@/lib/attendance/first-year-subjects'
 import type { Database } from '@/types/supabase'
 
 async function requireAttendanceCaller(supabaseOverride?: SupabaseClient<Database>) {
@@ -24,9 +24,9 @@ function today(): string {
 
 const AttendanceStatusSchema = z.enum(['present', 'absent', 'late'])
 
-// First Year's subject-wise attendance names the subject; '' / omitted is the
+// First and Second Year's subject-wise attendance names the subject; '' / omitted is the
 // whole-day marking every other grade uses.
-const SubjectSchema = z.string().refine((s) => s === '' || isFirstYearSubject(s), 'Unknown subject.')
+const SubjectSchema = z.string().refine((s) => s === '' || isAttendanceSubject(s), 'Unknown subject.')
 
 const MarkOneSchema = z.object({
   studentId: z.string().uuid(),
@@ -110,7 +110,7 @@ export async function markAttendanceAction(
   return result
 }
 
-// A subject-wise record is only valid for a First Year student who actually
+// A subject-wise record is only valid for a First or Second Year student who actually
 // studies that subject (the faculty comes from students.stream). Checked here, on
 // top of the page's own filtering, so a stale page or a hand-built request can't
 // mark Biology for a Pre-Engineering student.
@@ -120,8 +120,8 @@ async function subjectMismatch(supabase: SupabaseClient<Database>, studentIds: s
   for (const id of studentIds) {
     const s = byId.get(id)
     if (!s) return 'Student not found.'
-    if (s.grade_level !== FIRST_YEAR_GRADE) return `${s.full_name} is not a First Year student.`
-    if (!studentTakesSubject(s.stream, subject)) return `${s.full_name} does not study ${subject}.`
+    if (!isSubjectGrade(s.grade_level)) return `${s.full_name} is not a First Year or Second Year student.`
+    if (!studentTakesSubject(s.stream, subject, s.grade_level)) return `${s.full_name} does not study ${subject} in ${YEAR_LABEL[s.grade_level]}.`
   }
   return null
 }

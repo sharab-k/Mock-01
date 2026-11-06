@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase/client';
-import { FIRST_YEAR_GRADE, isUnplaced, studentInSubjectList, type Faculty } from '@/lib/attendance/first-year-subjects';
+import { FIRST_YEAR_GRADE, isUnplaced, studentInSubjectList, type Faculty, type SubjectGrade } from '@/lib/attendance/first-year-subjects';
 
 export type SubjectStatus = 'unmarked' | 'present' | 'absent' | 'late';
 
@@ -14,15 +14,16 @@ export type SubjectRosterStudent = {
 
 export type SubjectRoster = { students: SubjectRosterStudent[]; unplaced: number };
 
-// Ported from the web's lib/attendance/subject-roster.ts: First Year students of the
+// Ported from the web's lib/attendance/subject-roster.ts: First or Second Year students of the
 // section who study the chosen subject (optionally one faculty), with whatever is
 // already marked for that subject on that date. Runs on the staff member's own
 // RLS-scoped session.
-export async function fetchSubjectRoster(input: { section: string; classDate: string; subject: string; faculty: Faculty | null }): Promise<SubjectRoster> {
+export async function fetchSubjectRoster(input: { section: string; classDate: string; subject: string; faculty: Faculty | null; grade?: SubjectGrade }): Promise<SubjectRoster> {
+  const grade = input.grade ?? FIRST_YEAR_GRADE;
   const { data: all, error } = await supabase
     .from('students')
     .select('id, roll_number, gr_number, full_name, stream')
-    .eq('grade_level', FIRST_YEAR_GRADE)
+    .eq('grade_level', grade)
     .eq('section', input.section)
     .is('deleted_at', null)
     .eq('status', 'active')
@@ -30,8 +31,8 @@ export async function fetchSubjectRoster(input: { section: string; classDate: st
   if (error) throw new Error('Could not load the class.');
 
   const everyone = all ?? [];
-  const listed = everyone.filter((s) => studentInSubjectList(s.stream, input.subject, input.faculty));
-  const unplaced = input.faculty ? 0 : everyone.filter((s) => isUnplaced(s.stream, input.subject)).length;
+  const listed = everyone.filter((s) => studentInSubjectList(s.stream, input.subject, input.faculty, grade));
+  const unplaced = input.faculty ? 0 : everyone.filter((s) => isUnplaced(s.stream, input.subject, grade)).length;
   if (listed.length === 0) return { students: [], unplaced };
 
   const { data: records } = await supabase

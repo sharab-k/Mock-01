@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, CheckCircle2, XCircle, Clock3, Send, AlertTriangle, MessageSquare, Loader2 } from 'lucide-react'
 import { submitClassAttendanceAction } from '@/lib/actions/attendance'
-import { FACULTIES, subjectsForFaculty } from '@/lib/attendance/first-year-subjects'
+import { FACULTIES, YEAR_LABEL, YEAR_SLUG, subjectsForFaculty } from '@/lib/attendance/first-year-subjects'
 import { FIRST_YEAR_SECTIONS, dayName, longDate, type FirstYearSelection } from '@/lib/attendance/first-year-selection'
 import type { SubjectRoster, SubjectStatus } from '@/lib/attendance/subject-roster'
 
@@ -31,14 +31,15 @@ type Props = {
   roster: SubjectRoster | null
 }
 
-// First Year attends by faculty and subject, not for a fixed full day: pick the
+// First and Second Year attend by faculty and subject, not for a fixed full day: pick the
 // class, the date, the faculty and the subject, and only the students who study
 // that subject are listed (Physics → every faculty, Biology → Pre-Medical only…).
 export default function FirstYearAttendanceContent({ basePath = '/attendance', selection, roster }: Props) {
   const router = useRouter()
   const [navigating, startNav] = useTransition()
   const todayStr = new Date().toISOString().slice(0, 10)
-  const { section, classDate, faculty, subject } = selection
+  const { grade, section, classDate, faculty, subject } = selection
+  const yearLabel = YEAR_LABEL[grade]
 
   // Everyone starts as Present — the marker taps the absentees — except students
   // already marked for this subject on this date, who keep what was saved.
@@ -60,11 +61,11 @@ export default function FirstYearAttendanceContent({ basePath = '/attendance', s
       subject: next.subject ?? subject,
     }
     // A faculty change can leave a subject that faculty doesn't study — drop it.
-    const allowed = subjectsForFaculty(FACULTIES.find((f) => f === merged.faculty) ?? null)
+    const allowed = subjectsForFaculty(FACULTIES.find((f) => f === merged.faculty) ?? null, grade)
     const params = new URLSearchParams({ section: merged.section, date: merged.date })
     if (merged.faculty) params.set('faculty', merged.faculty)
     if (merged.subject && allowed.includes(merged.subject)) params.set('subject', merged.subject)
-    startNav(() => router.replace(`${basePath}/first-year?${params.toString()}`))
+    startNav(() => router.replace(`${basePath}/${YEAR_SLUG[grade]}?${params.toString()}`))
   }
 
   const students = roster?.students ?? []
@@ -92,7 +93,7 @@ export default function FirstYearAttendanceContent({ basePath = '/attendance', s
     const outcome = await submitClassAttendanceAction({
       classDate,
       subject,
-      classLabel: `First Year ${section}`,
+      classLabel: `${yearLabel} ${section}`,
       records: students.map((s) => ({ studentId: s.id, studentName: s.name, status: records[s.id] })),
     })
     setSubmitting(false)
@@ -113,7 +114,7 @@ export default function FirstYearAttendanceContent({ basePath = '/attendance', s
         <Link href={basePath} className="inline-flex items-center gap-1.5 text-[12.5px] font-medium text-neutral-500 hover:text-ink-700 transition-colors no-underline mb-4 group">
           <ArrowLeft size={13} className="group-hover:-translate-x-0.5 transition-transform" /> Attendance
         </Link>
-        <h1 className="text-[20px] font-bold text-neutral-900">First Year · Subject-wise Attendance</h1>
+        <h1 className="text-[20px] font-bold text-neutral-900">{yearLabel} · Subject-wise Attendance</h1>
         <p className="text-[13px] text-neutral-500 mt-0.5">Pick the class, date, faculty and subject — only the students who study that subject are listed</p>
       </div>
 
@@ -123,7 +124,7 @@ export default function FirstYearAttendanceContent({ basePath = '/attendance', s
           <span className={stepLabel}>1 · Class</span>
           <div className="flex flex-wrap gap-2">
             {FIRST_YEAR_SECTIONS.map((s) => (
-              <button key={s} type="button" onClick={() => go({ section: s })} className={`${CHIP} ${s === section ? CHIP_ON : CHIP_OFF}`}>First Year {s}</button>
+              <button key={s} type="button" onClick={() => go({ section: s })} className={`${CHIP} ${s === section ? CHIP_ON : CHIP_OFF}`}>{yearLabel} {s}</button>
             ))}
           </div>
         </div>
@@ -156,7 +157,7 @@ export default function FirstYearAttendanceContent({ basePath = '/attendance', s
         <div>
           <span className={stepLabel}>4 · Subject</span>
           <div className="flex flex-wrap gap-2">
-            {subjectsForFaculty(faculty).map((s) => (
+            {subjectsForFaculty(faculty, grade).map((s) => (
               <button key={s} type="button" onClick={() => go({ subject: s })} className={`${CHIP} ${s === subject ? CHIP_ON : CHIP_OFF}`}>{s}</button>
             ))}
           </div>
@@ -168,13 +169,13 @@ export default function FirstYearAttendanceContent({ basePath = '/attendance', s
         {!roster ? (
           <div className="px-6 py-12 text-center">
             <p className="text-[14px] font-semibold text-neutral-600">Choose a subject to see the students</p>
-            <p className="text-[12.5px] text-neutral-400 mt-1">The list shows First Year {section} students who study the subject you pick.</p>
+            <p className="text-[12.5px] text-neutral-400 mt-1">The list shows {yearLabel} {section} students who study the subject you pick.</p>
           </div>
         ) : (
           <>
             <div className="flex items-center justify-between gap-3 flex-wrap px-6 py-4 border-b border-neutral-100">
               <div>
-                <h2 className="text-[14px] font-semibold text-neutral-900">First Year {section} · {subject}{faculty ? ` · ${faculty}` : ''}</h2>
+                <h2 className="text-[14px] font-semibold text-neutral-900">{yearLabel} {section} · {subject}{faculty ? ` · ${faculty}` : ''}</h2>
                 <p className="text-[12px] text-neutral-500 mt-0.5">
                   {dayName(classDate)}, {longDate(classDate)} · <span className="font-mono">{students.length}</span> student{students.length === 1 ? '' : 's'}
                   {alreadyMarked && <span className="ml-2 text-ink-600 font-medium">· already marked — changes update the saved record</span>}
@@ -196,7 +197,7 @@ export default function FirstYearAttendanceContent({ basePath = '/attendance', s
 
             {students.length === 0 ? (
               <div className="px-6 py-12 text-center">
-                <p className="text-[13px] font-medium text-neutral-500">No students in First Year {section} study {subject}{faculty ? ` in ${faculty}` : ''}</p>
+                <p className="text-[13px] font-medium text-neutral-500">No students in {yearLabel} {section} study {subject}{faculty ? ` in ${faculty}` : ''}</p>
               </div>
             ) : (
               <div className="divide-y divide-neutral-100">

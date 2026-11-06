@@ -4,7 +4,7 @@ import { dayName, longDate, resolveFirstYearSelection } from '../first-year-sele
 describe('resolveFirstYearSelection', () => {
   it('keeps a valid selection', () => {
     expect(resolveFirstYearSelection({ section: 'C', date: '2026-11-05', faculty: 'Pre-Medical', subject: 'Biology' }))
-      .toEqual({ section: 'C', classDate: '2026-11-05', faculty: 'Pre-Medical', subject: 'Biology' })
+      .toEqual({ grade: '11', section: 'C', classDate: '2026-11-05', faculty: 'Pre-Medical', subject: 'Biology' })
   })
   it('falls back to section A and no faculty/subject for junk', () => {
     const s = resolveFirstYearSelection({ section: 'Z', faculty: 'Commerce', subject: 'Underwater Basket Weaving' })
@@ -29,5 +29,16 @@ describe('date labels', () => {
   it('5 November 2026 is a Thursday (the document\'s own example)', () => {
     expect(dayName('2026-11-05')).toBe('Thursday')
     expect(longDate('2026-11-05')).toBe('5 November 2026')
+  })
+})
+
+describe('resolveFirstYearSelection for Second Year', () => {
+  it('carries the grade and accepts Pak. Studies', () => {
+    const s = resolveFirstYearSelection({ section: 'B', faculty: 'Pre-Medical', subject: 'Pak. Studies' }, '12')
+    expect(s).toMatchObject({ grade: '12', section: 'B', faculty: 'Pre-Medical', subject: 'Pak. Studies' })
+  })
+  it('drops Islamiat, which Second Year does not study', () => {
+    expect(resolveFirstYearSelection({ subject: 'Islamiat' }, '12').subject).toBe('')
+    expect(resolveFirstYearSelection({ subject: 'Islamiat' }).subject).toBe('Islamiat')
   })
 })

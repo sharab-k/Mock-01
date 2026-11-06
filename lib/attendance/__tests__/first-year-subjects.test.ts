@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  ALL_SUBJECTS, FACULTIES, SUBJECTS_BY_FACULTY, facultiesForSubject, isUnplaced, studentInSubjectList, subjectsForFaculty,
+  ALL_SUBJECTS, ALL_SUBJECTS_BY_GRADE, FACULTIES, SUBJECTS_BY_FACULTY, facultiesForSubject, isUnplaced, studentInSubjectList, subjectsForFaculty,
 } from '../first-year-subjects'
 
 const PE = 'Pre-Engineering'
@@ -64,5 +64,31 @@ describe('students whose faculty is not set', () => {
       expect(studentInSubjectList('Commerce', s, null)).toBe(false)
       expect(isUnplaced('Commerce', s)).toBe(false)
     }
+  })
+})
+
+describe('Second Year subject lists (document §4)', () => {
+  const second = (subject: string, faculty: (typeof FACULTIES)[number] | null = null) =>
+    [PE, PM, CS].filter((stream) => studentInSubjectList(stream, subject, faculty, '12'))
+
+  it('Physics, English, Urdu and Pak. Studies show every faculty', () => {
+    for (const s of ['Physics', 'English', 'Urdu', 'Pak. Studies']) expect(second(s)).toEqual([PE, PM, CS])
+  })
+  it('Mathematics is Pre-Engineering and Computer Science', () => expect(second('Mathematics')).toEqual([PE, CS]))
+  it('Chemistry is Pre-Engineering and Pre-Medical', () => expect(second('Chemistry')).toEqual([PE, PM]))
+  it('Biology is Pre-Medical only', () => expect(second('Biology')).toEqual([PM]))
+  it('Computer Science is Computer Science only', () => expect(second('Computer Science')).toEqual([CS]))
+  it('Islamiat is a First Year paper — nobody takes it in Second Year', () => expect(second('Islamiat')).toEqual([]))
+  it('Pak. Studies is a Second Year paper — nobody takes it in First Year', () => expect(listed('Pak. Studies')).toEqual([]))
+  it('each faculty has six subjects, all known', () => {
+    for (const f of FACULTIES) {
+      expect(subjectsForFaculty(f, '12')).toHaveLength(6)
+      for (const s of subjectsForFaculty(f, '12')) expect(ALL_SUBJECTS_BY_GRADE['12']).toContain(s)
+    }
+  })
+  it('students with no faculty appear only for the subjects every faculty takes', () => {
+    expect(studentInSubjectList(null, 'Pak. Studies', null, '12')).toBe(true)
+    expect(isUnplaced(null, 'Biology', '12')).toBe(true)
+    expect(isUnplaced(null, 'Islamiat', '12')).toBe(true)
   })
 })
