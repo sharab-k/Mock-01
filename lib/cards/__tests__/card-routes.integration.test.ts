@@ -5,6 +5,7 @@
 // another parent and non-card roles are refused; Super Admin can replace.
 import { createClient } from '@supabase/supabase-js'
 import sharp from 'sharp'
+import { PDFDocument } from 'pdf-lib'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import type { Database } from '@/types/supabase'
 
@@ -30,6 +31,12 @@ async function post(role: R, body: Buffer | null, type = 'image/png') {
   if (body) form.append('file', new Blob([new Uint8Array(body)], { type }), 'p.png')
   return fetch(`${APP}/api/students/${studentId}/photo`, { method: 'POST', body: form, headers: { Authorization: `Bearer ${tokens[role]}` } })
 }
+const bulk = (role: R | null, body: unknown) =>
+  fetch(`${APP}/api/students/cards`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...(role ? { Authorization: `Bearer ${tokens[role]}` } : {}) },
+    body: JSON.stringify(body),
+  })
 const get = (role: R, what: 'photo' | 'card') =>
   fetch(`${APP}/api/students/${studentId}/${what}`, { headers: { Authorization: `Bearer ${tokens[role]}` } })
 
@@ -52,6 +59,7 @@ beforeAll(async () => {
   if (error || !st) throw error ?? new Error('student insert failed')
   studentId = st.id
   await admin.from('parent_student_links').insert({ parent_id: ids.parent, student_id: studentId })
+  await admin.from('profiles').update({ phone: '0300 1234567' }).eq('id', ids.parent)
 }, 60_000)
 
 afterAll(async () => {
@@ -108,5 +116,44 @@ describe('student ID card routes (live)', { timeout: 60_000 }, () => {
     expect(after).toBeTruthy()
     expect(after).not.toBe(before)
     expect((await get('super_admin', 'card')).status).toBe(200)
+  })
+
+  it('the card also renders with the parent, registration and contact details on file', async () => {
+    const res = await get('super_admin', 'card')
+    expect(res.status).toBe(200)
+    expect((await PDFDocument.load(new Uint8Array(await res.arrayBuffer()))).getPageCount()).toBe(2)
+  })
+})
+
+describe('bulk ID cards (live)', { timeout: 60_000 }, () => {
+  it('the Super Admin gets one PDF with a front and back page per student', async () => {
+    const res = await bulk('super_admin', { ids: [studentId] })
+    expect(res.status).toBe(200)
+    expect(res.headers.get('content-type')).toBe('application/pdf')
+    const doc = await PDFDocument.load(new Uint8Array(await res.arrayBuffer()))
+    expect(doc.getPageCount()).toBe(2)
+  })
+
+  it('a repeated id is printed once', async () => {
+    const res = await bulk('super_admin', { ids: [studentId, studentId] })
+    expect((await PDFDocument.load(new Uint8Array(await res.arrayBuffer()))).getPageCount()).toBe(2)
+  })
+
+  it('parents and other staff are refused, and so is a request with no sign-in', async () => {
+    expect((await bulk('parent', { ids: [studentId] })).status).toBe(403)
+    expect((await bulk('marks_admin', { ids: [studentId] })).status).toBe(403)
+    expect((await bulk(null, { ids: [studentId] })).status).toBe(401)
+  })
+
+  it('rejects an empty list, too many students, and bad ids', async () => {
+    expect((await bulk('super_admin', { ids: [] })).status).toBe(400)
+    expect((await bulk('super_admin', { ids: ['not-a-uuid'] })).status).toBe(400)
+    const tooMany = Array.from({ length: 101 }, () => crypto.randomUUID())
+    expect((await bulk('super_admin', { ids: tooMany })).status).toBe(400)
+    expect((await bulk('super_admin', {})).status).toBe(400)
+  })
+
+  it('answers 404 when none of the students exist', async () => {
+    expect((await bulk('super_admin', { ids: [crypto.randomUUID()] })).status).toBe(404)
   })
 })

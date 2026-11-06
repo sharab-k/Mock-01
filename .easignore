@@ -1,0 +1,43 @@
+# Used by `eas build` INSTEAD of .gitignore, so it repeats every rule from the
+# root and mobile .gitignore files, then adds the large local-only files below.
+
+# dependencies / build output
+/node_modules
+/.pnp
+.pnp.js
+/coverage
+/.next/
+/out/
+/build
+mobile/node_modules/
+mobile/.expo/
+mobile/dist/
+mobile/web-build/
+mobile/.kotlin/
+mobile/android/
+mobile/ios/
+
+# env, keys, logs, generated
+.env*
+*.pem
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.tsbuildinfo
+.vercel
+.DS_Store
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+dev-server.log
+/supabase/.branches
+/supabase/.temp
+.claude/settings.local.json
+
+# large local-only files that the app build never reads
+/*.apk
+/*.pdf
+/*.xlsx
+/Docs/

@@ -1,6 +1,6 @@
 import { PDFDocument, rgb, type PDFFont, type PDFPage } from 'pdf-lib'
 import fontkit from '@pdf-lib/fontkit'
-import { CARD_NOTE, CARD_TERMS, wrapText, type StudentCardData } from './card-data'
+import { CARD_NOTE, CARD_TERMS, orDash, truncateToWidth, wrapText, type StudentCardData } from './card-data'
 import { POPPINS_BOLD_BASE64, POPPINS_MEDIUM_BASE64, POPPINS_REGULAR_BASE64, POPPINS_SEMIBOLD_BASE64 } from './poppins-data'
 import { EMBLEM_JPEG_BASE64 } from './emblem-data'
 
@@ -41,9 +41,16 @@ function chrome(page: PDFPage, side: 'front' | 'back') {
 }
 
 export async function renderStudentCardPdf(data: StudentCardData): Promise<Uint8Array> {
+  return renderStudentCardsPdf([data])
+}
+
+// One PDF holding any number of cards, each as a front page followed by its back
+// page (so a duplex printer puts both sides on one sheet). Fonts and the emblem
+// are embedded once for the whole document.
+export async function renderStudentCardsPdf(cards: StudentCardData[]): Promise<Uint8Array> {
   const doc = await PDFDocument.create()
   doc.registerFontkit(fontkit)
-  doc.setTitle(`Student ID Card — ${data.fullName}`)
+  doc.setTitle(cards.length === 1 ? `Student ID Card — ${cards[0].fullName}` : `Student ID Cards (${cards.length})`)
   doc.setAuthor('J.E ACADEMY')
 
   const bold = await doc.embedFont(POPPINS_BOLD_BASE64, { subset: true })
@@ -81,6 +88,7 @@ export async function renderStudentCardPdf(data: StudentCardData): Promise<Uint8
     text(page, 'SCIENCE & COMMERCE', 64.7, 218.1 - dy, fit('SCIENCE & COMMERCE', medium, 2.91, 32.2), medium)
   }
 
+  for (const data of cards) {
   // ---- Front ------------------------------------------------------------------
   const front = doc.addPage([W, H])
   chrome(front, 'front')
@@ -121,17 +129,25 @@ export async function renderStudentCardPdf(data: StudentCardData): Promise<Uint8
   front.drawRectangle({ x: (W - badgeW) / 2, y: 98.1, width: badgeW, height: 12.2, color: BADGE })
   centered(front, 'Student', 102.7, 5.88, semi, rgb(1, 1, 1))
 
-  const rows: [string, string, number][] = [
-    ['GR No', data.grNumber, 84.0],
-    ['Grade', data.gradeLabel, 72.9],
-    ['Section', data.section, 61.9],
-    ['Validity', `Session ${data.session}`, 50.8],
+  // Required by the software requirements document: parent's name, registration
+  // number, GR number and contact details, beside the grade/section/validity.
+  const rows: [string, string][] = [
+    ['Parent', orDash(data.parentName)],
+    ['Reg No', orDash(data.registrationNumber)],
+    ['GR No', orDash(data.grNumber)],
+    ['Grade', orDash(data.gradeLabel)],
+    ['Section', orDash(data.section)],
+    ['Contact', orDash(data.contact)],
+    ['Validity', `Session ${data.session}`],
   ]
-  for (const [label, value, y] of rows) {
-    text(front, label, 16.4, y, 6.11, semi, INK)
-    const v = `: ${value}`
-    text(front, v, 43.6, y, fit(v, medium, 6.11, W - 43.6 - 8), medium, TEXT)
-  }
+  const ROW_TOP = 84.0, ROW_STEP = 9.9
+  const VALUE_W = W - 43.6 - 6
+  rows.forEach(([label, value], i) => {
+    const y = ROW_TOP - i * ROW_STEP
+    text(front, label, 14.4, y, 5.6, semi, INK)
+    const v = truncateToWidth(`: ${safe(value, medium)}`, VALUE_W, (s) => medium.widthOfTextAtSize(s, 5.6))
+    text(front, v, 43.6, y, 5.6, medium, TEXT)
+  })
 
   // ---- Back -------------------------------------------------------------------
   const back = doc.addPage([W, H])
@@ -151,6 +167,7 @@ export async function renderStudentCardPdf(data: StudentCardData): Promise<Uint8
   }
   const noteLines = wrapText(CARD_NOTE, 120, (s) => bold.widthOfTextAtSize(s, 5.6))
   noteLines.forEach((l, i) => centered(back, l, 53.2 - i * 7.5, 5.6, bold, NOTE))
+  }
 
   return doc.save()
 }

@@ -3,8 +3,8 @@ import { describe, expect, it } from 'vitest'
 import { writeFileSync } from 'node:fs'
 import sharp from 'sharp'
 import { PDFDocument } from 'pdf-lib'
-import { gradeLabel, sessionLabel, wrapText } from '../card-data'
-import { renderStudentCardPdf } from '../student-card'
+import { gradeLabel, orDash, sessionLabel, truncateToWidth, wrapText } from '../card-data'
+import { renderStudentCardPdf, renderStudentCardsPdf } from '../student-card'
 
 // A neutral head-and-shoulders silhouette (never a real person's face).
 async function silhouette(): Promise<Uint8Array> {
@@ -36,8 +36,27 @@ describe('card helpers', () => {
   })
 })
 
+describe('card text helpers', () => {
+  it('an empty value prints as a dash', () => {
+    expect(orDash('')).toBe('—')
+    expect(orDash('   ')).toBe('—')
+    expect(orDash(null)).toBe('—')
+    expect(orDash(' 0300 ')).toBe('0300')
+  })
+  it('truncates with an ellipsis only when it does not fit', () => {
+    const measure = (s: string) => s.length * 2
+    expect(truncateToWidth('short', 40, measure)).toBe('short')
+    const cut = truncateToWidth('A very long parent name indeed', 40, measure)
+    expect(cut.endsWith('…')).toBe(true)
+    expect(measure(cut)).toBeLessThanOrEqual(40)
+  })
+})
+
 describe('renderStudentCardPdf', () => {
-  const base = { fullName: 'Ayesha Fatima', grNumber: 'FA 501', gradeLabel: 'IX', section: 'B1', session: '26/27' }
+  const base = {
+    fullName: 'Ayesha Fatima', parentName: 'Fatima Khan', registrationNumber: 'REG-2026-0501', contact: '0300 1234567',
+    grNumber: 'FA 501', gradeLabel: 'IX', section: 'B1', session: '26/27',
+  }
 
   it('produces a two-page card at the school design size', async () => {
     const bytes = await renderStudentCardPdf({ ...base, photoJpeg: await silhouette() })
@@ -48,6 +67,24 @@ describe('renderStudentCardPdf', () => {
     expect(width).toBeCloseTo(141.75, 2)
     expect(height).toBeCloseTo(240.75, 2)
     if (process.env.CARD_OUT) writeFileSync(`${process.env.CARD_OUT}-photo.pdf`, bytes)
+  })
+
+  it('prints parent, registration and contact, and copes when they are missing or very long', async () => {
+    const full = await renderStudentCardPdf({ ...base, photoJpeg: null })
+    expect((await PDFDocument.load(full)).getPageCount()).toBe(2)
+    const empty = await renderStudentCardPdf({ ...base, parentName: '', contact: '', registrationNumber: '', photoJpeg: null })
+    expect((await PDFDocument.load(empty)).getPageCount()).toBe(2)
+    const long = await renderStudentCardPdf({ ...base, parentName: 'Muhammad Abdullah Bin Abdul Rehman Siddiqui Al-Hashmi', contact: '+92 300 1234567 / +92 321 7654321 / 021 34567890', photoJpeg: null })
+    expect((await PDFDocument.load(long)).getPageCount()).toBe(2)
+    if (process.env.CARD_OUT) writeFileSync(`${process.env.CARD_OUT}-fields.pdf`, full)
+  })
+
+  it('bulk: every student gets a front and a back page, in order', async () => {
+    const cards = [1, 2, 3].map((n) => ({ ...base, fullName: `Student ${n}`, photoJpeg: null }))
+    const doc = await PDFDocument.load(await renderStudentCardsPdf(cards))
+    expect(doc.getPageCount()).toBe(6)
+    expect(doc.getTitle()).toBe('Student ID Cards (3)')
+    for (let i = 0; i < 6; i++) expect(doc.getPage(i).getSize().width).toBeCloseTo(141.75, 2)
   })
 
   it('works without a photo (placeholder frame)', async () => {

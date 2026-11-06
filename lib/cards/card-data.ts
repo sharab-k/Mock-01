@@ -3,6 +3,12 @@
 
 export type StudentCardData = {
   fullName: string
+  /** Parent / guardian name (the linked parent account); '' when none is linked. */
+  parentName: string
+  /** Registration number issued at admission. */
+  registrationNumber: string
+  /** Parent's contact number; '' when none is on file. */
+  contact: string
   /** G.R. number as printed on the card; falls back to the roll number. */
   grNumber: string
   gradeLabel: string
@@ -29,6 +35,20 @@ export function gradeLabel(gradeLevel: string): string {
 export function sessionLabel(academicYear: number): string {
   const yy = (n: number) => String(n % 100).padStart(2, '0')
   return `${yy(academicYear)}/${yy(academicYear + 1)}`
+}
+
+// A value that is empty prints as a dash, so every card keeps the same rows.
+export function orDash(value: string | null | undefined): string {
+  const v = (value ?? '').trim()
+  return v || '—'
+}
+
+// Shortens text with an ellipsis until it fits `maxWidth` (the PDF font's measure).
+export function truncateToWidth(text: string, maxWidth: number, measure: (s: string) => number): string {
+  if (measure(text) <= maxWidth) return text
+  let out = text
+  while (out.length > 1 && measure(`${out}…`) > maxWidth) out = out.slice(0, -1)
+  return `${out.trimEnd()}…`
 }
 
 // Greedy word wrap against a measuring function (the PDF font), used for the
