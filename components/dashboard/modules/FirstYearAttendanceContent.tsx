@@ -3,10 +3,11 @@
 import { useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, CheckCircle2, XCircle, Clock3, Send, AlertTriangle, MessageSquare, Loader2 } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, XCircle, Clock3, CircleMinus, Send, AlertTriangle, MessageSquare, Loader2 } from 'lucide-react'
 import { submitClassAttendanceAction } from '@/lib/actions/attendance'
 import { FACULTIES, YEAR_LABEL, YEAR_SLUG, subjectsForFaculty } from '@/lib/attendance/first-year-subjects'
 import { FIRST_YEAR_SECTIONS, dayName, longDate, type FirstYearSelection } from '@/lib/attendance/first-year-selection'
+import { moveToMonth } from '@/lib/attendance/class-date'
 import type { SubjectRoster, SubjectStatus } from '@/lib/attendance/subject-roster'
 
 type Status = Exclude<SubjectStatus, 'unmarked'>
@@ -17,8 +18,9 @@ const STATUS_CONFIG: Record<Status, { label: string; icon: typeof CheckCircle2; 
   present: { label: 'Present', icon: CheckCircle2, active: 'bg-success text-white border-success shadow-sm', inactive: 'bg-success-bg text-success border-success/20 hover:border-success/40' },
   absent:  { label: 'Absent',  icon: XCircle,      active: 'bg-danger text-white border-danger shadow-sm',    inactive: 'bg-danger-bg text-danger border-danger/20 hover:border-danger/40' },
   late:    { label: 'Late',    icon: Clock3,       active: 'bg-warning text-white border-warning shadow-sm',  inactive: 'bg-warning-bg text-warning border-warning/20 hover:border-warning/40' },
+  leave:   { label: 'Leave',   icon: CircleMinus,  active: 'bg-ink-700 text-white border-ink-700 shadow-sm', inactive: 'bg-ink-50 text-ink-700 border-ink-200 hover:border-ink-300' },
 }
-const STATUSES: Status[] = ['present', 'absent', 'late']
+const STATUSES: Status[] = ['present', 'absent', 'late', 'leave']
 
 const CHIP = 'px-3.5 py-2 rounded-xl border text-[13px] font-medium transition-colors cursor-pointer'
 const CHIP_ON = 'bg-ink-700 text-white border-ink-700'
@@ -73,6 +75,7 @@ export default function FirstYearAttendanceContent({ basePath = '/attendance', s
     present: students.filter((s) => records[s.id] === 'present').length,
     absent: students.filter((s) => records[s.id] === 'absent').length,
     late: students.filter((s) => records[s.id] === 'late').length,
+    leave: students.filter((s) => records[s.id] === 'leave').length,
   }
 
   function setStatus(id: string, status: Status) {
@@ -114,7 +117,10 @@ export default function FirstYearAttendanceContent({ basePath = '/attendance', s
         <Link href={basePath} className="inline-flex items-center gap-1.5 text-[12.5px] font-medium text-neutral-500 hover:text-ink-700 transition-colors no-underline mb-4 group">
           <ArrowLeft size={13} className="group-hover:-translate-x-0.5 transition-transform" /> Attendance
         </Link>
-        <h1 className="text-[20px] font-bold text-neutral-900">{yearLabel} · Subject-wise Attendance</h1>
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <h1 className="text-[20px] font-bold text-neutral-900">{yearLabel} · Subject-wise Attendance</h1>
+          <Link href={`${basePath}/${grade}/${section}`} className="text-[12.5px] font-semibold text-ink-700 hover:text-ink-900 no-underline">Mark whole day (one by one) instead →</Link>
+        </div>
         <p className="text-[13px] text-neutral-500 mt-0.5">Pick the class, date, faculty and subject — only the students who study that subject are listed</p>
       </div>
 
@@ -132,6 +138,14 @@ export default function FirstYearAttendanceContent({ basePath = '/attendance', s
         <div>
           <span className={stepLabel}>2 · Date and day</span>
           <div className="flex flex-wrap items-center gap-3">
+            <input
+              type="month"
+              value={classDate.slice(0, 7)}
+              max={todayStr.slice(0, 7)}
+              onChange={(e) => e.target.value && go({ date: moveToMonth(classDate, e.target.value, todayStr) })}
+              className="text-[13px] font-mono border border-neutral-200 rounded-xl px-3 py-2 bg-white text-neutral-800 focus:outline-none focus:border-ink-400 focus:ring-2 focus:ring-ink-400/10"
+              aria-label="Month"
+            />
             <input
               type="date"
               value={classDate}
@@ -246,6 +260,7 @@ export default function FirstYearAttendanceContent({ basePath = '/attendance', s
                 <span><span className="font-mono font-semibold text-success">{counts.present}</span> Present</span>
                 <span><span className="font-mono font-semibold text-danger">{counts.absent}</span> Absent</span>
                 <span><span className="font-mono font-semibold text-warning">{counts.late}</span> Late</span>
+                <span><span className="font-mono font-semibold text-ink-700">{counts.leave}</span> Leave</span>
               </div>
               <div className="flex items-center gap-3">
                 {error && <span className="text-[12.5px] text-danger">{error}</span>}

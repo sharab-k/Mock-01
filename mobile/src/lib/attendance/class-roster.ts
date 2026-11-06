@@ -1,6 +1,6 @@
 import { getMobileApi } from '@/lib/api/client';
 
-export type RosterStatus = 'unmarked' | 'present' | 'absent' | 'late';
+export type RosterStatus = 'unmarked' | 'present' | 'absent' | 'late' | 'leave';
 
 export type RosterStudent = {
   id: string;

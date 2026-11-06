@@ -37,9 +37,10 @@ function isoDate(offsetDays: number): string {
 }
 
 function attendancePct(rows: { status: string }[]): number | null {
-  if (rows.length === 0) return null;
-  const present = rows.filter((r) => r.status === 'present' || r.status === 'late').length;
-  return Math.round((present / rows.length) * 100);
+  const counted = rows.filter((r) => r.status !== 'leave'); // approved leave is excused
+  if (counted.length === 0) return null;
+  const present = counted.filter((r) => r.status === 'present' || r.status === 'late').length;
+  return Math.round((present / counted.length) * 100);
 }
 
 async function loadDashboard(): Promise<DashboardData> {

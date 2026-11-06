@@ -5,7 +5,7 @@ import { letterGrade } from '@/lib/marks/letter-grade'
 
 const EXAM_LABEL: Record<string, string> = { monthly: 'Monthly', half_yearly: 'Half-Yearly', final: 'Final' }
 
-export type AttStatus = 'Present' | 'Late' | 'Absent'
+export type AttStatus = 'Present' | 'Late' | 'Absent' | 'Leave'
 
 export type ChildAcademicData = {
   gradeVal: string
@@ -48,13 +48,15 @@ export async function fetchChildAcademicData(supabase: SupabaseClient<Database>,
   ])
 
   const attRows = attendanceRes.data ?? []
-  const attended = attRows.filter((r) => r.status === 'present' || r.status === 'late').length
-  const attendancePct = attRows.length > 0 ? Math.round((attended / attRows.length) * 100) : 0
+  // Approved leave is excused: shown, but not counted as a day the student could have attended.
+  const counted = attRows.filter((r) => r.status !== 'leave')
+  const attended = counted.filter((r) => r.status === 'present' || r.status === 'late').length
+  const attendancePct = counted.length > 0 ? Math.round((attended / counted.length) * 100) : 0
 
   const attendance = attRows.slice(0, 5).reverse().map((r) => ({
     day: new Date(`${r.class_date}T00:00:00Z`).toLocaleDateString('en-GB', { weekday: 'short', timeZone: 'UTC' }),
     date: new Date(`${r.class_date}T00:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' }),
-    status: (r.status === 'present' ? 'Present' : r.status === 'late' ? 'Late' : 'Absent') as AttStatus,
+    status: (r.status === 'present' ? 'Present' : r.status === 'late' ? 'Late' : r.status === 'leave' ? 'Leave' : 'Absent') as AttStatus,
     subject: r.subject,
   }))
 
@@ -72,8 +74,9 @@ export async function fetchChildAcademicData(supabase: SupabaseClient<Database>,
   const buckets = monthBuckets(5)
   const monthlyTrend = buckets.map((b) => {
     const attInMonth = attRows.filter((r) => inRange(`${r.class_date}T00:00:00Z`, b.start, b.end))
-    const attendedInMonth = attInMonth.filter((r) => r.status === 'present' || r.status === 'late').length
-    const attendance = attInMonth.length > 0 ? Math.round((attendedInMonth / attInMonth.length) * 100) : 0
+    const countedInMonth = attInMonth.filter((r) => r.status !== 'leave')
+    const attendedInMonth = countedInMonth.filter((r) => r.status === 'present' || r.status === 'late').length
+    const attendance = countedInMonth.length > 0 ? Math.round((attendedInMonth / countedInMonth.length) * 100) : 0
 
     const marksInMonth = markRows.filter((m) => inRange(`${m.exam_date}T00:00:00Z`, b.start, b.end))
     const avgScoreInMonth = marksInMonth.length > 0

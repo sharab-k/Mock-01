@@ -9,7 +9,7 @@ import StudentIdCard from '@/components/dashboard/StudentIdCard'
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
 const fmtDate = (iso: string) => new Date(iso + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
 const monthKey = (iso: string) => `${MONTHS[Number(iso.slice(5, 7)) - 1]} ${iso.slice(0, 4)}`
-const STATUS_CLASS = { present: 'bg-success-bg text-success', absent: 'bg-danger-bg text-danger', late: 'bg-warning-bg text-warning' } as const
+const STATUS_CLASS = { present: 'bg-success-bg text-success', absent: 'bg-danger-bg text-danger', late: 'bg-warning-bg text-warning', leave: 'bg-ink-100 text-ink-700' } as const
 
 function groupBy<T>(items: T[], key: (t: T) => string): [string, T[]][] {
   const map = new Map<string, T[]>()
@@ -103,11 +103,11 @@ export default async function StudentRecordPage({ params }: { params: Promise<{ 
         {attByMonth.length === 0 ? <p className="text-sm text-neutral-600">No attendance recorded yet.</p> : attByMonth.map(([month, days], i) => (
           <details key={month} className="border-t border-neutral-200 py-2" open={i === 0}>
             <summary className="cursor-pointer text-sm font-medium text-neutral-900">
-              {month} <span className="font-normal text-neutral-600">· {days.filter((d) => d.status !== 'absent').length}/{days.length} attended</span>
+              {month} <span className="font-normal text-neutral-600">· {days.filter((d) => d.status === 'present' || d.status === 'late').length}/{days.filter((d) => d.status !== 'leave').length} attended{days.some((d) => d.status === 'leave') ? ` · ${days.filter((d) => d.status === 'leave').length} on leave` : ''}</span>
             </summary>
             <div className="mt-2 flex flex-wrap gap-1.5">
               {days.map((d, i) => (
-                <span key={`${d.date}-${d.subject}-${i}`} className={`rounded px-2 py-0.5 font-mono text-xs ${STATUS_CLASS[d.status]}`} title={d.subject ? `${d.subject} · ${d.status}` : d.status}>{d.date.slice(8)} {d.status[0].toUpperCase()}{d.subject ? ` ${d.subject.slice(0, 3)}` : ''}</span>
+                <span key={`${d.date}-${d.subject}-${i}`} className={`rounded px-2 py-0.5 font-mono text-xs ${STATUS_CLASS[d.status]}`} title={d.subject ? `${d.subject} · ${d.status}` : d.status}>{d.date.slice(8)} {d.status === 'leave' ? 'LV' : d.status[0].toUpperCase()}{d.subject ? ` ${d.subject.slice(0, 3)}` : ''}</span>
               ))}
             </div>
           </details>

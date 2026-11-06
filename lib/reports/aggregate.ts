@@ -14,7 +14,7 @@ export type RawMarkRow = { subject: string; exam_type: string; score: number; ma
 export type RawAttendanceRow = { status: string }
 export type RawAttendanceLogRow = { status: string; class_date: string; subject?: string }
 // `subject` is only present on First Year's subject-wise records.
-export type AttendanceLogRow = { date: string; status: 'present' | 'late' | 'absent'; subject?: string }
+export type AttendanceLogRow = { date: string; status: 'present' | 'late' | 'absent' | 'leave'; subject?: string }
 export type AttendanceLogMonth = { label: string; rows: AttendanceLogRow[] }
 
 export type ReportMark = { subject: string; score: number; maxScore: number; grade: string; date?: string | null }
@@ -48,8 +48,10 @@ export function computeTier(overallAverage: number | null): Tier | null {
 }
 
 export function computeAttendanceSummary(attRows: RawAttendanceRow[]): { attendancePct: number | null; presentDays: number; totalDays: number } {
-  const presentDays = attRows.filter((r) => r.status === 'present' || r.status === 'late').length
-  const totalDays = attRows.length
+  // Approved leave is excused: it is not a day the student could have attended.
+  const counted = attRows.filter((r) => r.status !== 'leave')
+  const presentDays = counted.filter((r) => r.status === 'present' || r.status === 'late').length
+  const totalDays = counted.length
   return {
     presentDays,
     totalDays,
@@ -137,7 +139,7 @@ export function buildAttendanceMonths(attRows: RawAttendanceLogRow[], reportKey:
         present: sorted.filter((r) => r.status === 'present').length,
         late: sorted.filter((r) => r.status === 'late').length,
         absent: sorted.filter((r) => r.status === 'absent').length,
-        total: sorted.length,
+        total: sorted.filter((r) => r.status !== 'leave').length,
         rows: sorted,
       }
     })

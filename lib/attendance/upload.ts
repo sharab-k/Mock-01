@@ -19,10 +19,11 @@ const ROLL_COLS = ['rollno', 'rollnumber', 'roll']
 const DATE_COLS = ['date', 'classdate', 'attendancedate']
 const STATUS_COLS = ['status', 'attendance', 'mark']
 
-const STATUS: Record<string, 'present' | 'absent' | 'late'> = {
+const STATUS: Record<string, 'present' | 'absent' | 'late' | 'leave'> = {
   present: 'present', p: 'present', pr: 'present',
   absent: 'absent', a: 'absent', ab: 'absent',
   late: 'late', l: 'late',
+  leave: 'leave', lv: 'leave', onleave: 'leave',
 }
 
 // Validates and saves an attendance spreadsheet (one row = one student on one
@@ -42,7 +43,7 @@ export async function processAttendanceUpload(
 
   // A spreadsheet row is a whole-day record (subject ''); First Year's subject-wise
   // marking is done in the app, one subject at a time.
-  const records = new Map<string, { student_id: string; class_date: string; subject: string; status: 'present' | 'absent' | 'late'; marked_by: string }>()
+  const records = new Map<string, { student_id: string; class_date: string; subject: string; status: 'present' | 'absent' | 'late' | 'leave'; marked_by: string }>()
   for (const r of rows) {
     const fail = (message: string) => errors.push({ row: r.rowNumber, message })
     const resolved = resolveStudent(lookup, pick(r.cells, GR_COLS), pick(r.cells, ROLL_COLS))

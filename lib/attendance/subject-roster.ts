@@ -4,7 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { FIRST_YEAR_GRADE, isUnplaced, studentInSubjectList, type Faculty, type SubjectGrade } from '@/lib/attendance/first-year-subjects'
 import type { Database } from '@/types/supabase'
 
-export type SubjectStatus = 'unmarked' | 'present' | 'absent' | 'late'
+export type SubjectStatus = 'unmarked' | 'present' | 'absent' | 'late' | 'leave'
 
 export type SubjectRosterStudent = {
   id: string

@@ -21,7 +21,7 @@ import { StudentIdCard } from '@/components/student-id-card';
 import { gradeTone } from '@/lib/marks/letter-grade';
 
 const TIER_TONE = { Distinction: 'success', Merit: 'ink', Pass: 'warning', 'Below Pass': 'danger' } as const;
-const STATUS_TONE = { Present: 'success', Late: 'warning', Absent: 'danger' } as const;
+const STATUS_TONE = { Present: 'success', Late: 'warning', Absent: 'danger', Leave: 'neutral' } as const;
 
 export default function StudentOverview() {
   const { studentId } = useLocalSearchParams<{ studentId: string }>();

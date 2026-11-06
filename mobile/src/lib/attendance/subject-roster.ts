@@ -1,7 +1,7 @@
 import { supabase } from '@/lib/supabase/client';
 import { FIRST_YEAR_GRADE, isUnplaced, studentInSubjectList, type Faculty, type SubjectGrade } from '@/lib/attendance/first-year-subjects';
 
-export type SubjectStatus = 'unmarked' | 'present' | 'absent' | 'late';
+export type SubjectStatus = 'unmarked' | 'present' | 'absent' | 'late' | 'leave';
 
 export type SubjectRosterStudent = {
   id: string;

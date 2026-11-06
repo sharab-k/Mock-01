@@ -1,6 +1,6 @@
 import { callMobileApi } from '@/lib/api/client';
 
-type Status = 'present' | 'absent' | 'late';
+type Status = 'present' | 'absent' | 'late' | 'leave';
 
 export type SubmitClassAttendanceInput = {
   classDate?: string;

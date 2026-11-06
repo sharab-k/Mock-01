@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { CheckCircle2, ChevronDown, Clock3, XCircle } from 'lucide-react-native';
+import { CheckCircle2, ChevronDown, CircleMinus, Clock3, XCircle } from 'lucide-react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -13,12 +13,13 @@ import { submitClassAttendanceAction } from '@/lib/actions/attendance';
 import { fetchMarkerClasses, type MarkerClass } from '@/lib/attendance/marker-classes';
 import { lateCutoffLabel } from '@/lib/attendance/late-policy';
 
-type Status = 'present' | 'absent' | 'late';
+type Status = 'present' | 'absent' | 'late' | 'leave';
 
 const STATUS_CONFIG: Record<Status, { label: string; icon: typeof CheckCircle2; color: string; bg: string }> = {
   present: { label: 'Present', icon: CheckCircle2, color: Semantic.success, bg: Semantic.successBg },
   absent: { label: 'Absent', icon: XCircle, color: Semantic.danger, bg: Semantic.dangerBg },
   late: { label: 'Late', icon: Clock3, color: Semantic.warning, bg: Semantic.warningBg },
+  leave: { label: 'Leave', icon: CircleMinus, color: Ink[700], bg: Ink[100] },
 };
 
 function initRecord(students: MarkerClass['students']): Record<string, Status> {
@@ -51,6 +52,7 @@ export default function AttendanceMarkScreen() {
     present: Object.values(classRecord).filter((s) => s === 'present').length,
     absent: Object.values(classRecord).filter((s) => s === 'absent').length,
     late: Object.values(classRecord).filter((s) => s === 'late').length,
+    leave: Object.values(classRecord).filter((s) => s === 'leave').length,
   };
   const isSubmitted = activeClass ? !!submitted[activeClass.id] : false;
 
@@ -115,7 +117,7 @@ export default function AttendanceMarkScreen() {
         </View>
 
         <View style={[styles.summaryBar, { borderColor: theme.border }]}>
-          {(['present', 'absent', 'late'] as Status[]).map((s) => {
+          {(['present', 'absent', 'late', 'leave'] as Status[]).map((s) => {
             const cfg = STATUS_CONFIG[s];
             const Icon = cfg.icon;
             return (
@@ -157,7 +159,7 @@ export default function AttendanceMarkScreen() {
                   <ThemedText variant="mono" color="textMuted" style={{ fontSize: 11 }}>{student.roll}</ThemedText>
                 </View>
                 <View style={styles.statusButtons}>
-                  {(['present', 'absent', 'late'] as Status[]).map((status) => {
+                  {(['present', 'absent', 'late', 'leave'] as Status[]).map((status) => {
                     const cfg = STATUS_CONFIG[status];
                     const Icon = cfg.icon;
                     const active = current === status;
