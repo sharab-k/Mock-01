@@ -37,7 +37,7 @@ export async function authorizeCard(
 export async function loadCardStudent(studentId: string) {
   const { data } = await createAdminClient()
     .from('students')
-    .select('id, full_name, roll_number, gr_number, grade_level, section, academic_year, photo_path, deleted_at')
+    .select('id, full_name, roll_number, gr_number, registration_number, grade_level, section, academic_year, photo_path, deleted_at')
     .eq('id', studentId)
     .maybeSingle()
   return data && !data.deleted_at ? data : null
