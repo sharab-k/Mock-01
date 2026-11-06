@@ -12,7 +12,7 @@ import { Ink, Radius, Semantic, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { submitClassAttendanceAction } from '@/lib/actions/attendance';
 import {
-  FACULTIES, FIRST_YEAR_SECTIONS, subjectsForFaculty, type Faculty,
+  FACULTIES, FIRST_YEAR_GRADE, FIRST_YEAR_SECTIONS, YEAR_LABEL, subjectsForFaculty, type Faculty, type SubjectGrade,
 } from '@/lib/attendance/first-year-subjects';
 import { fetchSubjectRoster, type SubjectRoster } from '@/lib/attendance/subject-roster';
 
@@ -50,11 +50,12 @@ function Chip({ label, active, onPress }: { label: string; active: boolean; onPr
   );
 }
 
-// First Year attends by faculty and subject, not for a fixed full day: pick the
+// First and Second Year attend by faculty and subject, not for a fixed full day: pick the
 // class, the date, the faculty and the subject, and only the students who study
 // that subject are listed (Physics → every faculty, Biology → Pre-Medical only…).
-export default function FirstYearAttendanceScreen() {
+export function SubjectAttendanceScreen({ grade }: { grade: SubjectGrade }) {
   const theme = useTheme();
+  const yearLabel = YEAR_LABEL[grade];
   const params = useLocalSearchParams<{ section?: string }>();
   const [section, setSection] = useState<string>(FIRST_YEAR_SECTIONS.find((s) => s === params.section) ?? 'A');
   const [classDate, setClassDate] = useState(isoDaysAgo(0));
@@ -68,13 +69,13 @@ export default function FirstYearAttendanceScreen() {
   const [message, setMessage] = useState<{ text: string; error: boolean } | null>(null);
 
   const dates = useMemo(() => Array.from({ length: 14 }, (_, i) => isoDaysAgo(i)), []);
-  const subjects = subjectsForFaculty(faculty);
+  const subjects = subjectsForFaculty(faculty, grade);
 
   const load = useCallback(async () => {
     if (!subject) { setRoster(null); return; }
     setLoading(true);
     try {
-      const data = await fetchSubjectRoster({ section, classDate, subject, faculty });
+      const data = await fetchSubjectRoster({ grade, section, classDate, subject, faculty });
       setRoster(data);
       setRecords(Object.fromEntries(data.students.map((s) => [s.id, s.status === 'unmarked' ? 'present' : s.status])));
       setDirty(false);
@@ -84,14 +85,14 @@ export default function FirstYearAttendanceScreen() {
     } finally {
       setLoading(false);
     }
-  }, [section, classDate, subject, faculty]);
+  }, [grade, section, classDate, subject, faculty]);
 
   useEffect(() => { void load(); }, [load]);
 
   function pickFaculty(next: Faculty | null) {
     setFaculty(next);
     // A faculty change can leave a subject that faculty doesn't study — drop it.
-    if (subject && !subjectsForFaculty(next).includes(subject)) setSubject('');
+    if (subject && !subjectsForFaculty(next, grade).includes(subject)) setSubject('');
     setMessage(null);
   }
 
@@ -115,7 +116,7 @@ export default function FirstYearAttendanceScreen() {
     const result = await submitClassAttendanceAction({
       classDate,
       subject,
-      classLabel: `First Year ${section}`,
+      classLabel: `${yearLabel} ${section}`,
       records: students.map((s) => ({ studentId: s.id, studentName: s.name, status: records[s.id] })),
     });
     setSubmitting(false);
@@ -132,7 +133,7 @@ export default function FirstYearAttendanceScreen() {
       <SafeAreaView style={styles.safeArea}>
         <ScrollView contentContainerStyle={styles.content}>
           <View>
-            <ThemedText variant="title" style={{ fontSize: 20, lineHeight: 26 }}>First Year · By subject</ThemedText>
+            <ThemedText variant="title" style={{ fontSize: 20, lineHeight: 26 }}>{yearLabel} · By subject</ThemedText>
             <ThemedText variant="small" color="textSecondary">Only students who study the subject are listed</ThemedText>
           </View>
 
@@ -140,7 +141,7 @@ export default function FirstYearAttendanceScreen() {
             <View style={{ gap: 6 }}>
               <ThemedText variant="label" color="textSecondary">1 · CLASS</ThemedText>
               <View style={styles.row}>
-                {FIRST_YEAR_SECTIONS.map((s) => <Chip key={s} label={`First Year ${s}`} active={s === section} onPress={() => setSection(s)} />)}
+                {FIRST_YEAR_SECTIONS.map((s) => <Chip key={s} label={`${yearLabel} ${s}`} active={s === section} onPress={() => setSection(s)} />)}
               </View>
             </View>
 
@@ -175,7 +176,7 @@ export default function FirstYearAttendanceScreen() {
           ) : (
             <>
               <View>
-                <ThemedText variant="bodyMedium">First Year {section} · {subject}{faculty ? ` · ${faculty}` : ''}</ThemedText>
+                <ThemedText variant="bodyMedium">{yearLabel} {section} · {subject}{faculty ? ` · ${faculty}` : ''}</ThemedText>
                 <ThemedText variant="small" color="textSecondary">
                   {students.length} student{students.length === 1 ? '' : 's'}{alreadyMarked ? ' · already marked — changes update the saved record' : ''}
                 </ThemedText>
@@ -190,7 +191,7 @@ export default function FirstYearAttendanceScreen() {
               )}
 
               {students.length === 0 ? (
-                <Card><ThemedText variant="small" color="textSecondary" style={{ textAlign: 'center' }}>No students in First Year {section} study {subject}{faculty ? ` in ${faculty}` : ''}.</ThemedText></Card>
+                <Card><ThemedText variant="small" color="textSecondary" style={{ textAlign: 'center' }}>No students in {yearLabel} {section} study {subject}{faculty ? ` in ${faculty}` : ''}.</ThemedText></Card>
               ) : (
                 <>
                   <View style={styles.summaryRow}>
@@ -268,3 +269,7 @@ const styles = StyleSheet.create({
   statusButtons: { flexDirection: 'row', gap: 6 },
   statusBtn: { width: 32, height: 32, borderRadius: Radius.sm, alignItems: 'center', justifyContent: 'center' },
 });
+
+export default function FirstYearAttendanceScreen() {
+  return <SubjectAttendanceScreen grade={FIRST_YEAR_GRADE} />;
+}

@@ -32,8 +32,9 @@ function today(): string {
 // their alert status with Send / Resend.
 export default function ClassDetailScreen() {
   const { grade, section } = useLocalSearchParams<{ grade: string; section: string }>();
-  // First Year attends by faculty and subject, never for a whole day.
+  // First and Second Year attend by faculty and subject, never for a whole day.
   if (grade === '11') return <Redirect href={`/attendance/first-year?section=${section}` as Href} />;
+  if (grade === '12') return <Redirect href={`/attendance/second-year?section=${section}` as Href} />;
   return <ClassDetailBody grade={grade} section={section} />;
 }
 

@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { FIRST_YEAR_GRADE, isUnplaced, studentInSubjectList, type Faculty } from '@/lib/attendance/first-year-subjects'
+import { FIRST_YEAR_GRADE, isUnplaced, studentInSubjectList, type Faculty, type SubjectGrade } from '@/lib/attendance/first-year-subjects'
 import type { Database } from '@/types/supabase'
 
 export type SubjectStatus = 'unmarked' | 'present' | 'absent' | 'late'
@@ -25,27 +25,28 @@ export type SubjectRoster = {
 }
 
 // Who appears for attendance when a class, date, (optional) faculty and subject are
-// chosen: only First Year students of that section who study that subject, with the
+// chosen: only First or Second Year students of that section who study that subject, with the
 // status already marked for that subject on that date. `supabaseOverride` lets the
 // mobile app's bearer-authed route reuse this exact query.
 export async function fetchSubjectRoster(
-  input: { section: string; classDate: string; subject: string; faculty: Faculty | null },
+  input: { section: string; classDate: string; subject: string; faculty: Faculty | null; grade?: SubjectGrade },
   supabaseOverride?: SupabaseClient<Database>,
 ): Promise<SubjectRoster> {
   const supabase = supabaseOverride ?? await createClient()
+  const grade = input.grade ?? FIRST_YEAR_GRADE
 
   const { data: all } = await supabase
     .from('students')
     .select('id, roll_number, gr_number, full_name, stream')
-    .eq('grade_level', FIRST_YEAR_GRADE)
+    .eq('grade_level', grade)
     .eq('section', input.section)
     .is('deleted_at', null)
     .eq('status', 'active')
     .order('list_sort', { ascending: true })
 
   const everyone = all ?? []
-  const listed = everyone.filter((s) => studentInSubjectList(s.stream, input.subject, input.faculty))
-  const unplaced = input.faculty ? 0 : everyone.filter((s) => isUnplaced(s.stream, input.subject)).length
+  const listed = everyone.filter((s) => studentInSubjectList(s.stream, input.subject, input.faculty, grade))
+  const unplaced = input.faculty ? 0 : everyone.filter((s) => isUnplaced(s.stream, input.subject, grade)).length
   if (listed.length === 0) return { students: [], unplaced }
 
   const ids = listed.map((s) => s.id)

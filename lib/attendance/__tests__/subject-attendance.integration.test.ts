@@ -1,6 +1,6 @@
 // @vitest-environment node
 //
-// Live: First Year subject-wise attendance against the dev server + real Supabase
+// Live: First and Second Year subject-wise attendance against the dev server + real Supabase
 // project, called with real role JWTs (Bearer) on the same route the phone app
 // uses. One student can have a row per subject per day; only students who study
 // the subject can be marked for it; an absence names the subject in the parent's
@@ -23,7 +23,7 @@ const roles = ['attendance_admin', 'marks_admin', 'parent'] as const
 type R = (typeof roles)[number]
 const ids = {} as Record<R, string>
 const tokens = {} as Record<R, string>
-const student = {} as Record<'pe' | 'pm' | 'cs' | 'ninth', string>
+const student = {} as Record<'pe' | 'pm' | 'cs' | 'ninth' | 'y2pe' | 'y2pm', string>
 
 async function submit(role: R, body: Record<string, unknown>) {
   const res = await fetch(`${APP}/api/mobile/attendance/submit`, {
@@ -53,7 +53,7 @@ beforeAll(async () => {
   const mk = async (key: keyof typeof student, stream: string | null, grade: string, section: string) => {
     const { data, error } = await admin.from('students').insert({
       full_name: `Subj ${key}`, roll_number: `SA-${key}-${runId}`, registration_number: `SAR-${key}-${runId}`,
-      program: grade === '11' ? 'HSC-1' : 'SSC-1', grade_level: grade, section, academic_year: 2026, stream,
+      program: grade === '11' ? 'HSC-1' : grade === '12' ? 'HSC-2' : 'SSC-1', grade_level: grade, section, academic_year: 2026, stream,
     }).select('id').single()
     if (error || !data) throw error ?? new Error('student insert failed')
     student[key] = data.id
@@ -62,7 +62,9 @@ beforeAll(async () => {
   await mk('pm', 'Pre-Medical', '11', 'A')
   await mk('cs', 'Computer Science', '11', 'A')
   await mk('ninth', null, '9', 'B1')
-  await admin.from('parent_student_links').insert({ parent_id: ids.parent, student_id: student.pm })
+  await mk('y2pe', 'Pre-Engineering', '12', 'A')
+  await mk('y2pm', 'Pre-Medical', '12', 'A')
+  await admin.from('parent_student_links').insert([{ parent_id: ids.parent, student_id: student.pm }, { parent_id: ids.parent, student_id: student.y2pm }])
 }, 60_000)
 
 afterAll(async () => {
@@ -124,7 +126,33 @@ describe('subject-wise attendance (live)', { timeout: 60_000 }, () => {
   it('a non-First-Year student cannot be marked for a subject', async () => {
     const res = await submit('attendance_admin', { classDate: DATE, subject: 'English', records: [rec('ninth', 'present')] })
     expect(res.status).toBe(400)
-    expect(res.json.error).toMatch(/not a First Year student/)
+    expect(res.json.error).toMatch(/not a First Year or Second Year student/)
+  })
+
+  it('Second Year: Pak. Studies is saved for every faculty, and the parent notice names it', async () => {
+    const ok = await submit('attendance_admin', { classDate: DATE, subject: 'Pak. Studies', records: [rec('y2pe', 'present'), rec('y2pm', 'absent')] })
+    expect(ok.status).toBe(200)
+    expect(await rowsFor('Pak. Studies')).toHaveLength(2)
+    const { data } = await admin.from('portal_notifications').select('body').eq('student_id', student.y2pm).eq('kind', 'absence')
+    expect((data ?? []).some((d) => d.body.includes('from the Pak. Studies class.'))).toBe(true)
+  })
+
+  it('Second Year follows its own faculty subjects', async () => {
+    const bio = await submit('attendance_admin', { classDate: DATE, subject: 'Biology', records: [rec('y2pe', 'present')] })
+    expect(bio.status).toBe(400)
+    expect(bio.json.error).toMatch(/does not study Biology/)
+    const chem = await submit('attendance_admin', { classDate: DATE, subject: 'Chemistry', records: [rec('y2pe', 'present'), rec('y2pm', 'present')] })
+    expect(chem.status).toBe(200)
+  })
+
+  it('Islamiat is First Year only and Pak. Studies is Second Year only', async () => {
+    const isl = await submit('attendance_admin', { classDate: DATE, subject: 'Islamiat', records: [rec('y2pe', 'present')] })
+    expect(isl.status).toBe(400)
+    expect(isl.json.error).toMatch(/does not study Islamiat/)
+    const pak = await submit('attendance_admin', { classDate: DATE, subject: 'Pak. Studies', records: [rec('pe', 'present')] })
+    expect(pak.status).toBe(400)
+    expect(pak.json.error).toMatch(/does not study Pak. Studies/)
+    expect((await submit('attendance_admin', { classDate: DATE, subject: 'Islamiat', records: [rec('pe', 'present')] })).status).toBe(200)
   })
 
   it('rejects an unknown subject', async () => {
@@ -146,7 +174,8 @@ describe('subject-wise attendance (live)', { timeout: 60_000 }, () => {
   it('the parent sees their own child\'s subject rows, and no one else\'s', async () => {
     const c = createClient<Database>(URL_, ANON, { auth: { autoRefreshToken: false, persistSession: false }, global: { headers: { Authorization: `Bearer ${tokens.parent}` } } })
     const { data } = await c.from('attendance_records').select('student_id, subject').in('student_id', Object.values(student))
-    expect(new Set((data ?? []).map((r) => r.student_id))).toEqual(new Set([student.pm]))
-    expect((data ?? []).map((r) => r.subject).sort()).toEqual(['Physics', 'Urdu'])
+    // Linked to one First Year and one Second Year child; never the other three students.
+    expect(new Set((data ?? []).map((r) => r.student_id))).toEqual(new Set([student.pm, student.y2pm]))
+    expect((data ?? []).filter((r) => r.student_id === student.pm).map((r) => r.subject).sort()).toEqual(['Physics', 'Urdu'])
   })
 })
