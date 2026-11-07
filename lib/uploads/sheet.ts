@@ -2,7 +2,9 @@ import 'server-only'
 import ExcelJS from 'exceljs'
 import { Readable } from 'node:stream'
 
-export const MAX_UPLOAD_BYTES = 5 * 1024 * 1024
+import { MAX_UPLOAD_BYTES, OLD_EXCEL_MESSAGE, UNREADABLE_MESSAGE, WRONG_TYPE_MESSAGE, tooLargeMessage } from './limits'
+
+export { MAX_UPLOAD_BYTES }
 export const MAX_UPLOAD_ROWS = 5000
 
 export type SheetRow = { rowNumber: number; cells: Record<string, string> }
@@ -29,10 +31,11 @@ function cellText(value: ExcelJS.CellValue): string {
 // Blank rows are dropped; every cell comes back as trimmed text so the
 // validators (not Excel's cell typing) decide what a value means.
 export async function readSheet(file: File): Promise<{ ok: true; rows: SheetRow[] } | { ok: false; error: string }> {
-  if (file.size > MAX_UPLOAD_BYTES) return { ok: false, error: 'File is too large (5 MB maximum).' }
+  if (file.size > MAX_UPLOAD_BYTES) return { ok: false, error: tooLargeMessage(file.size) }
   const name = file.name.toLowerCase()
   const isCsv = name.endsWith('.csv')
-  if (!isCsv && !name.endsWith('.xlsx')) return { ok: false, error: 'Upload an .xlsx or .csv file.' }
+  if (name.endsWith('.xls')) return { ok: false, error: OLD_EXCEL_MESSAGE }
+  if (!isCsv && !name.endsWith('.xlsx')) return { ok: false, error: WRONG_TYPE_MESSAGE }
 
   const workbook = new ExcelJS.Workbook()
   try {
@@ -42,7 +45,7 @@ export async function readSheet(file: File): Promise<{ ok: true; rows: SheetRow[
     if (isCsv) await workbook.csv.read(Readable.from(buffer), { map: (value: unknown) => (value === '' ? null : value), parserOptions: { delimiter: ',' } })
     else await workbook.xlsx.load(buffer as unknown as ArrayBuffer)
   } catch {
-    return { ok: false, error: 'Could not read the file. Check that it is a valid spreadsheet.' }
+    return { ok: false, error: UNREADABLE_MESSAGE }
   }
 
   const sheet = workbook.worksheets[0]
@@ -111,10 +114,11 @@ export type Grid = { name: string; rows: string[][] }
 // layout — header blocks, repeated tables, several sheets — matters more than
 // any one header row. CSV files come back as a single grid.
 export async function readWorkbook(file: File): Promise<{ ok: true; sheets: Grid[] } | { ok: false; error: string }> {
-  if (file.size > MAX_UPLOAD_BYTES) return { ok: false, error: 'File is too large (5 MB maximum).' }
+  if (file.size > MAX_UPLOAD_BYTES) return { ok: false, error: tooLargeMessage(file.size) }
   const name = file.name.toLowerCase()
   const isCsv = name.endsWith('.csv')
-  if (!isCsv && !name.endsWith('.xlsx')) return { ok: false, error: 'Upload an .xlsx or .csv file.' }
+  if (name.endsWith('.xls')) return { ok: false, error: OLD_EXCEL_MESSAGE }
+  if (!isCsv && !name.endsWith('.xlsx')) return { ok: false, error: WRONG_TYPE_MESSAGE }
 
   const workbook = new ExcelJS.Workbook()
   try {
@@ -122,7 +126,7 @@ export async function readWorkbook(file: File): Promise<{ ok: true; sheets: Grid
     if (isCsv) await workbook.csv.read(Readable.from(buffer), { map: (value: unknown) => (value === '' ? null : value), parserOptions: { delimiter: ',' } })
     else await workbook.xlsx.load(buffer as unknown as ArrayBuffer)
   } catch {
-    return { ok: false, error: 'Could not read the file. Check that it is a valid spreadsheet.' }
+    return { ok: false, error: UNREADABLE_MESSAGE }
   }
 
   const sheets: Grid[] = workbook.worksheets.map((ws) => {

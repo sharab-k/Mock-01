@@ -148,4 +148,22 @@ describe('marks CSV upload route (live)', { timeout: 60_000 }, () => {
       await admin.from('students').update({ status: 'active' }).eq('id', studentIds[1]!)
     }
   })
+
+  it('an old .xls file is answered with how to convert it, and an over-size file with its size', async () => {
+    const send = async (file: File) => {
+      const form = new FormData()
+      form.append('file', file); form.append('examType', 'monthly')
+      const res = await fetch(`${APP}/api/uploads/marks`, { method: 'POST', body: form, headers: { Authorization: `Bearer ${tokens.marks_admin}` } })
+      return { status: res.status, body: (await res.json()) as { error?: string } }
+    }
+    const xls = await send(new File(['not really an xls'], 'results.xls'))
+    expect(xls.status).toBe(400)
+    expect(xls.body.error).toMatch(/Save As/)
+    const big = await send(new File([new Uint8Array(4 * 1024 * 1024 + 1)], 'results.xlsx'))
+    expect(big.status).toBe(400)
+    expect(big.body.error).toMatch(/limit is 4 MB/)
+    const broken = await send(new File(['this is not a zip'], 'results.xlsx'))
+    expect(broken.status).toBe(400)
+    expect(broken.body.error).toMatch(/Could not read the file/)
+  })
 })
