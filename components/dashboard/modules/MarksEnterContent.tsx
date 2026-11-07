@@ -204,7 +204,7 @@ export default function MarksEnterContent({ basePath = '/marks', roster: fullRos
               <div className="w-8 h-8 rounded-full bg-ink-100 text-ink-700 flex items-center justify-center font-mono text-[10px] font-bold shrink-0">{INITIALS(s.full_name)}</div>
               <div className="flex-1 min-w-0">
                 <span className="block text-[13px] font-medium text-neutral-900 truncate">{s.full_name}</span>
-                <span className="block text-[11px] font-mono text-neutral-400">{s.roll_number}</span>
+                <span className="block text-[11px] font-mono text-neutral-400">GR {s.gr_number ?? '—'} · {s.roll_number}</span>
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 <input

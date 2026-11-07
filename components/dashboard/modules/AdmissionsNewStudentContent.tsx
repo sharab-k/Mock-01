@@ -151,7 +151,7 @@ export default function AdmissionsNewStudentContent({ basePath = '/admissions' }
               <Link href={`${basePath}/students`} className="flex-1 py-3 text-[13px] font-medium text-neutral-600 bg-neutral-100 hover:bg-neutral-200 rounded-xl transition-colors no-underline text-center">View Directory</Link>
               <button
                 onClick={() => {
-                  setStatus('idle'); setResult(null); setStudentName(''); setParentName(''); setParentPhone(''); setIsLate(false)
+                  setStatus('idle'); setResult(null); setStudentName(''); setParentName(''); setParentPhone(''); setParentSecondaryPhone(''); setParentWhatsapp2(''); setIsLate(false)
                   setStream(''); setGuardianProfession(''); setAddress(''); setPreviousSchool(''); setLastQualification('')
                   setGrNumber(''); setRegistrationFee(''); setTuitionFee('')
                 }}
@@ -246,15 +246,15 @@ export default function AdmissionsNewStudentContent({ basePath = '/admissions' }
               </div>
               <div>
                 <label className="block text-[12px] font-semibold text-neutral-700 mb-1.5">WhatsApp No.</label>
-                <input required value={parentPhone} onChange={(e) => setParentPhone(e.target.value)} placeholder="03XX XXXXXXX" className="w-full px-3.5 py-2.5 border border-neutral-200 rounded-xl text-[13px] bg-neutral-50 placeholder-neutral-400 focus:outline-none focus:border-ink-400 focus:ring-2 focus:ring-ink-400/10 focus:bg-white transition-all" />
+                <input required name="parent-primary-phone" autoComplete="off" inputMode="tel" value={parentPhone} onChange={(e) => setParentPhone(e.target.value)} placeholder="03XX XXXXXXX" className="w-full px-3.5 py-2.5 border border-neutral-200 rounded-xl text-[13px] bg-neutral-50 placeholder-neutral-400 focus:outline-none focus:border-ink-400 focus:ring-2 focus:ring-ink-400/10 focus:bg-white transition-all" />
               </div>
               <div>
                 <label className="block text-[12px] font-semibold text-neutral-700 mb-1.5">Phone No. <span className="text-neutral-400 font-normal">(optional)</span></label>
-                <input value={parentSecondaryPhone} onChange={(e) => setParentSecondaryPhone(e.target.value)} placeholder="03XX XXXXXXX" className="w-full px-3.5 py-2.5 border border-neutral-200 rounded-xl text-[13px] bg-neutral-50 placeholder-neutral-400 focus:outline-none focus:border-ink-400 focus:ring-2 focus:ring-ink-400/10 focus:bg-white transition-all" />
+                <input name="parent-secondary-phone" autoComplete="off" inputMode="tel" value={parentSecondaryPhone} onChange={(e) => setParentSecondaryPhone(e.target.value)} placeholder="03XX XXXXXXX" className="w-full px-3.5 py-2.5 border border-neutral-200 rounded-xl text-[13px] bg-neutral-50 placeholder-neutral-400 focus:outline-none focus:border-ink-400 focus:ring-2 focus:ring-ink-400/10 focus:bg-white transition-all" />
               </div>
               <div>
                 <label className="block text-[12px] font-semibold text-neutral-700 mb-1.5">WhatsApp 2 <span className="text-neutral-400 font-normal">(optional)</span></label>
-                <input value={parentWhatsapp2} onChange={(e) => setParentWhatsapp2(e.target.value)} placeholder="03XX XXXXXXX" className="w-full px-3.5 py-2.5 border border-neutral-200 rounded-xl text-[13px] bg-neutral-50 placeholder-neutral-400 focus:outline-none focus:border-ink-400 focus:ring-2 focus:ring-ink-400/10 focus:bg-white transition-all" />
+                <input name="parent-whatsapp-2" autoComplete="off" inputMode="tel" value={parentWhatsapp2} onChange={(e) => setParentWhatsapp2(e.target.value)} placeholder="03XX XXXXXXX" className="w-full px-3.5 py-2.5 border border-neutral-200 rounded-xl text-[13px] bg-neutral-50 placeholder-neutral-400 focus:outline-none focus:border-ink-400 focus:ring-2 focus:ring-ink-400/10 focus:bg-white transition-all" />
               </div>
               <div>
                 <label className="block text-[12px] font-semibold text-neutral-700 mb-1.5">Profession <span className="text-neutral-400 font-normal">(optional)</span></label>

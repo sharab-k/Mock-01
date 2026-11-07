@@ -1,9 +1,11 @@
 'use client'
 
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import MarksBulkUploadModal from '@/components/dashboard/modules/MarksBulkUploadModal'
 import { useState } from 'react'
 import StatCard from '@/components/dashboard/StatCard'
-import { PenLine, BookOpen, CheckCircle, Users, Upload, X, ClipboardList } from 'lucide-react'
+import { PenLine, BookOpen, CheckCircle, Users, Upload, ClipboardList } from 'lucide-react'
 import { TIER_ORDER, TIER_RANGE, TIER_STYLE, type Tier } from '@/lib/marks/tier'
 import { GRADES, sectionsForGrade } from '@/lib/students/constants'
 import type { ClassMarksStat, SubjectStat } from '@/lib/marks/dashboard-data'
@@ -43,7 +45,8 @@ export default function MarksDashboardContent({
   totalTiered,
   subjects,
 }: Props) {
-  const [showBulkHint, setShowBulkHint] = useState(false)
+  const router = useRouter()
+  const [showBulkUpload, setShowBulkUpload] = useState(false)
 
   const STATS = [
     { label: 'Entries This Week', value: String(entriesThisWeek), icon: <PenLine size={22} />,     iconBg: 'bg-ink-100',    iconColor: 'text-ink-600', sub: 'across all classes'                       },
@@ -61,21 +64,9 @@ export default function MarksDashboardContent({
           <p className="text-[13px] text-neutral-500 mt-0.5">Select a class to view and enter marks — Grades 9–12</p>
         </div>
         <div className="flex items-center gap-2 shrink-0 flex-wrap">
-          <div className="relative">
-            <button onClick={() => setShowBulkHint(v => !v)} className="flex items-center gap-2 px-3.5 py-2 bg-ink-700 text-white text-[13px] font-semibold rounded-xl hover:bg-ink-800 transition-colors">
-              <Upload size={14} /> Bulk Upload
-            </button>
-            {showBulkHint && (
-              <div className="absolute right-0 top-full mt-2 z-20 bg-white border border-neutral-200 rounded-2xl shadow-xl p-4 w-64 text-left">
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-[12px] font-semibold text-neutral-800">CSV format required</p>
-                  <button onClick={() => setShowBulkHint(false)} className="text-neutral-400 hover:text-neutral-700"><X size={14} /></button>
-                </div>
-                <p className="text-[11px] text-neutral-500 font-mono leading-relaxed bg-neutral-50 rounded-xl p-2.5">roll_number, subject,<br />exam_type, score, max_score</p>
-                <p className="text-[11px] text-neutral-400 mt-2">Exam type: Monthly / Half-Yearly / Final</p>
-              </div>
-            )}
-          </div>
+          <button onClick={() => setShowBulkUpload(true)} className="flex items-center gap-2 px-3.5 py-2 bg-ink-700 text-white text-[13px] font-semibold rounded-xl hover:bg-ink-800 transition-colors">
+            <Upload size={14} /> Bulk Upload
+          </button>
           <Link href={`${basePath}/tests`} className="flex items-center gap-2 px-3.5 py-2 bg-white border border-neutral-200 text-neutral-700 text-[13px] font-medium rounded-xl hover:bg-neutral-50 transition-colors no-underline">
             <ClipboardList size={14} /> Tests
           </Link>
@@ -213,6 +204,7 @@ export default function MarksDashboardContent({
         </div>
         )}
       </div>
+      {showBulkUpload && <MarksBulkUploadModal onClose={() => setShowBulkUpload(false)} onSaved={() => router.refresh()} />}
     </>
   )
 }

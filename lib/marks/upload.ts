@@ -78,6 +78,7 @@ async function loadMatchStudents(supabase: SupabaseClient<Database>): Promise<Ma
       .from('students')
       .select('id, full_name, gr_number, grade_level, stream')
       .is('deleted_at', null)
+      .eq('status', 'active')
       .order('id')
       .range(from, from + 999)
     if (error) throw error

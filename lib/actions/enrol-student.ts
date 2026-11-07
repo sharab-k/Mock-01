@@ -92,7 +92,7 @@ export async function enrolStudentAction(
 
   const { data: existingParent } = await admin
     .from('profiles')
-    .select('id, email')
+    .select('id, email, secondary_phone, whatsapp_number_2')
     .eq('phone', data.parentPhone)
     .eq('role', 'parent')
     .maybeSingle()
@@ -105,6 +105,13 @@ export async function enrolStudentAction(
   if (existingParent) {
     parentId = existingParent.id
     username = existingParent.email
+    // A sibling is matched to the family by the primary number. Any extra number typed on this
+    // enrolment is that family's too, so it is saved onto their profile when the slot is empty —
+    // never over a number that is already there, and never taken from anyone else's record.
+    const fill: { secondary_phone?: string; whatsapp_number_2?: string } = {}
+    if (data.parentSecondaryPhone && !existingParent.secondary_phone) fill.secondary_phone = data.parentSecondaryPhone
+    if (data.parentWhatsapp2 && !existingParent.whatsapp_number_2) fill.whatsapp_number_2 = data.parentWhatsapp2
+    if (Object.keys(fill).length > 0) await admin.from('profiles').update(fill).eq('id', existingParent.id)
   } else {
     tempPassword = generateTempPassword()
 

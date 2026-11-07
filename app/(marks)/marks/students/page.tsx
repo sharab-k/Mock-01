@@ -8,7 +8,7 @@ async function fetchStudents(): Promise<MarksStudentRow[]> {
   const data = await fetchAllRows((from, to) =>
     supabase
       .from('students')
-      .select('id, full_name, roll_number, grade_level, section')
+      .select('id, full_name, roll_number, gr_number, grade_level, section')
       .is('deleted_at', null)
       .eq('status', 'active')
       .order('list_sort', { ascending: true })
@@ -22,6 +22,7 @@ async function fetchStudents(): Promise<MarksStudentRow[]> {
     id: s.id,
     full_name: s.full_name,
     roll_number: s.roll_number,
+    gr_number: s.gr_number,
     grade: s.grade_level,
     section: s.section,
     average: averages.get(s.id)?.average ?? null,

@@ -6,6 +6,8 @@
 // the subject can be marked for it; an absence names the subject in the parent's
 // notice; whole-day records for other grades are untouched.
 import { createClient } from '@supabase/supabase-js'
+import ExcelJS from 'exceljs'
+import { refuseInactiveStudents } from '@/lib/students/inactive-guard'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import type { Database } from '@/types/supabase'
 
@@ -37,6 +39,15 @@ const rec = (key: keyof typeof student, status: 'present' | 'absent' | 'late' | 
 
 const rowsFor = async (subject: string) =>
   (await admin.from('attendance_records').select('student_id, status, subject').eq('class_date', DATE).eq('subject', subject).in('student_id', Object.values(student))).data ?? []
+
+
+const XLSX = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+const getXlsx = (path: string, role?: R) => fetch(`${APP}${path}`, { headers: role ? { Authorization: `Bearer ${tokens[role]}` } : {} })
+async function firstSheet(res: Response) {
+  const wb = new ExcelJS.Workbook()
+  await wb.xlsx.load(Buffer.from(await res.arrayBuffer()) as unknown as ArrayBuffer)
+  return wb.worksheets[0]!
+}
 
 beforeAll(async () => {
   for (const r of roles) {
@@ -206,6 +217,118 @@ describe('subject-wise attendance (live)', { timeout: 60_000 }, () => {
     const { roster } = (await res.json()) as { roster: { id: string; name: string; gr: string | null; status: string }[] }
     const row = roster.find((r) => r.id === student.ninth)
     expect(row?.gr).toBe(`GR-SA-ninth-${runId}`)
+  })
+
+  it('class Excel export lists roll no, name, GR number, contact and status for one section', async () => {
+    const res = await getXlsx('/api/students/export?grade=9&section=B1', 'attendance_admin')
+    expect(res.status).toBe(200)
+    expect(res.headers.get('content-type')).toBe(XLSX)
+    expect(res.headers.get('content-disposition')).toContain('students-9-B1.xlsx')
+    const ws = await firstSheet(res)
+    expect((ws.getRow(1).values as unknown[]).slice(1)).toEqual(['Sr', 'Roll No', 'Name', 'GR Number', 'Contact', 'Status'])
+    const row = ws.getRows(2, ws.rowCount - 1)!.find((r) => r.getCell(3).value === 'Subj ninth')!
+    expect(row.getCell(4).value).toBe(`GR-SA-ninth-${runId}`)
+    expect(row.getCell(6).value).toBe('Active')
+  })
+
+  it('the class export includes students who have left as Inactive, unless active=1 is asked for', async () => {
+    const { data: gone } = await admin.from('students').insert({
+      full_name: 'Subj gone', roll_number: `SA-gone-${runId}`, registration_number: `SAR-gone-${runId}`, gr_number: `GR-SA-gone-${runId}`,
+      program: 'SSC-1', grade_level: '9', section: 'B1', academic_year: 2026, status: 'inactive',
+    }).select('id').single()
+    try {
+      const all = await firstSheet(await getXlsx('/api/students/export?grade=9&section=B1', 'marks_admin'))
+      const goneRow = all.getRows(2, all.rowCount - 1)!.find((r) => r.getCell(3).value === 'Subj gone')
+      expect(goneRow?.getCell(6).value).toBe('Inactive')
+      const activeOnly = await firstSheet(await getXlsx('/api/students/export?grade=9&section=B1&active=1', 'marks_admin'))
+      expect(activeOnly.getRows(2, activeOnly.rowCount - 1)!.some((r) => r.getCell(3).value === 'Subj gone')).toBe(false)
+    } finally {
+      await admin.from('students').delete().eq('id', gone!.id)
+    }
+  })
+
+  it('the class export is for staff only, and rejects a class that does not exist', async () => {
+    expect((await getXlsx('/api/students/export?grade=9&section=B1', 'parent')).status).toBe(403)
+    expect((await getXlsx('/api/students/export?grade=9&section=B1')).status).toBe(401)
+    expect((await getXlsx('/api/students/export?grade=99&section=B1', 'attendance_admin')).status).toBe(400)
+    expect((await getXlsx('/api/students/export?grade=11&section=G1', 'attendance_admin')).status).toBe(400) // G1 is not a section of a co-ed class
+  })
+
+  it('the monthly attendance sheet has one column per day, the saved marks, and totals', async () => {
+    const res = await getXlsx('/api/attendance/monthly-report?grade=9&section=B1&month=2026-11', 'attendance_admin')
+    expect(res.status).toBe(200)
+    expect(res.headers.get('content-type')).toBe(XLSX)
+    expect(res.headers.get('content-disposition')).toContain('attendance-9-B1-2026-11.xlsx')
+    const ws = await firstSheet(res)
+    const header = (ws.getRow(1).values as unknown[]).slice(1)
+    expect(header.slice(0, 3)).toEqual(['Sr', 'GR No', 'Name'])
+    expect(header[3]).toBe('1\nS') // 1 Nov 2026 is a Sunday
+    expect(header).toHaveLength(3 + 30 + 5) // 30 days in November, then Present / Late / Absent / Leave / %
+    const row = ws.getRows(2, ws.rowCount - 1)!.find((r) => r.getCell(3).value === 'Subj ninth')!
+    expect(row.getCell(3 + 4).value).toBe('P') // the whole-day mark on 4 Nov
+    expect(row.getCell(3 + 30 + 1).value).toBe(1) // Present total
+    expect(row.getCell(3 + 30 + 3).value).toBe(0) // Absent total
+  })
+
+  it('an older month with no marks still returns the class, with empty days', async () => {
+    const ws = await firstSheet(await getXlsx('/api/attendance/monthly-report?grade=9&section=B1&month=2026-10', 'attendance_admin'))
+    const row = ws.getRows(2, ws.rowCount - 1)!.find((r) => r.getCell(3).value === 'Subj ninth')!
+    expect(row.getCell(4).value).toBe('')
+    expect(row.getCell(3 + 31 + 5).value).toBe('') // no percentage yet
+  })
+
+  it('the monthly sheet is for attendance staff only, and needs a real month', async () => {
+    expect((await getXlsx('/api/attendance/monthly-report?grade=9&section=B1&month=2026-11', 'marks_admin')).status).toBe(403)
+    expect((await getXlsx('/api/attendance/monthly-report?grade=9&section=B1&month=2026-11', 'parent')).status).toBe(403)
+    expect((await getXlsx('/api/attendance/monthly-report?grade=9&section=B1&month=2026-11')).status).toBe(401)
+    expect((await getXlsx('/api/attendance/monthly-report?grade=9&section=B1&month=2026-13', 'attendance_admin')).status).toBe(400)
+    expect((await getXlsx('/api/attendance/monthly-report?grade=9&section=B1&month=nope', 'attendance_admin')).status).toBe(400)
+  })
+
+  it('an inactive student cannot be marked, even by a hand-built request; setting them Active again brings them back with their history', async () => {
+    const { data: gone } = await admin.from('students').insert({
+      full_name: 'Subj inactive', roll_number: `SA-inactive-${runId}`, registration_number: `SAR-inactive-${runId}`, gr_number: `GR-SA-inactive-${runId}`,
+      program: 'SSC-1', grade_level: '9', section: 'B1', academic_year: 2026,
+    }).select('id').single()
+    const id = gone!.id
+    const day = '2026-10-20'
+    try {
+      // history from when the student was still active
+      expect((await submit('attendance_admin', { classDate: day, records: [{ studentId: id, studentName: 'Subj inactive', status: 'present' }] })).status).toBe(200)
+      await admin.from('students').update({ status: 'inactive' }).eq('id', id)
+
+      const refused = await submit('attendance_admin', { classDate: '2026-10-21', records: [{ studentId: id, studentName: 'Subj inactive', status: 'present' }] })
+      expect(refused.status).not.toBe(200)
+      expect(refused.json.error).toMatch(/inactive/)
+      expect((await admin.from('attendance_records').select('id').eq('student_id', id).eq('class_date', '2026-10-21')).data ?? []).toHaveLength(0)
+
+      // the old record is still there
+      expect((await admin.from('attendance_records').select('status').eq('student_id', id).eq('class_date', day)).data?.[0]?.status).toBe('present')
+
+      // and the roster the teachers see no longer lists them
+      const roster = await fetch(`${APP}/api/mobile/attendance/class-roster?grade=9&section=B1&date=2026-10-21`, { headers: { Authorization: `Bearer ${tokens.attendance_admin}` } })
+      expect(((await roster.json()) as { roster: { id: string }[] }).roster.some((r) => r.id === id)).toBe(false)
+
+      await admin.from('students').update({ status: 'active' }).eq('id', id)
+      expect((await submit('attendance_admin', { classDate: '2026-10-21', records: [{ studentId: id, studentName: 'Subj inactive', status: 'absent' }] })).status).toBe(200)
+      expect((await admin.from('attendance_records').select('class_date').eq('student_id', id)).data).toHaveLength(2)
+    } finally {
+      await admin.from('students').delete().eq('id', id)
+    }
+  })
+
+  it('the inactive guard names who is inactive and lets active students through', async () => {
+    const { data: gone } = await admin.from('students').insert({
+      full_name: 'Subj guard', roll_number: `SA-guard-${runId}`, registration_number: `SAR-guard-${runId}`,
+      program: 'SSC-1', grade_level: '9', section: 'B1', academic_year: 2026, status: 'inactive',
+    }).select('id').single()
+    try {
+      expect(await refuseInactiveStudents(admin, [student.ninth])).toBeNull()
+      expect(await refuseInactiveStudents(admin, [])).toBeNull()
+      expect(await refuseInactiveStudents(admin, [student.ninth, gone!.id])).toMatch(/Subj guard is inactive/)
+    } finally {
+      await admin.from('students').delete().eq('id', gone!.id)
+    }
   })
 
   it('a marks admin cannot mark attendance', async () => {

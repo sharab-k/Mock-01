@@ -2,7 +2,7 @@ import {
   LayoutDashboard, Users, UserPlus, Inbox,
   CalendarCheck, BookOpen, Megaphone, Settings2, UserCog,
   ClipboardList, BarChart2, PenLine, PlayCircle,
-  GraduationCap, UsersRound, Wallet, CalendarClock, Bell, Search, Upload, IdCard, Receipt, Layers, Ticket, HandCoins, Landmark, MessageSquareWarning, ScrollText, Users2,
+  GraduationCap, UsersRound, Wallet, CalendarClock, Bell, Search, Upload, IdCard, Receipt, Layers, CalendarRange, Ticket, HandCoins, Landmark, MessageSquareWarning, ScrollText, Users2,
 } from 'lucide-react'
 import type { NavSection } from './types'
 
@@ -31,6 +31,7 @@ export const NAV_CONFIGS: Record<string, NavSection[]> = {
         { label: 'Marks',      href: '/super-admin/marks',      icon: BookOpen                },
         { label: 'Upload Marks', href: '/super-admin/marks/upload', icon: Upload              },
         { label: 'Upload Attendance', href: '/super-admin/attendance/upload', icon: Upload      },
+        { label: 'Monthly Attendance Report', href: '/super-admin/attendance/reports/monthly', icon: CalendarRange },
         { label: 'Subjects',   href: '/super-admin/subjects',   icon: ClipboardList           },
         { label: 'Timetable',  href: '/super-admin/timetable',  icon: CalendarClock            },
         { label: 'Sent Alerts', href: '/super-admin/notifications', icon: Bell                },
@@ -96,6 +97,7 @@ export const NAV_CONFIGS: Record<string, NavSection[]> = {
         { label: 'Roster',     href: '/attendance/roster',  icon: ClipboardList },
         { label: 'Upload Attendance', href: '/attendance/upload', icon: Upload },
         { label: 'Reports',    href: '/attendance/reports', icon: BarChart2     },
+        { label: 'Monthly Report', href: '/attendance/reports/monthly', icon: CalendarRange },
       ],
     },
     {

@@ -11,6 +11,9 @@ const EXAMS: { value: ExamType; hint: string }[] = [
   { value: 'final', hint: 'Final exam' },
 ]
 
+// A file download, not a page navigation.
+const TEMPLATE_URL = '/api/uploads/template/marks'
+
 type Step = 'setup' | 'checking' | 'preview' | 'saving' | 'done'
 
 function csvEscape(v: string): string {
@@ -58,7 +61,7 @@ function RowList({ rows }: { rows: UploadRowError[] }) {
 // Half-Yearly or Final), then reads the chosen spreadsheet and shows exactly
 // what it found — students matched, tests and dates, and every row it could
 // not use — BEFORE anything is saved. Saving is a second, explicit step.
-export default function MarksBulkUploadModal({ onClose }: { onClose: () => void }) {
+export default function MarksBulkUploadModal({ onClose, onSaved }: { onClose: () => void; onSaved?: () => void }) {
   const [file, setFile] = useState<File | null>(null)
   const [examType, setExamType] = useState<ExamType | null>(null)
   const [notify, setNotify] = useState(false)
@@ -94,6 +97,7 @@ export default function MarksBulkUploadModal({ onClose }: { onClose: () => void 
       }
       setResult(json as MarksUploadResult)
       setStep(dryRun ? 'preview' : 'done')
+      if (!dryRun) onSaved?.()
     } catch {
       setError('Could not reach the server. Check your connection and try again.')
       setStep(dryRun ? 'setup' : 'preview')
@@ -146,6 +150,13 @@ export default function MarksBulkUploadModal({ onClose }: { onClose: () => void 
                   <FileSpreadsheet size={14} /> {file?.name || 'Choose .xlsx or .csv file'}
                   <input type="file" accept=".xlsx,.csv" className="hidden" onChange={(e) => { setFile(e.target.files?.[0] ?? null); setError('') }} />
                 </label>
+                <div className="mt-3 rounded-xl border border-neutral-200 bg-neutral-50 p-3.5 text-[12.5px] text-neutral-700 leading-relaxed space-y-2">
+                  <p className="font-semibold text-neutral-900">How to prepare the file</p>
+                  <p>Each student is found by their <b>G.R. number</b>, and their marks are saved against the subject and exam date. A mark that is already there for the same student, subject, exam and date is <b>updated</b>; otherwise it is added.</p>
+                  <p className="font-mono text-[11.5px] bg-white border border-neutral-200 rounded-lg px-2.5 py-2 overflow-x-auto whitespace-nowrap">GR No · Student Name · Subject · Marks · Total · Exam Date</p>
+                  <p>A file with one column per test (date on top, then its total, then the subject) and one row per student also works. NILL, LEFT or a blank cell means no mark. You will see a full check of the file, and any problems row by row, before anything is saved.</p>
+                  <a href={TEMPLATE_URL} className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-ink-700 hover:underline"><Download size={13} /> Download a ready-made template (CSV)</a>
+                </div>
                 <p className="text-[12px] text-neutral-500 mt-2 leading-relaxed">
                   The file&apos;s dates, subjects, G.R. numbers, names and marks are read automatically — one column per test (date on top, then its total, then the subject), one row per student.
                 </p>

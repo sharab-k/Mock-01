@@ -11,6 +11,7 @@ export type GroupedStudent = {
   id: string
   full_name: string
   roll_number: string
+  gr_number: string | null
   grade: string
   section: string
   attendancePct: number | null
@@ -21,7 +22,7 @@ export default function AttendanceStudentsListContent({ students }: { students: 
 
   const grouped = useMemo(() => {
     const q = query.trim().toLowerCase()
-    const matches = students.filter((s) => !q || s.full_name.toLowerCase().includes(q) || s.roll_number.toLowerCase().includes(q))
+    const matches = students.filter((s) => !q || s.full_name.toLowerCase().includes(q) || s.roll_number.toLowerCase().includes(q) || (s.gr_number ?? '').toLowerCase().includes(q))
     return GRADES.map((grade) => ({
       grade,
       sections: sectionsForGrade(grade).map((section) => ({
@@ -63,7 +64,7 @@ export default function AttendanceStudentsListContent({ students }: { students: 
                       <div className="w-7 h-7 rounded-full bg-ink-100 text-ink-700 flex items-center justify-center font-mono text-[9.5px] font-bold shrink-0">{INITIALS(s.full_name)}</div>
                       <div className="min-w-0 flex-1">
                         <span className="block text-[12.5px] font-medium text-neutral-800 truncate">{s.full_name}</span>
-                        <span className="block text-[10.5px] font-mono text-neutral-400">{s.roll_number}</span>
+                        <span className="block text-[10.5px] font-mono text-neutral-400">GR {s.gr_number ?? '—'} · {s.roll_number}</span>
                       </div>
                       {s.attendancePct === null ? (
                         <span className="text-[10.5px] text-neutral-400 italic shrink-0">No data</span>

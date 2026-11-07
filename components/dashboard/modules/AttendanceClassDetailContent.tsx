@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
+import ExportClassLink from '@/components/dashboard/ExportClassLink'
 import { YEAR_LABEL, YEAR_SLUG, isSubjectGrade } from '@/lib/attendance/first-year-subjects'
 import { moveToMonth } from '@/lib/attendance/class-date'
 import StatCard from '@/components/dashboard/StatCard'
@@ -92,25 +93,34 @@ export default function AttendanceClassDetailContent({ grade, section, basePath 
     else if (status === 'absent' && outcome.notified) setRoster(prev => prev.map(s => s.id === id ? { ...s, alertStatus: 'sent' } : s))
   }
 
-  // Marks everyone who is still unmarked as present in one go, so the teacher only has to tick the
-  // students who are absent. Anyone already marked (absent, late, leave…) is left as they are.
-  const markAllPresent = async () => {
-    const targets = roster.filter(s => s.status === 'unmarked')
+  // Sets the whole class to Present or Absent in one request; each student can still be changed
+  // afterwards one by one. Students already at that status are left out, and a confirmation is
+  // asked before overwriting anyone already marked, or before alerting a whole class's parents.
+  const markAll = async (status: 'present' | 'absent') => {
+    const targets = roster.filter(s => s.status !== status)
     if (targets.length === 0 || bulkBusy) return
+    const overwriting = targets.filter(s => s.status !== 'unmarked').length
+    const question = status === 'absent'
+      ? `Mark all ${targets.length} student${targets.length === 1 ? '' : 's'} absent? Their parents will be notified.`
+      : overwriting > 0 ? `${overwriting} student${overwriting === 1 ? ' is' : 's are'} already marked. Change ${targets.length === 1 ? 'it' : `all ${targets.length}`} to present?` : null
+    if (question && !window.confirm(question)) return
+
+    const previous = new Map(targets.map(s => [s.id, s.status]))
     setBulkBusy(true); setBulkNote(null)
-    setRoster(prev => prev.map(s => s.status === 'unmarked' ? { ...s, status: 'present' } : s))
+    setRoster(prev => prev.map(s => previous.has(s.id) ? { ...s, status } : s))
     const outcome = await submitClassAttendanceAction({
       classDate, classLabel: `Grade ${grade} · Section ${section}`,
-      records: targets.map(s => ({ studentId: s.id, studentName: s.name, status: 'present' as const })),
+      records: targets.map(s => ({ studentId: s.id, studentName: s.name, status })),
     })
     setBulkBusy(false)
     if (!outcome.ok) {
-      const ids = new Set(targets.map(s => s.id))
-      setRoster(prev => prev.map(s => ids.has(s.id) ? { ...s, status: 'unmarked' } : s))
+      setRoster(prev => prev.map(s => previous.has(s.id) ? { ...s, status: previous.get(s.id)! } : s))
       setBulkNote(outcome.error)
       return
     }
-    setBulkNote(`${targets.length} student${targets.length === 1 ? '' : 's'} marked present. Tick Absent for anyone who is not here.`)
+    setBulkNote(status === 'present'
+      ? `${targets.length} student${targets.length === 1 ? '' : 's'} marked present. Tick Absent for anyone who is not here.`
+      : `${targets.length} student${targets.length === 1 ? '' : 's'} marked absent${outcome.notifiedCount > 0 ? `, ${outcome.notifiedCount} parent notice${outcome.notifiedCount === 1 ? '' : 's'} sent` : ''}. Change anyone who is here to Present.`)
   }
 
   const cycleStatus = (id: string) => {
@@ -201,6 +211,10 @@ export default function AttendanceClassDetailContent({ grade, section, basePath 
               <p className="text-[13px] text-neutral-500 mt-0.5">
                 {EMPTY ? 'No students on roster yet' : `${total} student${total !== 1 ? 's' : ''} · ${dayLabel}`}
               </p>
+              <div className="flex items-center gap-4 mt-1.5 flex-wrap">
+                <ExportClassLink grade={grade} section={section} />
+                <Link href={`${basePath}/reports/monthly?grade=${encodeURIComponent(grade)}&section=${encodeURIComponent(section)}&month=${classDate.slice(0, 7)}`} className="text-[12px] font-semibold text-ink-700 hover:text-ink-900 no-underline">Monthly report →</Link>
+              </div>
             </div>
           </div>
           <div className="flex items-end gap-3 flex-wrap">
@@ -246,7 +260,8 @@ export default function AttendanceClassDetailContent({ grade, section, basePath 
             <p className="text-[11.5px] text-neutral-400 mt-0.5 hidden sm:block">Tap student name for full profile · click status to cycle it</p>
           </div>
           <div className="flex items-center gap-3 shrink-0">
-            <button onClick={markAllPresent} disabled={bulkBusy || roster.every(s => s.status !== 'unmarked')} className="text-[12px] font-semibold text-success bg-success-bg hover:bg-success/15 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50">{bulkBusy ? 'Marking…' : 'Mark all present'}</button>
+            <button onClick={() => markAll('present')} disabled={bulkBusy || roster.every(s => s.status === 'present')} className="text-[12px] font-semibold text-success bg-success-bg hover:bg-success/15 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50">{bulkBusy ? 'Marking…' : 'All Present'}</button>
+            <button onClick={() => markAll('absent')} disabled={bulkBusy || roster.every(s => s.status === 'absent')} className="text-[12px] font-semibold text-danger bg-danger-bg hover:bg-danger/10 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50">All Absent</button>
             <Link href={`${basePath}/roster`} className="text-[12px] text-ink-600 hover:text-ink-800 no-underline font-medium">Full Roster →</Link>
           </div>
         </div>

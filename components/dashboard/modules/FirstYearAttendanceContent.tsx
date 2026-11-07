@@ -197,6 +197,7 @@ export default function FirstYearAttendanceContent({ basePath = '/attendance', s
               </div>
               <div className="flex items-center gap-2">
                 <button type="button" onClick={() => markAll('present')} disabled={students.length === 0} className="text-[11.5px] font-medium text-success bg-success-bg hover:bg-success/15 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50">All Present</button>
+                <button type="button" onClick={() => markAll('absent')} disabled={students.length === 0} className="text-[11.5px] font-medium text-danger bg-danger-bg hover:bg-danger/10 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50">All Absent</button>
               </div>
             </div>
 

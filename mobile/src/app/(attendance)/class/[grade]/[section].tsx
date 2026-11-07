@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams, type Href } from 'expo-router';
 import { monthTitle, shiftMonth } from '@/lib/attendance/month';
@@ -76,25 +76,40 @@ function ClassDetailBody({ grade, section }: { grade: string; section: string })
     if (status === 'absent' && outcome.notified) patchStudent(student.id, { alertStatus: 'sent' });
   }
 
-  // Marks everyone still unmarked as present, so only the absent students need a tap. Anyone already marked is left alone.
-  async function markAllPresent() {
-    const targets = (roster ?? []).filter((s) => s.status === 'unmarked');
+  // Sets the whole class to Present or Absent in one request; each student can still be changed after.
+  // Students already at that status are skipped; a confirmation is asked before overwriting anyone
+  // already marked, and before alerting a whole class of parents.
+  function markAll(status: 'present' | 'absent') {
+    const targets = (roster ?? []).filter((s) => s.status !== status);
     if (targets.length === 0 || bulkBusy) return;
+    const overwriting = targets.filter((s) => s.status !== 'unmarked').length;
+    const question = status === 'absent'
+      ? `Mark all ${targets.length} student${targets.length === 1 ? '' : 's'} absent? Their parents will be notified.`
+      : overwriting > 0 ? `${overwriting} already marked. Change all ${targets.length} to present?` : null;
+    if (!question) { void applyAll(status, targets); return; }
+    Alert.alert(status === 'absent' ? 'Mark all absent' : 'Mark all present', question, [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Yes, mark', style: status === 'absent' ? 'destructive' : 'default', onPress: () => { void applyAll(status, targets); } },
+    ]);
+  }
+
+  async function applyAll(status: 'present' | 'absent', targets: RosterStudent[]) {
     setBulkBusy(true);
     setBulkNote(null);
-    targets.forEach((s) => patchStudent(s.id, { status: 'present' }));
+    const previous = new Map(targets.map((s) => [s.id, s.status]));
+    targets.forEach((s) => patchStudent(s.id, { status }));
     const outcome = await submitClassAttendanceAction({
       classDate,
       classLabel: `Grade ${grade} · Section ${section}`,
-      records: targets.map((s) => ({ studentId: s.id, studentName: s.name, status: 'present' as const })),
+      records: targets.map((s) => ({ studentId: s.id, studentName: s.name, status })),
     });
     setBulkBusy(false);
     if (!outcome.ok) {
-      targets.forEach((s) => patchStudent(s.id, { status: 'unmarked' }));
+      targets.forEach((s) => patchStudent(s.id, { status: previous.get(s.id) ?? 'unmarked' }));
       setBulkNote(outcome.error);
       return;
     }
-    setBulkNote(`${targets.length} marked present. Tap a status to mark anyone absent.`);
+    setBulkNote(status === 'present' ? `${targets.length} marked present. Tap a status to mark anyone absent.` : `${targets.length} marked absent. Tap a status to change anyone who is here.`);
   }
 
   async function sendAlert(student: RosterStudent) {
@@ -150,13 +165,22 @@ function ClassDetailBody({ grade, section }: { grade: string; section: string })
           <ScrollView contentContainerStyle={styles.list}>
             {roster.length > 0 && (
               <View style={{ gap: 6 }}>
-                <Pressable
-                  onPress={markAllPresent}
-                  disabled={bulkBusy || roster.every((s) => s.status !== 'unmarked')}
-                  accessibilityRole="button"
-                  style={[styles.allPresentBtn, { backgroundColor: Semantic.successBg, opacity: bulkBusy || roster.every((s) => s.status !== 'unmarked') ? 0.5 : 1, alignSelf: 'flex-start' }]}>
-                  <ThemedText variant="small" style={{ color: Semantic.success }}>{bulkBusy ? 'Marking…' : 'Mark all present'}</ThemedText>
-                </Pressable>
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <Pressable
+                    onPress={() => markAll('present')}
+                    disabled={bulkBusy || roster.every((s) => s.status === 'present')}
+                    accessibilityRole="button"
+                    style={[styles.allPresentBtn, { backgroundColor: Semantic.successBg, opacity: bulkBusy || roster.every((s) => s.status === 'present') ? 0.5 : 1 }]}>
+                    <ThemedText variant="small" style={{ color: Semantic.success }}>{bulkBusy ? 'Marking…' : 'All Present'}</ThemedText>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => markAll('absent')}
+                    disabled={bulkBusy || roster.every((s) => s.status === 'absent')}
+                    accessibilityRole="button"
+                    style={[styles.allPresentBtn, { backgroundColor: Semantic.dangerBg, opacity: bulkBusy || roster.every((s) => s.status === 'absent') ? 0.5 : 1 }]}>
+                    <ThemedText variant="small" style={{ color: Semantic.danger }}>All Absent</ThemedText>
+                  </Pressable>
+                </View>
                 {bulkNote ? <ThemedText variant="small" color="textSecondary">{bulkNote}</ThemedText> : null}
               </View>
             )}

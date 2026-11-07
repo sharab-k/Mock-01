@@ -201,6 +201,12 @@ export default function AttendanceMarker({ classes, onSubmitted }: Props) {
             All Present
           </button>
           <button
+            onClick={() => markAll('absent')}
+            className="text-[11.5px] font-medium text-danger bg-danger-bg hover:bg-danger/10 px-3 py-1.5 rounded-lg transition-colors"
+          >
+            All Absent
+          </button>
+          <button
             onClick={() => markAll('present')}
             className="text-[11.5px] font-medium text-neutral-500 hover:text-neutral-700 hover:bg-neutral-100 px-2.5 py-1.5 rounded-lg transition-colors"
             aria-label="Reset"
