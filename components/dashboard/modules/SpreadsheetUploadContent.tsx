@@ -2,6 +2,7 @@
 
 import { useRef, useState } from 'react'
 import { FileSpreadsheet, Download, Loader2, CheckCircle2, AlertCircle } from 'lucide-react'
+import { checkFileNameAndSize, uploadFailureMessage } from '@/lib/uploads/limits'
 
 type Kind = 'marks' | 'attendance'
 type Result = {
@@ -48,6 +49,8 @@ export default function SpreadsheetUploadContent({ kind }: { kind: Kind }) {
   const upload = async () => {
     const file = fileRef.current?.files?.[0]
     if (!file) return
+    const problem = checkFileNameAndSize(file.name, file.size)
+    if (problem) { setError(problem); setStatus('error'); return }
     setStatus('uploading')
     setError('')
     setResult(null)
@@ -57,7 +60,7 @@ export default function SpreadsheetUploadContent({ kind }: { kind: Kind }) {
       const res = await fetch(`/api/uploads/${kind}`, { method: 'POST', body })
       const json = await res.json().catch(() => null)
       if (!res.ok) {
-        setError(json?.error ?? 'The upload failed. Please try again.')
+        setError(uploadFailureMessage(res.status, json))
         setStatus('error')
         return
       }
@@ -94,7 +97,7 @@ export default function SpreadsheetUploadContent({ kind }: { kind: Kind }) {
             <input
               ref={fileRef}
               type="file"
-              accept=".xlsx,.csv"
+              accept=".xlsx,.xls,.csv"
               className="hidden"
               onChange={(e) => { setFileName(e.target.files?.[0]?.name ?? ''); setStatus('idle'); setResult(null); setError('') }}
             />

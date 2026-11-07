@@ -45,7 +45,7 @@ describe('Bulk Upload on the marks dashboard', () => {
     render(<MarksDashboardContent {...props} />)
     fireEvent.click(screen.getByText('Bulk Upload'))
     const input = document.querySelector<HTMLInputElement>('input[type="file"]')!
-    expect(input.accept).toBe('.xlsx,.csv')
+    expect(input.accept).toBe('.xlsx,.xls,.csv')
     expect((screen.getByRole('button', { name: /^check file$/i }) as HTMLButtonElement).disabled).toBe(true)
   })
 
@@ -72,6 +72,48 @@ describe('Bulk Upload on the marks dashboard', () => {
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2))
     expect((fetchMock.mock.calls[1]![1] as { body: FormData }).body.get('dryRun')).toBe('0')
     await waitFor(() => expect(refresh).toHaveBeenCalledTimes(1))
+    vi.unstubAllGlobals()
+  })
+
+  const chooseFile = (file: File) => {
+    fireEvent.click(screen.getByText('Bulk Upload'))
+    fireEvent.click(screen.getByText('Monthly'))
+    fireEvent.change(document.querySelector<HTMLInputElement>('input[type="file"]')!, { target: { files: [file] } })
+  }
+
+  it('an old .xls file can be picked, and is answered with the steps to convert it, without sending anything', () => {
+    const fetchMock = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
+    render(<MarksDashboardContent {...props} />)
+    fireEvent.click(screen.getByText('Bulk Upload'))
+    expect(document.querySelector<HTMLInputElement>('input[type="file"]')!.accept).toContain('.xls')
+    chooseFile(new File(['x'], 'results.xls'))
+    expect(screen.getByText(/old Excel file/)).toBeTruthy()
+    expect(screen.getByText(/Save As/)).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: /^check file$/i }))
+    expect(fetchMock).not.toHaveBeenCalled()
+    vi.unstubAllGlobals()
+  })
+
+  it('a file over the limit is refused up front with its size, not a vague failure', () => {
+    const fetchMock = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
+    render(<MarksDashboardContent {...props} />)
+    const big = new File(['x'], 'results.xlsx')
+    Object.defineProperty(big, 'size', { value: 6 * 1024 * 1024 })
+    chooseFile(big)
+    expect(screen.getByText(/6\.0 MB and the limit is 4 MB/)).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: /^check file$/i }))
+    expect(fetchMock).not.toHaveBeenCalled()
+    vi.unstubAllGlobals()
+  })
+
+  it('a server failure with no message (such as 413 from the host) is explained in plain words', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 413, json: async () => { throw new Error('not json') } }))
+    render(<MarksDashboardContent {...props} />)
+    chooseFile(new File(['GR No,Subject'], 'results.xlsx'))
+    fireEvent.click(screen.getByRole('button', { name: /^check file$/i }))
+    await waitFor(() => expect(screen.getByText(/too large for the server/)).toBeTruthy())
     vi.unstubAllGlobals()
   })
 })

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { X, FileSpreadsheet, Loader2, CheckCircle2, AlertCircle, ChevronDown, Download } from 'lucide-react'
 import { recentMonths } from '@/lib/reports/months'
+import { checkFileNameAndSize, uploadFailureMessage } from '@/lib/uploads/limits'
 import { EXAM_LABEL, type ExamType, type MarksUploadResult, type UploadRowError } from '@/lib/marks/upload-types'
 
 const EXAMS: { value: ExamType; hint: string }[] = [
@@ -79,6 +80,8 @@ export default function MarksBulkUploadModal({ onClose, onSaved }: { onClose: ()
 
   const send = async (dryRun: boolean) => {
     if (!file || !examType) return
+    const problem = checkFileNameAndSize(file.name, file.size)
+    if (problem) { setError(problem); setStep('setup'); return }
     setError('')
     setStep(dryRun ? 'checking' : 'saving')
     try {
@@ -91,7 +94,7 @@ export default function MarksBulkUploadModal({ onClose, onSaved }: { onClose: ()
       const res = await fetch('/api/uploads/marks', { method: 'POST', body })
       const json = await res.json().catch(() => null)
       if (!res.ok) {
-        setError(json?.error ?? 'The upload failed. Please try again.')
+        setError(uploadFailureMessage(res.status, json))
         setStep(dryRun ? 'setup' : 'preview')
         return
       }
@@ -147,8 +150,8 @@ export default function MarksBulkUploadModal({ onClose, onSaved }: { onClose: ()
               <div>
                 <p className="text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-2">3 · Choose the results file</p>
                 <label className="inline-flex items-center gap-2 text-[13px] font-medium px-3.5 py-2 rounded-xl border border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50 cursor-pointer">
-                  <FileSpreadsheet size={14} /> {file?.name || 'Choose .xlsx or .csv file'}
-                  <input type="file" accept=".xlsx,.csv" className="hidden" onChange={(e) => { setFile(e.target.files?.[0] ?? null); setError('') }} />
+                  <FileSpreadsheet size={14} /> {file?.name || 'Choose an Excel or CSV file'}
+                  <input type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={(e) => { const f = e.target.files?.[0] ?? null; setFile(f); setError(f ? (checkFileNameAndSize(f.name, f.size) ?? '') : '') }} />
                 </label>
                 <div className="mt-3 rounded-xl border border-neutral-200 bg-neutral-50 p-3.5 text-[12.5px] text-neutral-700 leading-relaxed space-y-2">
                   <p className="font-semibold text-neutral-900">How to prepare the file</p>
