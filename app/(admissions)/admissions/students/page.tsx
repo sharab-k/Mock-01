@@ -8,7 +8,7 @@ export default async function AdmissionsStudentsPage() {
   const rows = await fetchAllRows((from, to) =>
     supabase
       .from('students')
-      .select('id, roll_number, full_name, grade_level, section, status')
+      .select('id, roll_number, gr_number, full_name, grade_level, section, status')
       .is('deleted_at', null)
       .order('list_sort', { ascending: true })
       .order('id')
@@ -22,6 +22,7 @@ export default async function AdmissionsStudentsPage() {
     id: s.id,
     full_name: s.full_name,
     roll_number: s.roll_number,
+    gr_number: s.gr_number,
     grade: s.grade_level,
     section: s.section,
     parent_id: parentByStudent.get(s.id)?.id ?? null,

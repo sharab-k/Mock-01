@@ -5,6 +5,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/server'
 import { getLinkedParentsBatch } from '@/lib/notifications/send-notification'
 import { logAction } from '@/lib/audit/log'
+import { refuseInactiveStudents } from '@/lib/students/inactive-guard'
 import { YEAR_LABEL, isAttendanceSubject, isSubjectGrade, studentTakesSubject } from '@/lib/attendance/first-year-subjects'
 import type { Database } from '@/types/supabase'
 
@@ -97,6 +98,9 @@ export async function markAttendanceAction(
   const { supabase, user, authorized } = await requireAttendanceCaller(supabaseOverride)
   if (!authorized || !user) return { ok: false as const, error: 'Not authorized.' }
 
+  const inactive = await refuseInactiveStudents(supabase, [parsed.data.studentId])
+  if (inactive) return { ok: false as const, error: inactive }
+
   const subject = parsed.data.subject ?? ''
   if (subject) {
     const refused = await subjectMismatch(supabase, [parsed.data.studentId], subject)
@@ -146,6 +150,9 @@ export async function submitClassAttendanceAction(
 
   const { supabase, user, authorized } = await requireAttendanceCaller(supabaseOverride)
   if (!authorized || !user) return { ok: false as const, error: 'Not authorized.' }
+
+  const inactive = await refuseInactiveStudents(supabase, parsed.data.records.map((r) => r.studentId))
+  if (inactive) return { ok: false as const, error: inactive }
 
   const classDate = parsed.data.classDate ?? today()
   const subject = parsed.data.subject ?? ''

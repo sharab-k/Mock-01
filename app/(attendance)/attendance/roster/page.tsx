@@ -8,7 +8,7 @@ async function fetchRoster(): Promise<RosterRow[]> {
   const data = await fetchAllRows((from, to) =>
     supabase
       .from('students')
-      .select('id, roll_number, full_name, grade_level, section')
+      .select('id, roll_number, gr_number, full_name, grade_level, section')
       .is('deleted_at', null)
       .eq('status', 'active')
       .order('list_sort', { ascending: true })
@@ -22,6 +22,7 @@ async function fetchRoster(): Promise<RosterRow[]> {
     id: s.id,
     full_name: s.full_name,
     roll_number: s.roll_number,
+    gr_number: s.gr_number,
     grade: s.grade_level,
     section: s.section,
     attendancePct: pctByStudent.get(s.id)?.pct ?? null,

@@ -218,6 +218,11 @@ export function SubjectAttendanceScreen({ grade }: { grade: SubjectGrade }) {
                       style={[styles.allPresentBtn, { backgroundColor: Semantic.successBg }]}>
                       <ThemedText variant="small" style={{ color: Semantic.success }}>All Present</ThemedText>
                     </Pressable>
+                    <Pressable
+                      onPress={() => { setRecords(Object.fromEntries(students.map((s) => [s.id, 'absent' as Status]))); setDirty(true); }}
+                      style={[styles.allPresentBtn, { backgroundColor: Semantic.dangerBg }]}>
+                      <ThemedText variant="small" style={{ color: Semantic.danger }}>All Absent</ThemedText>
+                    </Pressable>
                   </View>
 
                   {students.map((s) => (

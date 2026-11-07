@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import ExportClassLink from '@/components/dashboard/ExportClassLink'
 import StatCard from '@/components/dashboard/StatCard'
 import {
   ArrowLeft, Users, KeyRound, FileText, UserPlus,
@@ -225,6 +226,7 @@ export default function AdmissionsClassDetailContent({ grade, section, basePath 
               <div>
                 <h1 className="text-[20px] font-bold text-neutral-900">Grade {grade} · Section {section}</h1>
                 <p className="text-[13px] text-neutral-500 mt-0.5">Student registration pipeline — {enrolledTotal} record{enrolledTotal !== 1 ? 's' : ''}</p>
+                <ExportClassLink grade={grade} section={section} className="mt-1.5" />
               </div>
             </div>
           </div>

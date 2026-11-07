@@ -11,6 +11,7 @@ export type ClassMark = {
   id: string
   student: string
   roll: string
+  gr: string | null
   subject: string
   exam: string
   score: number
@@ -22,7 +23,7 @@ export async function fetchClassMarks(grade: string, section: string): Promise<C
 
   const { data: students } = await supabase
     .from('students')
-    .select('id, roll_number, full_name')
+    .select('id, roll_number, gr_number, full_name')
     .eq('grade_level', grade)
     .eq('section', section)
     .is('deleted_at', null)
@@ -52,6 +53,7 @@ export async function fetchClassMarks(grade: string, section: string): Promise<C
       id: m.id,
       student: student?.full_name ?? 'Unknown',
       roll: student?.roll_number ?? '—',
+      gr: student?.gr_number ?? null,
       subject: m.subject,
       exam: m.exam_type === 'custom' && m.tests?.title ? m.tests.title : (EXAM_TYPE_LABEL[m.exam_type] ?? m.exam_type),
       score: m.score,

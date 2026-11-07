@@ -10,6 +10,7 @@ export type MarksStudentRow = {
   id: string
   full_name: string
   roll_number: string
+  gr_number: string | null
   grade: string
   section: string
   average: number | null
@@ -22,7 +23,7 @@ export default function MarksStudentsListContent({ students }: { students: Marks
   const filtered = useMemo(() => {
     return students.filter((s) => {
       const q = query.trim().toLowerCase()
-      const matchesQuery = !q || s.full_name.toLowerCase().includes(q) || s.roll_number.toLowerCase().includes(q)
+      const matchesQuery = !q || s.full_name.toLowerCase().includes(q) || s.roll_number.toLowerCase().includes(q) || (s.gr_number ?? '').toLowerCase().includes(q)
       const matchesGrade = gradeFilter === 'All Grades' || s.grade === gradeFilter
       return matchesQuery && matchesGrade
     })
@@ -55,6 +56,7 @@ export default function MarksStudentsListContent({ students }: { students: Marks
             <thead>
               <tr className="bg-neutral-50 text-left">
                 <th className="px-5 py-3 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">Student</th>
+                <th className="px-3 py-3 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">GR No.</th>
                 <th className="px-3 py-3 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">Class</th>
                 <th className="px-3 py-3 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">Average Score</th>
                 <th className="px-3 py-3 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider text-right">Report</th>
@@ -72,6 +74,7 @@ export default function MarksStudentsListContent({ students }: { students: Marks
                       </div>
                     </div>
                   </td>
+                  <td className="px-3 py-3.5 font-mono text-[12px] text-neutral-700">{s.gr_number ?? <span className="text-neutral-300">—</span>}</td>
                   <td className="px-3 py-3.5 font-mono text-[12px] text-neutral-700">{s.grade}{s.section}</td>
                   <td className="px-3 py-3.5">
                     {s.average === null ? (

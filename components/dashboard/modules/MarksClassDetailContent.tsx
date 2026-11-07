@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import Link from 'next/link'
+import ExportClassLink from '@/components/dashboard/ExportClassLink'
 import StatCard from '@/components/dashboard/StatCard'
 import { ArrowLeft, PenLine, BookOpen, CheckCircle, Users, Upload, X } from 'lucide-react'
 import { letterGrade, gradeTextClass } from '@/lib/marks/letter-grade'
@@ -28,6 +29,7 @@ export type ClassMark = {
   id: string
   student: string
   roll: string
+  gr: string | null
   subject: string
   exam: string
   score: number
@@ -107,6 +109,7 @@ export default function MarksClassDetailContent({ grade, section, basePath = '/m
               <p className="text-[13px] text-neutral-500 mt-0.5">
                 {totalEntries === 0 ? 'No marks entered yet' : `${totalEntries} entr${totalEntries !== 1 ? 'ies' : 'y'} · current term`}
               </p>
+              <ExportClassLink grade={grade} section={section} className="mt-1.5" />
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0 flex-wrap">
@@ -202,7 +205,7 @@ export default function MarksClassDetailContent({ grade, section, basePath = '/m
                         </div>
                         <div className="min-w-0">
                           <span className="block font-medium text-neutral-900 truncate">{m.student}</span>
-                          <span className="block text-[11px] font-mono text-neutral-400">{m.roll}</span>
+                          <span className="block text-[11px] font-mono text-neutral-400">GR {m.gr ?? '—'} · {m.roll}</span>
                         </div>
                       </div>
                     </td>

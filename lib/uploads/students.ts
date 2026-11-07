@@ -40,14 +40,14 @@ export async function loadStudentLookup(
   const uniqueGrs = Array.from(new Set(grs.map(grKey).filter(Boolean)))
   const rows = await inBatches(uniqueGrs, 40, async (batch) => {
     const filter = batch.map((g) => `gr_number.ilike.%${Array.from(g.replace(/[,()%*\\:"]/g, '')).join('%')}%`).join(',')
-    const { data } = await supabase.from('students').select('id, full_name, grade_level, gr_number, roll_number').is('deleted_at', null).or(filter)
+    const { data } = await supabase.from('students').select('id, full_name, grade_level, gr_number, roll_number').is('deleted_at', null).eq('status', 'active').or(filter)
     return data ?? []
   })
   for (const r of rows) add(byGr, grKey(r.gr_number ?? ''), { id: r.id, fullName: r.full_name.trim(), gradeLevel: r.grade_level })
 
   const uniqueRolls = Array.from(new Set(rolls.map(idKey).filter(Boolean)))
   const rollRows = await inBatches(uniqueRolls, 100, async (batch) => {
-    const { data } = await supabase.from('students').select('id, full_name, grade_level, roll_number').is('deleted_at', null).in('roll_number', batch.map((r) => r.toUpperCase()))
+    const { data } = await supabase.from('students').select('id, full_name, grade_level, roll_number').is('deleted_at', null).eq('status', 'active').in('roll_number', batch.map((r) => r.toUpperCase()))
     return data ?? []
   })
   for (const r of rollRows) add(byRoll, idKey(r.roll_number), { id: r.id, fullName: r.full_name.trim(), gradeLevel: r.grade_level })
@@ -64,13 +64,13 @@ export function resolveStudent(
   if (roll) {
     const found = lookup.byRoll.get(idKey(roll))
     if (found?.length === 1) return { ok: true, student: found[0] }
-    if (!found?.length) return { ok: false, error: `No student with roll number "${roll}".` }
+    if (!found?.length) return { ok: false, error: `No active student with roll number "${roll}".` }
   }
   if (gr) {
     const found = lookup.byGr.get(grKey(gr))
     if (found?.length === 1) return { ok: true, student: found[0] }
     if (found && found.length > 1) return { ok: false, error: `G.R. number "${gr}" matches ${found.length} students — add the roll number column.` }
-    return { ok: false, error: `No student with G.R. number "${gr}".` }
+    return { ok: false, error: `No active student with G.R. number "${gr}".` }
   }
   return { ok: false, error: 'Missing G.R. number or roll number.' }
 }

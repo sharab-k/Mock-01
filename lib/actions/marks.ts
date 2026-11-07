@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/server'
 import { queueGradeAlerts, type GradeAlertJob } from '@/lib/notifications/send-notification'
 import { termForDate } from '@/lib/marks/term'
 import { logAction } from '@/lib/audit/log'
+import { refuseInactiveStudents } from '@/lib/students/inactive-guard'
 import type { Database } from '@/types/supabase'
 
 async function requireMarksCaller(supabaseOverride?: SupabaseClient<Database>) {
@@ -127,6 +128,9 @@ export async function bulkSaveMarksAction(
     if (entry.score > maxScore) return { ok: false as const, error: `${entry.studentName}'s score exceeds the maximum.` }
   }
 
+  const inactive = await refuseInactiveStudents(supabase, entries.map((e) => e.studentId))
+  if (inactive) return { ok: false as const, error: inactive }
+
   const { data: existing } = await supabase
     .from('marks')
     .select('id, student_id, score, max_score')
@@ -189,6 +193,9 @@ export async function bulkSaveTestMarksAction(
   for (const entry of entries) {
     if (entry.score > test.max_score) return { ok: false as const, error: `${entry.studentName}'s score exceeds the maximum.` }
   }
+
+  const inactive = await refuseInactiveStudents(supabase, entries.map((e) => e.studentId))
+  if (inactive) return { ok: false as const, error: inactive }
 
   const term = termForDate(test.test_date)
   const subjectName = test.subjects?.name ?? '—'

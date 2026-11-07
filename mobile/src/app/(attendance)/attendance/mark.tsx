@@ -68,6 +68,12 @@ export default function AttendanceMarkScreen() {
     setSubmitted((prev) => ({ ...prev, [activeClass.id]: false }));
   }
 
+  function markAllAbsent() {
+    if (!activeClass) return;
+    setRecords((prev) => ({ ...prev, [activeClass.id]: Object.fromEntries(activeClass.students.map((s) => [s.id, 'absent' as Status])) }));
+    setSubmitted((prev) => ({ ...prev, [activeClass.id]: false }));
+  }
+
   async function handleSubmit() {
     if (!activeClass) return;
     setSubmitting(true);
@@ -134,6 +140,9 @@ export default function AttendanceMarkScreen() {
           })}
           <Pressable onPress={markAllPresent} style={[styles.allPresentBtn, { backgroundColor: Semantic.successBg }]}>
             <ThemedText variant="small" style={{ color: Semantic.success }}>All Present</ThemedText>
+          </Pressable>
+          <Pressable onPress={markAllAbsent} style={[styles.allPresentBtn, { backgroundColor: Semantic.dangerBg }]}>
+            <ThemedText variant="small" style={{ color: Semantic.danger }}>All Absent</ThemedText>
           </Pressable>
         </View>
 
