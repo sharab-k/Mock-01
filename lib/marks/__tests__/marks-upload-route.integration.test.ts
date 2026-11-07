@@ -3,6 +3,7 @@
 // Live: a marks CSV posted to /api/uploads/marks with a real marks_admin JWT —
 // the same call the web popup and the phone app make. Needs the dev server.
 import { createClient } from '@supabase/supabase-js'
+import ExcelJS from 'exceljs'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import type { Database } from '@/types/supabase'
 
@@ -116,5 +117,35 @@ describe('marks CSV upload route (live)', { timeout: 60_000 }, () => {
     expect(r.body.toSave).toBe(0)
     expect(r.body.errors.length).toBe(3)
     expect((await stored()).filter((m) => m.exam_type === 'half_yearly')).toHaveLength(0)
+  })
+
+  it('a real Excel (.xlsx) file works the same: students are found by GR number and their marks are updated', async () => {
+    const wb = new ExcelJS.Workbook()
+    const ws = wb.addWorksheet('Marks')
+    ws.addRow(['GR No', 'Student Name', 'Subject', 'Marks', 'Total', 'Exam Date'])
+    ws.addRow([GR[0], 'Marks Upload Test 0', SUBJECT, 14, 20, day])
+    ws.addRow([GR[1], 'Marks Upload Test 1', SUBJECT, 18, 20, day])
+    const file = new File([new Uint8Array(await wb.xlsx.writeBuffer())], 'marks.xlsx', { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+    const form = new FormData()
+    form.append('file', file); form.append('examType', 'monthly'); form.append('examMonth', month)
+    const res = await fetch(`${APP}/api/uploads/marks`, { method: 'POST', body: form, headers: { Authorization: `Bearer ${tokens.marks_admin}` } })
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as { mode: string; saved: number; errors: unknown[] }
+    expect(body).toMatchObject({ mode: 'saved', saved: 2, errors: [] })
+    const rows = await stored()
+    expect(rows).toHaveLength(2)
+    expect(rows.map((m) => m.score).sort()).toEqual([14, 18]) // replaced the earlier 12 / 19 for the same student, subject and exam
+  })
+
+  it('a student who is no longer active is refused with a clear message, and nothing is saved for them', async () => {
+    await admin.from('students').update({ status: 'inactive' }).eq('id', studentIds[1]!)
+    try {
+      const before = (await stored()).find((m) => m.student_id === studentIds[1])?.score
+      const r = await upload('marks_admin', csv([`${GR[1]},${SUBJECT},3,20,${day}`]), { examType: 'monthly', examMonth: month })
+      expect(JSON.stringify(r.body)).toMatch(/active student/i)
+      expect((await stored()).find((m) => m.student_id === studentIds[1])?.score).toBe(before)
+    } finally {
+      await admin.from('students').update({ status: 'active' }).eq('id', studentIds[1]!)
+    }
   })
 })
