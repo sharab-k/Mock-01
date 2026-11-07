@@ -6,6 +6,8 @@ export type RosterStudent = {
   id: string;
   name: string;
   roll: string;
+  /** G.R. number, when the student has one. */
+  gr: string | null;
   grade: string;
   section: string;
   status: RosterStatus;

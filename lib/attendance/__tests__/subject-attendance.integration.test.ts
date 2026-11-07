@@ -52,7 +52,7 @@ beforeAll(async () => {
   }
   const mk = async (key: keyof typeof student, stream: string | null, grade: string, section: string) => {
     const { data, error } = await admin.from('students').insert({
-      full_name: `Subj ${key}`, roll_number: `SA-${key}-${runId}`, registration_number: `SAR-${key}-${runId}`,
+      full_name: `Subj ${key}`, gr_number: `GR-SA-${key}-${runId}`, roll_number: `SA-${key}-${runId}`, registration_number: `SAR-${key}-${runId}`,
       program: grade === '11' ? 'HSC-1' : grade === '12' ? 'HSC-2' : 'SSC-1', grade_level: grade, section, academic_year: 2026, stream,
     }).select('id').single()
     if (error || !data) throw error ?? new Error('student insert failed')
@@ -198,6 +198,14 @@ describe('subject-wise attendance (live)', { timeout: 60_000 }, () => {
     expect((await submit('attendance_admin', { classDate: DATE, records: [rec('pm', 'present')] })).status).toBe(200)
     expect((await rowsFor('')).find((r) => r.student_id === student.pm)?.status).toBe('present')
     await admin.from('attendance_records').delete().eq('student_id', student.pm).eq('subject', '') // leave the shared fixtures as the later tests expect
+  })
+
+  it('the class roster carries each student GR number, for the serial / GR / name layout', async () => {
+    const res = await fetch(`${APP}/api/mobile/attendance/class-roster?grade=9&section=B1&date=${DATE}`, { headers: { Authorization: `Bearer ${tokens.attendance_admin}` } })
+    expect(res.status).toBe(200)
+    const { roster } = (await res.json()) as { roster: { id: string; name: string; gr: string | null; status: string }[] }
+    const row = roster.find((r) => r.id === student.ninth)
+    expect(row?.gr).toBe(`GR-SA-ninth-${runId}`)
   })
 
   it('a marks admin cannot mark attendance', async () => {

@@ -17,7 +17,7 @@ export async function fetchClassRoster(grade: string, section: string, supabaseO
 
   const { data: students } = await supabase
     .from('students')
-    .select('id, roll_number, full_name, grade_level, section')
+    .select('id, roll_number, gr_number, full_name, grade_level, section')
     .eq('grade_level', grade)
     .eq('section', section)
     .is('deleted_at', null)
@@ -67,6 +67,7 @@ export async function fetchClassRoster(grade: string, section: string, supabaseO
       id: s.id,
       name: s.full_name,
       roll: s.roll_number,
+      gr: s.gr_number,
       grade: s.grade_level,
       section: s.section,
       status: statusByStudent.get(s.id) ?? 'unmarked',

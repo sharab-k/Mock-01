@@ -10,7 +10,7 @@ import {
   ArrowLeft, UserCheck, UserX, Clock, Percent,
   MessageSquare, CalendarCheck, AlertCircle, X,
 } from 'lucide-react'
-import { markAttendanceAction } from '@/lib/actions/attendance'
+import { markAttendanceAction, submitClassAttendanceAction } from '@/lib/actions/attendance'
 import { GRADES, sectionsForGrade, type Grade, type Section } from '@/lib/students/constants'
 import { lateCutoffLabel } from '@/lib/attendance/late-policy'
 
@@ -20,6 +20,8 @@ export type RosterStudent = {
   id: string
   name: string
   roll: string
+  /** G.R. number, when the student has one. */
+  gr: string | null
   grade: string
   section: string
   status: Status
@@ -62,6 +64,8 @@ export default function AttendanceClassDetailContent({ grade, section, basePath 
   const [pending, setPending] = useState<Record<string, boolean>>({})
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [alertPending, setAlertPending] = useState<Record<string, boolean>>({})
+  const [bulkBusy, setBulkBusy] = useState(false)
+  const [bulkNote, setBulkNote] = useState<string | null>(null)
 
   const isValid = GRADES.includes(grade as Grade) && sectionsForGrade(grade as Grade).includes(section as Section)
 
@@ -86,6 +90,27 @@ export default function AttendanceClassDetailContent({ grade, section, basePath 
     setPending(p => ({ ...p, [id]: false }))
     if (!outcome.ok) setRoster(prev => prev.map(s => s.id === id ? { ...s, status: previous } : s))
     else if (status === 'absent' && outcome.notified) setRoster(prev => prev.map(s => s.id === id ? { ...s, alertStatus: 'sent' } : s))
+  }
+
+  // Marks everyone who is still unmarked as present in one go, so the teacher only has to tick the
+  // students who are absent. Anyone already marked (absent, late, leave…) is left as they are.
+  const markAllPresent = async () => {
+    const targets = roster.filter(s => s.status === 'unmarked')
+    if (targets.length === 0 || bulkBusy) return
+    setBulkBusy(true); setBulkNote(null)
+    setRoster(prev => prev.map(s => s.status === 'unmarked' ? { ...s, status: 'present' } : s))
+    const outcome = await submitClassAttendanceAction({
+      classDate, classLabel: `Grade ${grade} · Section ${section}`,
+      records: targets.map(s => ({ studentId: s.id, studentName: s.name, status: 'present' as const })),
+    })
+    setBulkBusy(false)
+    if (!outcome.ok) {
+      const ids = new Set(targets.map(s => s.id))
+      setRoster(prev => prev.map(s => ids.has(s.id) ? { ...s, status: 'unmarked' } : s))
+      setBulkNote(outcome.error)
+      return
+    }
+    setBulkNote(`${targets.length} student${targets.length === 1 ? '' : 's'} marked present. Tick Absent for anyone who is not here.`)
   }
 
   const cycleStatus = (id: string) => {
@@ -220,8 +245,12 @@ export default function AttendanceClassDetailContent({ grade, section, basePath 
             <h2 className="text-[14px] font-semibold text-neutral-900">Class Roster</h2>
             <p className="text-[11.5px] text-neutral-400 mt-0.5 hidden sm:block">Tap student name for full profile · click status to cycle it</p>
           </div>
-          <Link href={`${basePath}/roster`} className="text-[12px] text-ink-600 hover:text-ink-800 no-underline font-medium shrink-0">Full Roster →</Link>
+          <div className="flex items-center gap-3 shrink-0">
+            <button onClick={markAllPresent} disabled={bulkBusy || roster.every(s => s.status !== 'unmarked')} className="text-[12px] font-semibold text-success bg-success-bg hover:bg-success/15 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50">{bulkBusy ? 'Marking…' : 'Mark all present'}</button>
+            <Link href={`${basePath}/roster`} className="text-[12px] text-ink-600 hover:text-ink-800 no-underline font-medium">Full Roster →</Link>
+          </div>
         </div>
+        {bulkNote && <p className="px-5 py-2.5 text-[12.5px] text-ink-700 bg-ink-50 border-b border-neutral-100" role="status">{bulkNote}</p>}
 
         {EMPTY ? (
           <div className="flex flex-col items-center py-16 text-center px-8">
@@ -233,26 +262,29 @@ export default function AttendanceClassDetailContent({ grade, section, basePath 
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-[13px] min-w-[460px]">
+            <table className="w-full text-[13px] min-w-[560px]">
               <thead>
                 <tr className="bg-neutral-50 text-left">
-                  <th className="px-5 py-3 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">Student</th>
+                  <th className="pl-5 pr-2 py-3 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider w-12">#</th>
+                  <th className="px-3 py-3 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">GR No.</th>
+                  <th className="px-3 py-3 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">Name</th>
                   <th className="px-3 py-3 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">Status</th>
                   <th className="px-3 py-3 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider hidden md:table-cell">Alert</th>
                   <th className="px-3 py-3 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">Mark</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-100">
-                {roster.map(s => (
+                {roster.map((s, i) => (
                   <tr key={s.id} className="hover:bg-neutral-50/80 transition-colors">
-                    <td className="px-5 py-3">
+                    <td className="pl-5 pr-2 py-3 font-mono text-[12px] text-neutral-400">{i + 1}</td>
+                    <td className="px-3 py-3 font-mono text-[12px] text-neutral-700">{s.gr ?? '—'}</td>
+                    <td className="px-3 py-3">
                       <button onClick={() => setSelectedId(s.id)} className="flex items-center gap-3 w-full text-left group">
                         <div className="w-8 h-8 rounded-full bg-ink-100 text-ink-700 flex items-center justify-center font-mono text-[10px] font-bold shrink-0 group-hover:bg-ink-200 transition-colors">
                           {INITIALS(s.name)}
                         </div>
                         <div className="min-w-0">
                           <span className="block font-medium text-neutral-900 group-hover:text-ink-700 transition-colors truncate">{s.name}</span>
-                          <span className="block text-[11px] font-mono text-neutral-400">{s.roll}</span>
                         </div>
                       </button>
                     </td>
@@ -271,7 +303,7 @@ export default function AttendanceClassDetailContent({ grade, section, basePath 
                         <span className="text-[11px] text-neutral-300">—</span>
                       )}
                     </td>
-                    <td className="px-3 py-3">
+                    <td className="px-3 py-3 whitespace-nowrap">
                       <button
                         onClick={() => cycleStatus(s.id)}
                         disabled={pending[s.id]}
@@ -279,6 +311,10 @@ export default function AttendanceClassDetailContent({ grade, section, basePath 
                       >
                         {s.status === 'present' ? '✓ In' : 'Check In'}
                       </button>
+                      <label className="ml-3 inline-flex items-center gap-1.5 text-[12px] text-neutral-600 cursor-pointer select-none align-middle">
+                        <input type="checkbox" checked={s.status === 'absent'} disabled={pending[s.id]} onChange={(e) => setStatus(s.id, e.target.checked ? 'absent' : 'present')} className="w-4 h-4 accent-[#973F35]" aria-label={`Mark ${s.name} absent`} />
+                        Absent
+                      </label>
                     </td>
                   </tr>
                 ))}

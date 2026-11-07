@@ -14,7 +14,7 @@ import { Card } from '@/components/ui/card';
 import { StatusPill } from '@/components/ui/status-pill';
 import { Ink, Radius, Semantic, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { markAttendanceAction, sendAbsenceAlertAction } from '@/lib/actions/attendance';
+import { markAttendanceAction, sendAbsenceAlertAction, submitClassAttendanceAction } from '@/lib/actions/attendance';
 import { fetchClassRoster, type RosterStatus, type RosterStudent } from '@/lib/attendance/class-roster';
 import { lateCutoffLabel } from '@/lib/attendance/late-policy';
 
@@ -44,6 +44,8 @@ function ClassDetailBody({ grade, section }: { grade: string; section: string })
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState<Record<string, boolean>>({});
   const [alertPending, setAlertPending] = useState<Record<string, boolean>>({});
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkNote, setBulkNote] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -72,6 +74,27 @@ function ClassDetailBody({ grade, section }: { grade: string; section: string })
     setPending((p) => ({ ...p, [student.id]: false }));
     if (!outcome.ok) { patchStudent(student.id, { status: previous }); return; }
     if (status === 'absent' && outcome.notified) patchStudent(student.id, { alertStatus: 'sent' });
+  }
+
+  // Marks everyone still unmarked as present, so only the absent students need a tap. Anyone already marked is left alone.
+  async function markAllPresent() {
+    const targets = (roster ?? []).filter((s) => s.status === 'unmarked');
+    if (targets.length === 0 || bulkBusy) return;
+    setBulkBusy(true);
+    setBulkNote(null);
+    targets.forEach((s) => patchStudent(s.id, { status: 'present' }));
+    const outcome = await submitClassAttendanceAction({
+      classDate,
+      classLabel: `Grade ${grade} · Section ${section}`,
+      records: targets.map((s) => ({ studentId: s.id, studentName: s.name, status: 'present' as const })),
+    });
+    setBulkBusy(false);
+    if (!outcome.ok) {
+      targets.forEach((s) => patchStudent(s.id, { status: 'unmarked' }));
+      setBulkNote(outcome.error);
+      return;
+    }
+    setBulkNote(`${targets.length} marked present. Tap a status to mark anyone absent.`);
   }
 
   async function sendAlert(student: RosterStudent) {
@@ -125,15 +148,27 @@ function ClassDetailBody({ grade, section }: { grade: string; section: string })
 
         {roster && (
           <ScrollView contentContainerStyle={styles.list}>
+            {roster.length > 0 && (
+              <View style={{ gap: 6 }}>
+                <Pressable
+                  onPress={markAllPresent}
+                  disabled={bulkBusy || roster.every((s) => s.status !== 'unmarked')}
+                  accessibilityRole="button"
+                  style={[styles.allPresentBtn, { backgroundColor: Semantic.successBg, opacity: bulkBusy || roster.every((s) => s.status !== 'unmarked') ? 0.5 : 1, alignSelf: 'flex-start' }]}>
+                  <ThemedText variant="small" style={{ color: Semantic.success }}>{bulkBusy ? 'Marking…' : 'Mark all present'}</ThemedText>
+                </Pressable>
+                {bulkNote ? <ThemedText variant="small" color="textSecondary">{bulkNote}</ThemedText> : null}
+              </View>
+            )}
             {roster.length === 0 ? (
               <ThemedText color="textSecondary">No students in this class.</ThemedText>
             ) : (
-              roster.map((s) => (
+              roster.map((s, i) => (
                 <Card key={s.id} style={{ gap: 8 }}>
                   <View style={styles.row}>
                     <View style={{ flex: 1 }}>
+                      <ThemedText variant="mono" color="textMuted" style={{ fontSize: 11 }}>{i + 1} · GR {s.gr ?? '—'}</ThemedText>
                       <ThemedText variant="small">{s.name}</ThemedText>
-                      <ThemedText variant="mono" color="textMuted" style={{ fontSize: 11 }}>{s.roll}</ThemedText>
                     </View>
                     <Pressable
                       onPress={() => cycleStatus(s)}
@@ -178,6 +213,7 @@ function ClassDetailBody({ grade, section }: { grade: string; section: string })
 }
 
 const styles = StyleSheet.create({
+  allPresentBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999 },
   monthRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 4 },
   container: { flex: 1 },
   safeArea: { flex: 1 },
