@@ -10,7 +10,7 @@ async function fetchClassStudents(grade: string, section: string): Promise<Class
     .select(`
       id, roll_number, full_name, grade_level, section, enrollment_date, program,
       is_late_enrollment, stream, guardian_profession, previous_school, last_qualification,
-      address, gr_number, registration_fee, tuition_fee
+      address, gr_number, registration_fee, tuition_fee, status
     `)
     .eq('grade_level', grade)
     .eq('section', section)
@@ -23,6 +23,7 @@ async function fetchClassStudents(grade: string, section: string): Promise<Class
     const parent = parentByStudent.get(s.id)
     return {
       id: s.id,
+      inactive: s.status === 'inactive',
       name: s.full_name,
       roll: s.roll_number,
       grade: s.grade_level,
