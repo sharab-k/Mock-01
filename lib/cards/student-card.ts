@@ -1,8 +1,9 @@
 import { PDFDocument, rgb, type PDFFont, type PDFPage } from 'pdf-lib'
 import fontkit from '@pdf-lib/fontkit'
-import { CARD_NOTE, CARD_TERMS, orDash, truncateToWidth, wrapText, type StudentCardData } from './card-data'
+import { ACADEMY_PHONE, CARD_NOTE, CARD_TERMS, orDash, truncateToWidth, wrapText, type StudentCardData } from './card-data'
 import { POPPINS_BOLD_BASE64, POPPINS_MEDIUM_BASE64, POPPINS_REGULAR_BASE64, POPPINS_SEMIBOLD_BASE64 } from './poppins-data'
-import { EMBLEM_JPEG_BASE64 } from './emblem-data'
+import { WATERMARK_PNG_BASE64 } from './watermark-data'
+import { GELASIO_BOLD_BASE64, GELASIO_REGULAR_BASE64 } from './brand-font-data'
 
 // The J.E Academy student ID card: portrait, two pages (front, back), the same
 // size and layout as the school's own design (a Canva export, 141.75 x 240.75 pt
@@ -57,7 +58,10 @@ export async function renderStudentCardsPdf(cards: StudentCardData[]): Promise<U
   const semi = await doc.embedFont(POPPINS_SEMIBOLD_BASE64, { subset: true })
   const medium = await doc.embedFont(POPPINS_MEDIUM_BASE64, { subset: true })
   const regular = await doc.embedFont(POPPINS_REGULAR_BASE64, { subset: true })
-  const emblem = await doc.embedJpg(EMBLEM_JPEG_BASE64)
+  // The academy name at the top is set in Gelasio, an open-licence typeface made to match Georgia.
+  const titleFont = await doc.embedFont(GELASIO_BOLD_BASE64, { subset: true })
+  const taglineFont = await doc.embedFont(GELASIO_REGULAR_BASE64, { subset: true })
+  const watermark = await doc.embedPng(WATERMARK_PNG_BASE64)
 
   // Standard-font-style safety: a character the font lacks (e.g. Urdu script in a
   // name) must not fail the whole download, so unsupported characters become '?'.
@@ -82,20 +86,34 @@ export async function renderStudentCardsPdf(cards: StudentCardData[]): Promise<U
     return size
   }
 
+  // The academy emblem, large and faint, behind everything on the page. Drawn first, so the card's own blue
+  // bands, the photo and the text all sit on top of it.
+  const WM = 156
+  const stamp = (page: PDFPage) =>
+    page.drawImage(watermark, { x: (W - WM) / 2, y: (H - WM) / 2 - 14, width: WM, height: WM, opacity: 0.11 })
+
+  // The brand block at the top of each page: the emblem at the left, the academy name beside it.
+  const LOGO = 34, GAP = 5, LOGO_X = 16
+  const TEXT_X = LOGO_X + LOGO + GAP
+  const TEXT_W = W - TEXT_X - 5
   const brand = (page: PDFPage, dy: number) => {
-    page.drawImage(emblem, { x: 37.5, y: 210.5 - dy, width: 23, height: 23 })
-    text(page, 'JE ACADEMY', 64.7, 221.7 - dy, fit('JE ACADEMY', semi, 4.91, 31), semi)
-    text(page, 'SCIENCE & COMMERCE', 64.7, 218.1 - dy, fit('SCIENCE & COMMERCE', medium, 2.91, 32.2), medium)
+    const y0 = 203.4 - dy
+    page.drawImage(watermark, { x: LOGO_X, y: y0, width: LOGO, height: LOGO })
+    const titleSize = fit('JE ACADEMY', titleFont, 10.6, TEXT_W)
+    const tagSize = fit('SCIENCE & COMMERCE', taglineFont, 5.7, TEXT_W)
+    text(page, 'JE ACADEMY', TEXT_X, y0 + LOGO / 2 + 2.6, titleSize, titleFont)
+    text(page, 'SCIENCE & COMMERCE', TEXT_X, y0 + LOGO / 2 - 7, tagSize, taglineFont)
   }
 
   for (const data of cards) {
   // ---- Front ------------------------------------------------------------------
   const front = doc.addPage([W, H])
+  stamp(front)
   chrome(front, 'front')
   brand(front, 0)
 
   // Photo frame 58.6 x 70.3 (5:6), the processed upload fills it exactly.
-  const PX = 41.9, PY = 133.6, PW = 58.6, PH = 70.3
+  const PX = 41.9, PY = 129.4, PW = 58.6, PH = 70.3
   if (data.photoJpeg) {
     const photo = await doc.embedJpg(data.photoJpeg)
     front.drawImage(photo, { x: PX, y: PY, width: PW, height: PH })
@@ -117,30 +135,29 @@ export async function renderStudentCardsPdf(cards: StudentCardData[]): Promise<U
   const NAME_W = 118
   const nameSize1 = fit(data.fullName, bold, 13.24, NAME_W, 9.5)
   if (bold.widthOfTextAtSize(safe(data.fullName, bold), nameSize1) <= NAME_W) {
-    centered(front, data.fullName, 116.1, nameSize1, bold)
+    centered(front, data.fullName, 111.9, nameSize1, bold)
   } else {
     const lines = wrapText(safe(data.fullName, bold), NAME_W, (s) => bold.widthOfTextAtSize(s, 9.5)).slice(0, 2)
-    centered(front, lines[0], 124.5, fit(lines[0], bold, 9.5, NAME_W), bold)
-    if (lines[1]) centered(front, lines[1], 114.6, fit(lines[1], bold, 9.5, NAME_W), bold)
+    centered(front, lines[0], 120.3, fit(lines[0], bold, 9.5, NAME_W), bold)
+    if (lines[1]) centered(front, lines[1], 110.4, fit(lines[1], bold, 9.5, NAME_W), bold)
   }
 
   // "Student" badge
   const badgeW = semi.widthOfTextAtSize('Student', 5.88) + 7
-  front.drawRectangle({ x: (W - badgeW) / 2, y: 98.1, width: badgeW, height: 12.2, color: BADGE })
-  centered(front, 'Student', 102.7, 5.88, semi, rgb(1, 1, 1))
+  front.drawRectangle({ x: (W - badgeW) / 2, y: 93.9, width: badgeW, height: 12.2, color: BADGE })
+  centered(front, 'Student', 98.5, 5.88, semi, rgb(1, 1, 1))
 
-  // Required by the software requirements document: parent's name, registration
-  // number, GR number and contact details, beside the grade/section/validity.
+  // Father's name and the group come first, then the registration and GR numbers, the class and the contact.
   const rows: [string, string][] = [
-    ['Parent', orDash(data.parentName)],
+    ['Father', orDash(data.parentName)],
+    ['Group', orDash(data.group)],
     ['Reg No', orDash(data.registrationNumber)],
     ['GR No', orDash(data.grNumber)],
     ['Grade', orDash(data.gradeLabel)],
     ['Section', orDash(data.section)],
-    ['Contact', orDash(data.contact)],
     ['Validity', `Session ${data.session}`],
   ]
-  const ROW_TOP = 84.0, ROW_STEP = 9.9
+  const ROW_TOP = 83.2, ROW_STEP = 9.6
   const VALUE_W = W - 43.6 - 6
   rows.forEach(([label, value], i) => {
     const y = ROW_TOP - i * ROW_STEP
@@ -151,12 +168,13 @@ export async function renderStudentCardsPdf(cards: StudentCardData[]): Promise<U
 
   // ---- Back -------------------------------------------------------------------
   const back = doc.addPage([W, H])
+  stamp(back)
   chrome(back, 'back')
-  brand(back, 16.2)
-  centered(back, 'TERMS AND', 177.9, 8.23, bold)
-  centered(back, 'CONDITIONS', 168.4, 8.23, bold)
+  brand(back, 14.5)
+  centered(back, 'TERMS AND', 170.9, 8.23, bold)
+  centered(back, 'CONDITIONS', 161.4, 8.23, bold)
 
-  let y = 151.9
+  let y = 145.4
   for (const term of CARD_TERMS) {
     const lines = wrapText(term, 128, (s) => regular.widthOfTextAtSize(s, 4.53))
     back.drawCircle({ x: 8.3, y: y + 1.6, size: 0.9, color: rgb(0.1, 0.1, 0.1) })
@@ -167,6 +185,7 @@ export async function renderStudentCardsPdf(cards: StudentCardData[]): Promise<U
   }
   const noteLines = wrapText(CARD_NOTE, 120, (s) => bold.widthOfTextAtSize(s, 5.6))
   noteLines.forEach((l, i) => centered(back, l, 53.2 - i * 7.5, 5.6, bold, NOTE))
+  centered(back, `Phone: ${ACADEMY_PHONE}`, 53.2 - noteLines.length * 7.5 - 5.5, 7, bold, INK)
   }
 
   return doc.save()

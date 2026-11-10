@@ -3,16 +3,16 @@
 
 export type StudentCardData = {
   fullName: string
-  /** Parent / guardian name (the linked parent account); '' when none is linked. */
+  /** The student's father (printed as "Father"); '' when none is on file. */
   parentName: string
   /** Registration number issued at admission. */
   registrationNumber: string
-  /** Parent's contact number; '' when none is on file. */
-  contact: string
   /** G.R. number as printed on the card; falls back to the roll number. */
   grNumber: string
   gradeLabel: string
   section: string
+  /** Pre-Engineering, Pre-Medical, General Science, Commerce (11, 12) or Biology, Engineering (9, 10). */
+  group: string
   /** e.g. "26/27" */
   session: string
   /** Processed card photo (JPEG, 5:6), or null for the placeholder. */
@@ -79,5 +79,8 @@ export const CARD_TERMS = [
   'A replacement card will be issued on payment of the prescribed fee.',
   'This ID card must be returned to the academy upon leaving.',
 ] as const
+
+/** The academy's phone number, printed under the note on the back of the card. */
+export const ACADEMY_PHONE = '+92 343 3773203'
 
 export const CARD_NOTE = 'NOTE: FINDER OF THIS CARD MAY POST OR RETURN IT TO THE ACADEMY.'

@@ -19,9 +19,11 @@ export type CardStudentRow = {
   section: string
   academic_year: number
   photo_path: string | null
+  /** The group printed on the card; null until it has been chosen. */
+  card_group: string | null
 }
 
-type Parent = { name: string; phone: string }
+type Parent = { name: string }
 
 // The parent shown on the card: the first account linked to the student (oldest
 // link first). Uses the service-role client because staff cannot read another
@@ -32,15 +34,12 @@ async function loadParents(studentIds: string[]): Promise<Map<string, Parent>> {
   if (studentIds.length === 0) return out
   const { data } = await createAdminClient()
     .from('parent_student_links')
-    .select('student_id, created_at, profiles(full_name, phone, secondary_phone)')
+    .select('student_id, created_at, profiles(full_name)')
     .in('student_id', studentIds)
     .order('created_at', { ascending: true })
   for (const row of data ?? []) {
     if (out.has(row.student_id)) continue
-    out.set(row.student_id, {
-      name: row.profiles?.full_name?.trim() ?? '',
-      phone: (row.profiles?.phone || row.profiles?.secondary_phone || '').trim(),
-    })
+    out.set(row.student_id, { name: row.profiles?.full_name?.trim() ?? '' })
   }
   return out
 }
@@ -72,10 +71,10 @@ export async function buildCardData(students: CardStudentRow[], opts: { bulk?: b
         fullName: s.full_name.trim(),
         parentName: parent?.name ?? '',
         registrationNumber: s.registration_number,
-        contact: parent?.phone ?? '',
         grNumber: s.gr_number?.trim() || s.roll_number,
         gradeLabel: gradeLabel(s.grade_level),
         section: s.section,
+        group: s.card_group ?? '',
         session: sessionLabel(s.academic_year),
         photoJpeg: photos[j],
       })
