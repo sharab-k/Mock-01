@@ -25,10 +25,44 @@ export async function hasCardPhoto(studentId: string): Promise<boolean> {
   }
 }
 
+export type GroupInfo = { group: string | null; options: string[]; canChange: boolean };
+
+// The group printed on the card. It has to be chosen before the card can be downloaded: a parent chooses it once,
+// and the Super Admin can change it at any time (the server enforces both).
+export async function fetchCardGroup(studentId: string): Promise<GroupInfo | null> {
+  const t = await token();
+  if (!API_BASE_URL || !t) return null;
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/students/${studentId}/group`, { headers: { Authorization: `Bearer ${t}` } });
+    return res.ok ? ((await res.json()) as GroupInfo) : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function saveCardGroup(studentId: string, group: string): Promise<CardResult> {
+  const t = await token();
+  if (!API_BASE_URL) return { ok: false, error: 'API base URL is not configured.' };
+  if (!t) return { ok: false, error: 'Not signed in.' };
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/students/${studentId}/group`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${t}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ group }),
+    });
+    const json = (await res.json().catch(() => null)) as { error?: string } | null;
+    return res.ok ? { ok: true } : { ok: false, error: json?.error ?? 'Could not save the group.' };
+  } catch {
+    return { ok: false, error: 'Network error. Please check your connection and try again.' };
+  }
+}
+
 export async function downloadIdCard(studentId: string, studentName: string): Promise<CardResult> {
   const t = await token();
   if (!API_BASE_URL) return { ok: false, error: 'API base URL is not configured.' };
   if (!t) return { ok: false, error: 'Not signed in.' };
+  const info = await fetchCardGroup(studentId);
+  if (info && !info.group) return { ok: false, error: 'Choose the group first. The card can only be downloaded after that.' };
   try {
     const file = await File.downloadFileAsync(`${API_BASE_URL}/api/students/${studentId}/card`, Paths.cache, {
       headers: { Authorization: `Bearer ${t}` },

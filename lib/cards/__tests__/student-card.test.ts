@@ -3,7 +3,8 @@ import { describe, expect, it } from 'vitest'
 import { writeFileSync } from 'node:fs'
 import sharp from 'sharp'
 import { PDFDocument } from 'pdf-lib'
-import { gradeLabel, orDash, sessionLabel, truncateToWidth, wrapText } from '../card-data'
+import { ACADEMY_PHONE, gradeLabel, orDash, sessionLabel, truncateToWidth, wrapText } from '../card-data'
+import { COLLEGE_GROUPS, MATRIC_GROUPS, groupsForGrade, isGroupForGrade } from '../groups'
 import { renderStudentCardPdf, renderStudentCardsPdf } from '../student-card'
 
 // A neutral head-and-shoulders silhouette (never a real person's face).
@@ -54,8 +55,8 @@ describe('card text helpers', () => {
 
 describe('renderStudentCardPdf', () => {
   const base = {
-    fullName: 'Ayesha Fatima', parentName: 'Fatima Khan', registrationNumber: 'REG-2026-0501', contact: '0300 1234567',
-    grNumber: 'FA 501', gradeLabel: 'IX', section: 'B1', session: '26/27',
+    fullName: 'Ayesha Fatima', parentName: 'Imran Khan', registrationNumber: 'REG-2026-0501',
+    grNumber: 'FA 501', gradeLabel: 'IX', section: 'B1', group: 'Biology', session: '26/27',
   }
 
   it('produces a two-page card at the school design size', async () => {
@@ -69,12 +70,12 @@ describe('renderStudentCardPdf', () => {
     if (process.env.CARD_OUT) writeFileSync(`${process.env.CARD_OUT}-photo.pdf`, bytes)
   })
 
-  it('prints parent, registration and contact, and copes when they are missing or very long', async () => {
+  it('prints father, group and registration, and copes when they are missing or very long', async () => {
     const full = await renderStudentCardPdf({ ...base, photoJpeg: null })
     expect((await PDFDocument.load(full)).getPageCount()).toBe(2)
-    const empty = await renderStudentCardPdf({ ...base, parentName: '', contact: '', registrationNumber: '', photoJpeg: null })
+    const empty = await renderStudentCardPdf({ ...base, parentName: '', group: '', registrationNumber: '', photoJpeg: null })
     expect((await PDFDocument.load(empty)).getPageCount()).toBe(2)
-    const long = await renderStudentCardPdf({ ...base, parentName: 'Muhammad Abdullah Bin Abdul Rehman Siddiqui Al-Hashmi', contact: '+92 300 1234567 / +92 321 7654321 / 021 34567890', photoJpeg: null })
+    const long = await renderStudentCardPdf({ ...base, parentName: 'Muhammad Abdullah Bin Abdul Rehman Siddiqui Al-Hashmi', group: 'Pre-Engineering', photoJpeg: null })
     expect((await PDFDocument.load(long)).getPageCount()).toBe(2)
     if (process.env.CARD_OUT) writeFileSync(`${process.env.CARD_OUT}-fields.pdf`, full)
   })
@@ -99,5 +100,67 @@ describe('renderStudentCardPdf', () => {
     const urdu = await renderStudentCardPdf({ ...base, fullName: 'عائشہ فاطمہ', photoJpeg: null })
     expect((await PDFDocument.load(urdu)).getPageCount()).toBe(2)
     if (process.env.CARD_OUT) writeFileSync(`${process.env.CARD_OUT}-longname.pdf`, long)
+  })
+
+  // -- what the card actually says, read back out of the PDF --------------------------------------------------
+  async function pageText(bytes: Uint8Array, pageNo: number): Promise<string> {
+    const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs')
+    const doc = await pdfjs.getDocument({ data: new Uint8Array(bytes), useSystemFonts: true }).promise
+    const page = await doc.getPage(pageNo)
+    const content = await page.getTextContent()
+    return content.items.map((i) => ('str' in i ? i.str : '')).join(' ').replace(/\s+/g, ' ')
+  }
+
+  it('the front says Father and Group (with their values) and no longer prints a contact number', async () => {
+    const text = await pageText(await renderStudentCardPdf({ ...base, photoJpeg: null }), 1)
+    expect(text).toMatch(/Father/)
+    expect(text).toMatch(/Imran Khan/)
+    expect(text).toMatch(/Group/)
+    expect(text).toMatch(/Biology/)
+    expect(text).not.toMatch(/Contact/)
+    expect(text).not.toMatch(/Parent/)
+    expect(text).toMatch(/JE ACADEMY/)
+    expect(text).toMatch(/SCIENCE & COMMERCE/)
+  })
+
+  it('a college student is printed with their college group', async () => {
+    const text = await pageText(await renderStudentCardPdf({ ...base, gradeLabel: 'XI', group: 'Pre-Medical', photoJpeg: null }), 1)
+    expect(text).toMatch(/Pre-Medical/)
+  })
+
+  it('the back carries the academy name, the note and the academy phone number beneath it', async () => {
+    const text = await pageText(await renderStudentCardPdf({ ...base, photoJpeg: null }), 2)
+    expect(ACADEMY_PHONE).toBe('+92 343 3773203')
+    expect(text).toMatch(/JE ACADEMY/)
+    expect(text).toMatch(/NOTE: FINDER/)
+    expect(text.indexOf(ACADEMY_PHONE)).toBeGreaterThan(text.indexOf('NOTE: FINDER'))
+  })
+
+  it('the logo is stamped on both pages: the small brand logo and the large watermark', async () => {
+    const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs')
+    const doc = await pdfjs.getDocument({ data: new Uint8Array(await renderStudentCardPdf({ ...base, photoJpeg: null })), useSystemFonts: true }).promise
+    for (const n of [1, 2]) {
+      const ops = await (await doc.getPage(n)).getOperatorList()
+      const images = ops.fnArray.filter((fn) => fn === pdfjs.OPS.paintImageXObject).length
+      expect(images).toBeGreaterThanOrEqual(2)
+    }
+  })
+})
+
+describe('card groups', () => {
+  it('classes 9 and 10 choose Biology or Engineering; 11, 12 and I.Com choose from the four college groups', () => {
+    expect([...groupsForGrade('9')]).toEqual([...MATRIC_GROUPS])
+    expect([...groupsForGrade('10')]).toEqual(['Biology', 'Engineering'])
+    for (const g of ['11', '12', 'ICOM-1', 'ICOM-2']) expect([...groupsForGrade(g)]).toEqual([...COLLEGE_GROUPS])
+    expect([...COLLEGE_GROUPS]).toEqual(['Pre-Engineering', 'Pre-Medical', 'General Science', 'Commerce'])
+  })
+
+  it('a group only fits the classes it belongs to', () => {
+    expect(isGroupForGrade('9', 'Biology')).toBe(true)
+    expect(isGroupForGrade('9', 'Commerce')).toBe(false)
+    expect(isGroupForGrade('11', 'Biology')).toBe(false)
+    expect(isGroupForGrade('11', 'General Science')).toBe(true)
+    expect(isGroupForGrade('12', '')).toBe(false)
+    expect(isGroupForGrade('9', 'Pre-Medical')).toBe(false)
   })
 })

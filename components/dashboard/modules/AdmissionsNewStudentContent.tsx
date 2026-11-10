@@ -241,7 +241,7 @@ export default function AdmissionsNewStudentContent({ basePath = '/admissions' }
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-[12px] font-semibold text-neutral-700 mb-1.5">Parent&apos;s name</label>
+                <label className="block text-[12px] font-semibold text-neutral-700 mb-1.5">Father&apos;s name</label>
                 <input required value={parentName} onChange={(e) => setParentName(e.target.value)} placeholder="e.g. Mr. Ahmed Raza" className="w-full px-3.5 py-2.5 border border-neutral-200 rounded-xl text-[13px] bg-neutral-50 placeholder-neutral-400 focus:outline-none focus:border-ink-400 focus:ring-2 focus:ring-ink-400/10 focus:bg-white transition-all" />
               </div>
               <div>

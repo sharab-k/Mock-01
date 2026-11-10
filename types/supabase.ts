@@ -1354,6 +1354,7 @@ export type Database = {
         Row: {
           academic_year: number
           address: string | null
+          card_group: string | null
           created_at: string
           deleted_at: string | null
           enrollment_date: string
@@ -1384,6 +1385,7 @@ export type Database = {
         Insert: {
           academic_year: number
           address?: string | null
+          card_group?: string | null
           created_at?: string
           deleted_at?: string | null
           enrollment_date?: string
@@ -1414,6 +1416,7 @@ export type Database = {
         Update: {
           academic_year?: number
           address?: string | null
+          card_group?: string | null
           created_at?: string
           deleted_at?: string | null
           enrollment_date?: string
@@ -1798,6 +1801,7 @@ export type Database = {
         Returns: {
           academic_year: number
           address: string | null
+          card_group: string | null
           created_at: string
           deleted_at: string | null
           enrollment_date: string

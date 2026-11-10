@@ -14,7 +14,7 @@ export default async function SuperAdminStudentCardsPage() {
     fetchAllRows((from, to) =>
       supabase
         .from('students')
-        .select('id, roll_number, full_name, grade_level, section, status, gr_number')
+        .select('id, roll_number, full_name, grade_level, section, status, gr_number, card_group')
         .is('deleted_at', null)
         .order('list_sort', { ascending: true })
         .order('id')
@@ -32,6 +32,7 @@ export default async function SuperAdminStudentCardsPage() {
     grade: s.grade_level,
     section: s.section,
     status: s.status === 'active' ? 'Active' : 'Inactive',
+    card_group: s.card_group,
     fee_status: feeByStudent.get(s.id) === 'paid' ? 'paid' : 'unpaid',
   }))
 

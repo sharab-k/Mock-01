@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react'
 import { Download, Loader2, Search } from 'lucide-react'
 import StudentIdCard from '@/components/dashboard/StudentIdCard'
 import { INITIALS } from '@/lib/students/constants'
+import { groupsForGrade } from '@/lib/cards/groups'
 
 export type CardStudent = {
   id: string
@@ -14,6 +15,8 @@ export type CardStudent = {
   section: string
   status: 'Active' | 'Inactive'
   fee_status: 'paid' | 'unpaid'
+  /** The group printed on the card; null until it has been chosen. */
+  card_group: string | null
 }
 
 const STATUS_PILL: Record<string, string> = {
@@ -32,7 +35,11 @@ const BULK_BATCH = 100
 // Super Admin's ID-card list: every student in grade, then G.R. number order
 // (the server sends them already sorted), with the same filters as the Students
 // directory. The card button opens the download / replace-photo panel.
-export default function StudentCardsContent({ students, grades }: { students: CardStudent[]; grades: string[] }) {
+export default function StudentCardsContent({ students: initialStudents, grades }: { students: CardStudent[]; grades: string[] }) {
+  const [students, setStudents] = useState<CardStudent[]>(initialStudents)
+  const [groupError, setGroupError] = useState<string | null>(null)
+  // Students a blocked bulk download said still need a group, so their rows can be marked.
+  const [needGroup, setNeedGroup] = useState<Set<string>>(new Set())
   const [query, setQuery] = useState('')
   const [gradeFilter, setGradeFilter] = useState('All Grades')
   const [statusFilter, setStatusFilter] = useState('All Statuses')
@@ -64,10 +71,24 @@ export default function StudentCardsContent({ students, grades }: { students: Ca
   const toggle = (id: string) => setSelected((prev) => { const next = new Set(prev); if (next.has(id)) next.delete(id); else next.add(id); return next })
   const toggleAllMatching = () => setSelected(allMatchingSelected ? new Set() : new Set(filtered.map((s) => s.id)))
 
+  // Super Admin sets or changes a student's group right in the list.
+  async function changeGroup(id: string, group: string) {
+    setGroupError(null)
+    const res = await fetch(`/api/students/${id}/group`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ group }) })
+    if (!res.ok) {
+      const j = (await res.json().catch(() => null)) as { error?: string } | null
+      setGroupError(j?.error ?? 'Could not save the group.')
+      return
+    }
+    setStudents((prev) => prev.map((s) => (s.id === id ? { ...s, card_group: group } : s)))
+    setNeedGroup((prev) => { const next = new Set(prev); next.delete(id); return next })
+  }
+
   async function downloadBulk() {
     const ids = targets.map((s) => s.id)
     if (ids.length === 0 || bulk) return
     setBulkError(null)
+    setNeedGroup(new Set())
     const parts = Math.ceil(ids.length / BULK_BATCH)
     setBulk({ done: 0, total: parts })
     for (let i = 0; i < parts; i++) {
@@ -77,8 +98,14 @@ export default function StudentCardsContent({ students, grades }: { students: Ca
         body: JSON.stringify({ ids: ids.slice(i * BULK_BATCH, (i + 1) * BULK_BATCH) }),
       })
       if (!res.ok) {
-        const j = (await res.json().catch(() => null)) as { error?: string } | null
-        setBulkError(j?.error ?? 'Could not generate the cards. Please try again.')
+        const j = (await res.json().catch(() => null)) as { error?: string; code?: string; missing?: { id: string; name: string }[] } | null
+        if (j?.code === 'group_required' && j.missing) {
+          setNeedGroup(new Set(j.missing.map((m) => m.id)))
+          const names = j.missing.slice(0, 4).map((m) => m.name).join(', ') + (j.missing.length > 4 ? ` and ${j.missing.length - 4} more` : '')
+          setBulkError(`${j.error} Choose the group in the Group column for: ${names}. Then download again.`)
+        } else {
+          setBulkError(j?.error ?? 'Could not generate the cards. Please try again.')
+        }
         break
       }
       const url = URL.createObjectURL(await res.blob())
@@ -138,6 +165,7 @@ export default function StudentCardsContent({ students, grades }: { students: Ca
         </p>
         <div className="flex items-center gap-3">
           {bulkError && <span className="text-[12px] text-danger" role="alert">{bulkError}</span>}
+          {groupError && <span className="text-[12px] text-danger" role="alert">{groupError}</span>}
           <button
             type="button"
             onClick={downloadBulk}
@@ -152,7 +180,7 @@ export default function StudentCardsContent({ students, grades }: { students: Ca
 
       <div className="bg-white rounded-2xl border border-neutral-200 shadow-1 overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-[13px] min-w-[700px]">
+          <table className="w-full text-[13px] min-w-[820px]">
             <thead>
               <tr className="bg-neutral-50 text-left">
                 <th className="pl-5 pr-1 py-3 w-8">
@@ -161,6 +189,7 @@ export default function StudentCardsContent({ students, grades }: { students: Ca
                 <th className="px-3 py-3 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">G.R. No</th>
                 <th className="px-3 py-3 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">Student</th>
                 <th className="px-3 py-3 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">Class</th>
+                <th className="px-3 py-3 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">Group</th>
                 <th className="px-3 py-3 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">Status</th>
                 <th className="px-3 py-3 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">Fees</th>
                 <th className="px-3 py-3 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider text-right">ID card</th>
@@ -184,6 +213,17 @@ export default function StudentCardsContent({ students, grades }: { students: Ca
                   </td>
                   <td className="px-3 py-3 font-mono text-[12px] text-neutral-700">{s.grade}{s.section}</td>
                   <td className="px-3 py-3">
+                    <select
+                      aria-label={`Group for ${s.full_name}`}
+                      value={s.card_group ?? ''}
+                      onChange={(e) => e.target.value && void changeGroup(s.id, e.target.value)}
+                      className={`text-[12px] border rounded-lg px-2 py-1.5 bg-white text-neutral-800 focus:outline-none focus:border-ink-400 max-w-[150px] ${!s.card_group ? (needGroup.has(s.id) ? 'border-danger ring-1 ring-danger' : 'border-warning') : 'border-neutral-200'}`}
+                    >
+                      {!s.card_group && <option value="">Choose group…</option>}
+                      {groupsForGrade(s.grade).map((g) => <option key={g} value={g}>{g}</option>)}
+                    </select>
+                  </td>
+                  <td className="px-3 py-3">
                     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold ${STATUS_PILL[s.status]}`}>{s.status}</span>
                   </td>
                   <td className="px-3 py-3">
@@ -195,7 +235,7 @@ export default function StudentCardsContent({ students, grades }: { students: Ca
                 </tr>
               ))}
               {filtered.length === 0 && (
-                <tr><td colSpan={7} className="px-5 py-10 text-center text-[13px] text-neutral-400">No students match this filter.</td></tr>
+                <tr><td colSpan={8} className="px-5 py-10 text-center text-[13px] text-neutral-400">No students match this filter.</td></tr>
               )}
             </tbody>
           </table>
