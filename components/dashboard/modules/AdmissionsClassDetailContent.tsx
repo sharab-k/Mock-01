@@ -17,6 +17,8 @@ const STREAMS = ['Pre-Engineering', 'Pre-Medical', 'Computer Science', 'Commerce
 
 export type ClassDetailStudent = {
   id: string
+  /** Set Inactive from the student directory: kept and editable, but out of attendance, marks and fees. */
+  inactive?: boolean
   name: string
   roll: string
   grade: string
@@ -286,7 +288,7 @@ export default function AdmissionsClassDetailContent({ grade, section, basePath 
                           {INITIALS(s.name)}
                         </div>
                         <div className="min-w-0">
-                          <span className="block font-medium text-neutral-900 truncate">{s.name}</span>
+                          <span className="block font-medium text-neutral-900 truncate">{s.name}{s.inactive && <span className="ml-2 align-middle text-[10px] font-semibold uppercase tracking-wide text-neutral-500 bg-neutral-100 px-1.5 py-0.5 rounded">Inactive</span>}</span>
                           <span className="block text-[11px] font-mono text-neutral-400">{s.roll}</span>
                         </div>
                       </div>

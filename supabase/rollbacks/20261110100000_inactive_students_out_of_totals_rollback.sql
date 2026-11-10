@@ -1,0 +1,6 @@
+-- Restores the previous definitions (totals counting every student, active or not). Re-run the bodies from:
+--   marks_class_stats, marks_subject_stats, attendance_day_stats, attendance_class_day  -> 20261020120000_aggregates_bulk_marks_hardening.sql
+--   attendance_weekly_rates, attendance_grade_rates                                       -> 20261108100100_attendance_leave_rates.sql
+--   fee_overview                                                                          -> 20261106140000_fees_core.sql
+--   finance_totals                                                                        -> 20261107100000_expenses.sql
+-- No table or data is changed by this migration, so there is nothing to restore except those function bodies.

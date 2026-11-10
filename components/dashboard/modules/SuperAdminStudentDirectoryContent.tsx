@@ -2,9 +2,9 @@
 
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Search, X, CalendarCheck, BookOpen, Clock3, Loader2, Trash2, AlertTriangle, UserPlus, KeyRound, Pencil } from 'lucide-react'
+import { ArrowLeft, Search, X, CalendarCheck, BookOpen, Clock3, Loader2, Trash2, AlertTriangle, UserPlus, KeyRound, Pencil, Power } from 'lucide-react'
 import { fetchStudentAcademicSummaryAction, type StudentAcademicSummary } from '@/lib/actions/student-summary'
-import { deleteStudentAction } from '@/lib/actions/students'
+import { setStudentStatusAction, deleteStudentAction } from '@/lib/actions/students'
 import { setParentPasswordAction } from '@/lib/actions/parents'
 import SetPasswordModal from '@/components/dashboard/SetPasswordModal'
 import StudentSubjectsSection from '@/components/dashboard/StudentSubjectsSection'
@@ -63,6 +63,9 @@ export default function SuperAdminStudentDirectoryContent({ students: initialStu
   const [deleting, setDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState('')
   const [passwordTarget, setPasswordTarget] = useState<DirectoryStudent | null>(null)
+  const [statusTarget, setStatusTarget] = useState<DirectoryStudent | null>(null)
+  const [statusBusy, setStatusBusy] = useState(false)
+  const [statusError, setStatusError] = useState('')
 
   const filtered = useMemo(() => {
     return students.filter((s) => {
@@ -82,6 +85,21 @@ export default function SuperAdminStudentDirectoryContent({ students: initialStu
     const outcome = await fetchStudentAcademicSummaryAction({ studentId: s.id })
     setSummaryLoading(false)
     if (outcome.ok) setSummary({ attendancePct: outcome.attendancePct, avgScore: outcome.avgScore })
+  }
+
+  // Inactive hides the student from daily attendance, marks entry, fee lists and vouchers; nothing is deleted.
+  const confirmStatusChange = async () => {
+    if (!statusTarget) return
+    const next = statusTarget.status === 'Active' ? 'inactive' : 'active'
+    setStatusBusy(true)
+    setStatusError('')
+    const outcome = await setStudentStatusAction({ id: statusTarget.id, status: next })
+    setStatusBusy(false)
+    if (!outcome.ok) { setStatusError(outcome.error); return }
+    const label = next === 'active' ? 'Active' : 'Inactive'
+    setStudents((prev) => prev.map((s) => (s.id === statusTarget.id ? { ...s, status: label } : s)))
+    setSelected((cur) => (cur && cur.id === statusTarget.id ? { ...cur, status: label } : cur))
+    setStatusTarget(null)
   }
 
   const confirmDelete = async () => {
@@ -361,7 +379,13 @@ export default function SuperAdminStudentDirectoryContent({ students: initialStu
                 </div>
               )}
 
-              <div className="pt-4 border-t border-neutral-100">
+              <div className="pt-4 border-t border-neutral-100 space-y-2.5">
+                <button
+                  onClick={() => { setStatusError(''); setStatusTarget(selected) }}
+                  className={`w-full flex items-center justify-center gap-2 text-[12.5px] font-semibold py-2.5 rounded-xl border transition-colors ${selected.status === 'Active' ? 'text-neutral-700 bg-neutral-50 border-neutral-200 hover:bg-neutral-100' : 'text-success bg-success-bg border-success/20 hover:bg-success/10'}`}
+                >
+                  <Power size={13} /> {selected.status === 'Active' ? 'Mark student inactive' : 'Make student active again'}
+                </button>
                 <button
                   onClick={() => { setDeleteError(''); setDeleteTarget(selected) }}
                   className="w-full flex items-center justify-center gap-2 text-[12.5px] font-semibold text-danger bg-danger-bg border border-danger/20 py-2.5 rounded-xl hover:bg-danger/10 transition-colors"
@@ -375,6 +399,25 @@ export default function SuperAdminStudentDirectoryContent({ students: initialStu
       )}
 
       {/* Delete confirmation */}
+      {statusTarget && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label={statusTarget.status === 'Active' ? 'Mark student inactive' : 'Make student active'}>
+          <div className="fixed inset-0 bg-neutral-900/50 backdrop-blur-sm" onClick={() => !statusBusy && setStatusTarget(null)} />
+          <div className="relative w-full max-w-sm bg-white rounded-3xl shadow-2xl p-6 space-y-4">
+            <h3 className="text-[16px] font-bold text-neutral-900">{statusTarget.status === 'Active' ? `Mark ${statusTarget.full_name} inactive?` : `Make ${statusTarget.full_name} active again?`}</h3>
+            {statusTarget.status === 'Active' ? (
+              <p className="text-[13px] text-neutral-600 leading-relaxed">They will no longer appear in daily attendance, marks entry, fee lists, vouchers or dashboard totals. <b>Nothing is deleted</b> — every record is kept, and you can make them active again at any time. Their details can still be edited.</p>
+            ) : (
+              <p className="text-[13px] text-neutral-600 leading-relaxed">They will appear again in attendance, marks, fees and vouchers, with all their history intact.</p>
+            )}
+            {statusError && <p className="text-[12.5px] text-danger bg-danger-bg rounded-lg px-3 py-2" role="alert">{statusError}</p>}
+            <div className="flex gap-2.5">
+              <button onClick={() => setStatusTarget(null)} disabled={statusBusy} className="flex-1 py-2.5 text-[13px] font-medium text-neutral-600 bg-neutral-100 hover:bg-neutral-200 rounded-xl disabled:opacity-60">Cancel</button>
+              <button onClick={confirmStatusChange} disabled={statusBusy} className="flex-1 py-2.5 text-[13px] font-semibold rounded-xl text-white bg-ink-700 hover:bg-ink-800 disabled:opacity-60">{statusBusy ? 'Saving…' : statusTarget.status === 'Active' ? 'Mark inactive' : 'Make active'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {deleteTarget && (
         <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-4">
           <div className="fixed inset-0 bg-neutral-900/50 backdrop-blur-sm" onClick={() => !deleting && setDeleteTarget(null)} />
