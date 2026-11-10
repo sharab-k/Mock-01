@@ -157,10 +157,22 @@ export async function setStudentStatusAction(
   const parsed = SetStatusSchema.safeParse(input)
   if (!parsed.success) return { ok: false as const, error: 'Invalid request.' }
 
-  const { supabase, authorized } = await requireAdmissionsCaller(supabaseOverride)
-  if (!authorized) return { ok: false as const, error: 'Not authorized.' }
+  const { supabase, userId, authorized } = await requireAdmissionsCaller(supabaseOverride)
+  if (!authorized || !userId) return { ok: false as const, error: 'Not authorized.' }
 
-  const { error } = await supabase.from('students').update({ status: parsed.data.status }).eq('id', parsed.data.id)
+  // Nothing is deleted: an inactive student keeps every attendance, marks and fee record, and comes back
+  // everywhere the moment they are set Active again. The update is checked, so an unknown id is an error
+  // rather than a silent success.
+  const { data, error } = await supabase
+    .from('students')
+    .update({ status: parsed.data.status })
+    .eq('id', parsed.data.id)
+    .is('deleted_at', null)
+    .select('full_name, roll_number')
+    .maybeSingle()
   if (error) return { ok: false as const, error: 'Could not update status.' }
+  if (!data) return { ok: false as const, error: 'Student not found.' }
+
+  await logAction(supabase, userId, `${parsed.data.status === 'inactive' ? 'Marked student inactive' : 'Reactivated student'} — ${data.full_name} · ${data.roll_number}`)
   return { ok: true as const }
 }
