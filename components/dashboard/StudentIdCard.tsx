@@ -7,10 +7,12 @@ import CardPreview from '@/components/dashboard/CardPreview'
 type Props = {
   studentId: string
   studentName: string
-  /** Parents may upload the picture once; a Super Admin can always replace it. */
+  /** Parents may upload the picture and choose the group once; a Super Admin can always change both. */
   role: 'parent' | 'super_admin'
   className?: string
 }
+
+type GroupInfo = { group: string | null; options: string[]; canChange: boolean }
 
 const BUTTON = 'inline-flex items-center gap-2 text-[12.5px] font-medium text-ink-600 bg-ink-50 border border-ink-100 px-3.5 py-2 rounded-xl hover:bg-ink-100 transition-colors disabled:opacity-60'
 
@@ -19,18 +21,30 @@ export default function StudentIdCard({ studentId, studentName, role, className 
   // The generated card, exactly as it downloads: shown in the preview and reused for Download / Print.
   const [card, setCard] = useState<{ pdf: ArrayBuffer; fileName: string } | null>(null)
   const [hasPhoto, setHasPhoto] = useState<boolean | null>(null)
-  const [busy, setBusy] = useState<'upload' | null>(null)
+  const [groupInfo, setGroupInfo] = useState<GroupInfo | null>(null)
+  const [draftGroup, setDraftGroup] = useState('')
+  const [busy, setBusy] = useState<'upload' | 'group' | null>(null)
   const [error, setError] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
+  // The group comes first: a card is only generated (and so only shown, downloaded or printed) once one is chosen.
   const loadCard = useCallback(async () => {
     setCard(null)
-    const [photoRes, cardRes] = await Promise.all([
+    setError(null)
+    const [photoRes, groupRes] = await Promise.all([
       fetch(`/api/students/${studentId}/photo`, { cache: 'no-store' }),
-      fetch(`/api/students/${studentId}/card`, { cache: 'no-store' }),
+      fetch(`/api/students/${studentId}/group`, { cache: 'no-store' }),
     ])
     void photoRes.body?.cancel()
     setHasPhoto(photoRes.ok)
+    if (!groupRes.ok) { setError('Could not load the card details. Please try again.'); return }
+    const info = (await groupRes.json()) as GroupInfo
+    setGroupInfo(info)
+    setDraftGroup((d) => d || info.group || '')
+    if (!info.group) return
+
+    const cardRes = await fetch(`/api/students/${studentId}/card`, { cache: 'no-store' })
+    if (cardRes.status === 409) { setGroupInfo({ ...info, group: null, canChange: true }); return }
     if (!cardRes.ok) { setError('Could not generate the card. Please try again.'); return }
     const fileName = /filename="([^"]+)"/.exec(cardRes.headers.get('Content-Disposition') ?? '')?.[1] ?? 'id-card.pdf'
     setCard({ pdf: await cardRes.arrayBuffer(), fileName })
@@ -58,6 +72,22 @@ export default function StudentIdCard({ studentId, studentName, role, className 
     void loadCard()
   }
 
+  const saveGroup = async (group: string) => {
+    if (!group) return
+    setError(null)
+    setBusy('group')
+    const res = await fetch(`/api/students/${studentId}/group`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ group }) })
+    setBusy(null)
+    if (!res.ok) {
+      const j = (await res.json().catch(() => null)) as { error?: string } | null
+      setError(j?.error ?? 'Could not save the group.')
+      if (res.status === 409) void loadCard()
+      return
+    }
+    setDraftGroup(group)
+    void loadCard()
+  }
+
   const withBlobUrl = (action: (url: string) => void) => {
     if (!card) return
     const url = URL.createObjectURL(new Blob([card.pdf], { type: 'application/pdf' }))
@@ -77,6 +107,8 @@ export default function StudentIdCard({ studentId, studentName, role, className 
   // The browser's own PDF viewer has the print button, and prints at the card's real size.
   const print = () => withBlobUrl((url) => { window.open(url, '_blank', 'noopener') })
 
+  const needsGroup = groupInfo !== null && groupInfo.group === null
+
   return (
     <>
       <button type="button" onClick={() => setOpen(true)} className={className ?? BUTTON}>
@@ -94,8 +126,51 @@ export default function StudentIdCard({ studentId, studentName, role, className 
               <button type="button" onClick={() => setOpen(false)} aria-label="Close" className="text-neutral-400 hover:text-neutral-700"><X size={18} /></button>
             </div>
 
+            {groupInfo && (
+              <div className="mt-4 rounded-xl border border-neutral-200 bg-neutral-50 p-3.5" data-testid="group-section">
+                <p className="text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-2">Group <span className="normal-case font-normal text-neutral-400">(printed on the card)</span></p>
+                {needsGroup ? (
+                  <>
+                    <p className="text-[12.5px] text-neutral-700 mb-2.5">Choose the group first. The card can only be shown, downloaded or printed after this.</p>
+                    <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Group">
+                      {groupInfo.options.map((g) => (
+                        <button key={g} type="button" role="radio" aria-checked={draftGroup === g} onClick={() => setDraftGroup(g)}
+                          className={`text-[12.5px] font-medium px-3 py-1.5 rounded-xl border transition-colors ${draftGroup === g ? 'border-ink-600 bg-ink-50 text-ink-800 ring-1 ring-ink-600' : 'border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-100'}`}>
+                          {g}
+                        </button>
+                      ))}
+                    </div>
+                    {role === 'parent' && (
+                      <p className="mt-3 flex gap-2 text-[12px] text-warning bg-warning-bg rounded-xl px-3 py-2">
+                        <AlertCircle size={14} className="shrink-0 mt-0.5" />
+                        <span><b>Note:</b> you can choose the group only one time. Please choose it carefully.</span>
+                      </p>
+                    )}
+                    <button type="button" disabled={!draftGroup || busy !== null} onClick={() => saveGroup(draftGroup)}
+                      className="mt-3 inline-flex items-center gap-2 text-[12.5px] font-medium text-white bg-ink-700 px-3.5 py-2 rounded-xl hover:bg-ink-600 disabled:opacity-60">
+                      {busy === 'group' && <Loader2 size={13} className="animate-spin" />} Save group
+                    </button>
+                  </>
+                ) : groupInfo.canChange ? (
+                  <div className="flex items-center gap-2.5">
+                    <select aria-label="Group" value={groupInfo.group ?? ''} disabled={busy !== null} onChange={(e) => void saveGroup(e.target.value)}
+                      className="text-[13px] border border-neutral-200 rounded-xl px-3 py-2 bg-white text-neutral-800 focus:outline-none focus:border-ink-400">
+                      {groupInfo.options.map((g) => <option key={g} value={g}>{g}</option>)}
+                    </select>
+                    <span className="text-[12px] text-neutral-500">As Super Admin you can change the group at any time.</span>
+                  </div>
+                ) : (
+                  <p className="text-[13px] text-neutral-800"><b>{groupInfo.group}</b> <span className="text-[12px] text-neutral-500">· To change it, please contact the academy office.</span></p>
+                )}
+              </div>
+            )}
+
             <div className="mt-4">
-              <CardPreview pdf={card?.pdf ?? null} />
+              {needsGroup ? (
+                <p className="text-[12.5px] text-neutral-500 bg-neutral-50 rounded-xl px-3 py-10 text-center">Choose the group above to see the card.</p>
+              ) : (
+                <CardPreview pdf={card?.pdf ?? null} />
+              )}
             </div>
 
             <p className="mt-3 text-[12px] text-neutral-500 leading-relaxed">

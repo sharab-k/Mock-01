@@ -447,7 +447,7 @@ export default function AdmissionsClassDetailContent({ grade, section, basePath 
                 <p className="text-[11.5px] font-semibold text-neutral-400 uppercase tracking-wider mb-4">Parent / Guardian</p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-[12px] font-semibold text-neutral-700 mb-1.5">Parent&apos;s name</label>
+                    <label className="block text-[12px] font-semibold text-neutral-700 mb-1.5">Father&apos;s name</label>
                     <input
                       value={editParentName}
                       onChange={e => setEditParentName(e.target.value)}

@@ -4,6 +4,7 @@ import { resolveRequestClient } from '@/lib/supabase/session'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { MAX_BULK_CARDS, buildCardData } from '@/lib/cards/build'
 import { renderStudentCardsPdf } from '@/lib/cards/student-card'
+import { isGroupForGrade } from '@/lib/cards/groups'
 
 export const runtime = 'nodejs'
 
@@ -25,12 +26,25 @@ export async function POST(request: Request) {
 
   const { data } = await createAdminClient()
     .from('students')
-    .select('id, full_name, roll_number, gr_number, registration_number, grade_level, section, academic_year, photo_path')
+    .select('id, full_name, roll_number, gr_number, registration_number, grade_level, section, academic_year, photo_path, card_group')
     .in('id', ids)
     .is('deleted_at', null)
   const byId = new Map((data ?? []).map((s) => [s.id, s]))
   const students = ids.flatMap((id) => byId.get(id) ?? [])
   if (students.length === 0) return NextResponse.json({ error: 'No matching students.' }, { status: 404 })
+
+  // No card is printed without its group: name everyone who still needs one so it can be chosen first.
+  const missing = students.filter((s) => !s.card_group || !isGroupForGrade(s.grade_level, s.card_group))
+  if (missing.length > 0) {
+    return NextResponse.json(
+      {
+        code: 'group_required',
+        error: `${missing.length} student${missing.length === 1 ? ' has' : 's have'} no group chosen yet. Choose their group first.`,
+        missing: missing.map((s) => ({ id: s.id, name: s.full_name, roll: s.roll_number })),
+      },
+      { status: 409 },
+    )
+  }
 
   const pdf = await renderStudentCardsPdf(await buildCardData(students, { bulk: true }))
   return new NextResponse(new Uint8Array(pdf), {
