@@ -73,7 +73,8 @@ export const grKey = (raw: string): string => raw.toLowerCase().replace(/\s+/g, 
 const digitsOf = (raw: string): string => raw.replace(/\D/g, '')
 const lettersOf = (raw: string): string => raw.toLowerCase().replace(/[^a-z]/g, '')
 
-export function buildMatcher(students: MatchStudent[]) {
+// grOnly: the G.R. number is the ONLY key (ignoring spaces/case). No G.R. in the system = no match, never a guess by name.
+export function buildMatcher(students: MatchStudent[], opts: { grOnly?: boolean } = {}) {
   const byKey = new Map<string, MatchStudent[]>()
   const byDigits = new Map<string, MatchStudent[]>()
   for (const s of students) {
@@ -92,6 +93,23 @@ export function buildMatcher(students: MatchStudent[]) {
   return function match(gr: string, name: string, allowedGrades?: ReadonlySet<string>): MatchResult {
     const inScope = (s: MatchStudent) => !allowedGrades || allowedGrades.has(s.grade)
     const key = grKey(gr)
+
+    if (opts.grOnly) {
+      if (!key) return { ok: false, error: `No G.R. number written for "${name || 'this row'}" — marks not saved.` }
+      const all = byKey.get(key) ?? []
+      const scoped = all.filter(inScope)
+      const exact = scoped.length > 0 ? scoped : all
+      if (exact.length === 0) return { ok: false, error: `G.R. "${gr}"${name ? ` (${name})` : ''} is not in the system — marks not saved.` }
+      if (exact.length > 1) {
+        const ranked = rank(exact, name)
+        if (name && isStrongAgreement(ranked[0]) && !(ranked[1] && ranked[1].hits >= ranked[0].hits)) {
+          return { ok: true, student: ranked[0].student, via: 'gr', ratio: ranked[0].ratio, hits: ranked[0].hits }
+        }
+        return { ok: false, error: `G.R. "${gr}" belongs to ${exact.length} students in the system — marks not saved.` }
+      }
+      const a = name ? nameAgreement(name, exact[0].fullName) : { hits: 0, ratio: 0 }
+      return { ok: true, student: exact[0], via: 'gr', ratio: name ? a.ratio : null, hits: a.hits }
+    }
 
     if (key) {
       const exact = (byKey.get(key) ?? []).filter(inScope)

@@ -115,7 +115,7 @@ function addEntry(
 
 async function planWide(supabase: SupabaseClient<Database>, blocks: WideBlock[], opts: UploadOptions): Promise<{ ok: true; plan: Plan } | { ok: false; error: string }> {
   const [students, subjects] = await Promise.all([loadMatchStudents(supabase), loadSubjects(supabase)])
-  const match = buildMatcher(students)
+  const match = buildMatcher(students, { grOnly: true })
   const today = todayIso()
 
   const groups: GroupMap = new Map()
@@ -145,10 +145,6 @@ async function planWide(supabase: SupabaseClient<Database>, blocks: WideBlock[],
       const m = match(s.gr, s.name, gradesForSheet(block.sheet))
       if (!m.ok) { errors.push({ row: s.row, message: `${where}${m.error}` }); continue }
       const st = m.student
-      if (m.via === 'gr' && s.name && m.hits === 0) {
-        errors.push({ row: s.row, message: `${where}G.R. "${s.gr}" is ${st.fullName} in the system but "${s.name}" in the sheet — no name in common, not saved. Check which is right.` })
-        continue
-      }
       if (!warnedStudent.has(`${st.id}|${s.row}`)) {
         warnedStudent.add(`${st.id}|${s.row}`)
         if (m.via === 'name') warnings.push({ row: s.row, message: `${where}"${s.name}" matched to ${st.fullName} (GR ${st.gr ?? '—'}) by NAME — the sheet's G.R. "${s.gr || 'blank'}" did not match.` })

@@ -170,6 +170,16 @@ describe('matching a sheet row to a student', () => {
     expect(match('', 'Ayesha Naz', gradesForSheet('xii a')).ok).toBe(false)
   })
 
+  it('G.R.-only mode (used by the upload): exact G.R. is the only key, a missing one is reported', () => {
+    const strict = buildMatcher(students, { grOnly: true })
+    expect(strict('fa 501', 'Someone Else', eleven)).toMatchObject({ ok: true, student: { id: 'a' } })
+    const noGr = strict('F 502', 'M. Ayan Siddiqui', eleven)
+    expect(noGr).toMatchObject({ ok: false })
+    expect(noGr.ok === false && noGr.error).toMatch(/not in the system/)
+    const blank = strict('', 'Ayesha Naz', eleven)
+    expect(blank.ok === false && blank.error).toMatch(/No G\.R\. number/)
+  })
+
   it('name agreement understands Muhammad abbreviations and small typos', () => {
     expect(nameAgreement('M. Ayan Siddiqui', 'MUHAMMAD AYAN SIDDIQUI').ratio).toBe(1)
     expect(nameAgreement('Abudllah Pervaiz', 'ABDULLAH PERVAIZ').hits).toBeGreaterThanOrEqual(1)
