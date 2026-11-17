@@ -23,6 +23,7 @@ export function nameTokens(name: string): string[] {
   return name
     .toLowerCase()
     .replace(/\(.*?\)/g, ' ')
+    .replace(/\s+(xii|xi)\s*[a-e]?\s*$/, ' ')
     .replace(/[^a-z\s]/g, ' ')
     .split(/\s+/)
     .filter(Boolean)

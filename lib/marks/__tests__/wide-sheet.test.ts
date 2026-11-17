@@ -102,7 +102,17 @@ describe('which subject does a shared column mean for this student', () => {
 
   it('refuses to guess when the student data cannot say', () => {
     expect(chooseAlternative(['M', 'B'], { grade: '11', stream: null })).toBeNull()
-    expect(chooseAlternative(['POC', 'BANK'], { grade: 'ICOM-1', stream: null })).toBeNull()
+    expect(chooseAlternative(['CH', 'CM'], { grade: '11', stream: null })).toBeNull()
+  })
+
+  it('commerce pairs: first subject for first year, second for second year', () => {
+    expect(chooseAlternative(['POC', 'BANK'], { grade: 'ICOM-1', stream: null })).toBe('POC')
+    expect(chooseAlternative(['POC', 'BANK'], { grade: 'ICOM-2', stream: null })).toBe('BANK')
+    expect(chooseAlternative(['POC', 'ACC.'], { grade: 'ICOM-2', stream: null })).toBe('ACC.')
+  })
+
+  it('a truncated header total falls back to the only total written', () => {
+    expect(totalFor({ raw: 'B=35/M=', byKey: { B: 35, M: null }, positional: [], single: null }, ['M', 'B'], 'M', { grade: '11', stream: null })).toBe(35)
   })
 
   it('takes the total that belongs to the chosen subject', () => {
@@ -110,7 +120,7 @@ describe('which subject does a shared column mean for this student', () => {
     expect(totalFor(parseTotals('M=20/B=35'), ['M', 'B'], 'B', g)).toBe(35)
     expect(totalFor(parseTotals('T=20/35'), ['M', 'B'], 'B', g)).toBe(35)
     expect(totalFor(parseTotals('T=30'), ['PHY'], 'PHY', g)).toBe(30)
-    expect(totalFor(parseTotals('B=35/M='), ['M', 'B'], 'M', g)).toBeNull()
+    expect(totalFor(parseTotals('B=35/M='), ['M', 'B'], 'M', g)).toBe(35)
     expect(totalFor(parseTotals('XII=22/XI=25'), ['ACC', 'STATS'], 'ACC', { grade: 'ICOM-1', stream: null })).toBe(25)
     expect(totalFor(parseTotals('XII=22/XI=25'), ['ACC', 'STATS'], 'STATS', { grade: 'ICOM-2', stream: null })).toBe(22)
   })
