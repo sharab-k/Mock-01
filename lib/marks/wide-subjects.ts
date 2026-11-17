@@ -20,6 +20,9 @@ const ABBREVIATIONS: Record<string, RegExp> = {
   POC: /^principleofcommerce$/,
   STATS: /^(stats|statistics)$/,
   BANK: /^bank(ing)?$/,
+  'BANK.': /^bank(ing)?$/,
+  BANKING: /^bank(ing)?$/,
+  'ACC.': /^account(s|ing)?$/,
 }
 
 export const normalizeSubject = (name: string): string => name.toLowerCase().replace(/[^a-z]/g, '')
@@ -61,14 +64,23 @@ export function chooseAlternative(alts: string[], s: Group): string | null {
   }
   if (has('ISL', 'PST')) return isSecondYear(s.grade) ? 'PST' : 'ISL'
   if (has('ACC', 'STATS')) return isSecondYear(s.grade) ? 'STATS' : 'ACC'
+  // Commerce pairs: the first-named subject is the first-year one, the second is second-year.
+  for (const [a, b] of [['POC', 'BANK'], ['POC', 'BANK.'], ['ACC', 'BANK'], ['ACC.', 'BANK.'], ['POC', 'ACC'], ['POC', 'ACC.']]) {
+    if (has(a, b)) return isSecondYear(s.grade) ? b : a
+  }
   return null
 }
 
 // The total marks of the chosen alternative from the column's header.
 export function totalFor(totals: ColumnTotals, alts: string[], chosen: string, s: Group): number | null {
-  if (totals.byKey[chosen] !== undefined) return totals.byKey[chosen]
+  if (totals.byKey[chosen] != null) return totals.byKey[chosen]
   const yearKey = isSecondYear(s.grade) ? 'XII' : 'XI'
-  if (totals.byKey[yearKey] !== undefined) return totals.byKey[yearKey]
-  if (totals.positional.length > 1) return totals.positional[alts.indexOf(chosen)] ?? null
-  return totals.single
+  if (totals.byKey[yearKey] != null) return totals.byKey[yearKey]
+  if (totals.positional.length > 1) {
+    const v = totals.positional[alts.indexOf(chosen)]
+    if (v) return v
+  } else if (totals.single !== null && totals.single !== undefined) return totals.single
+  // A truncated header ("B=35/M="): if every total that IS written is the same number, use it.
+  const known = new Set<number>([...Object.values(totals.byKey), ...totals.positional].filter((n): n is number => typeof n === 'number' && n > 0))
+  return known.size === 1 ? Array.from(known)[0] : null
 }

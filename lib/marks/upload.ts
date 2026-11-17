@@ -164,9 +164,9 @@ async function planWide(supabase: SupabaseClient<Database>, blocks: WideBlock[],
         if (cell.kind === 'error') { errors.push({ row: s.row, message: `${where}${st.fullName} · ${col.date} ${col.header}: ${cell.message}` }); return }
 
         const chosen = chooseAlternative(col.alts, st)
-        if (!chosen) { errors.push({ row: s.row, message: `${where}${st.fullName} · ${col.date} ${col.alts.join('/')}: cannot tell which subject this student takes (stream: ${st.stream ?? 'not set'}).` }); return }
+        if (!chosen) { errors.push({ row: s.row, message: `${where}${st.fullName} · ${col.date} ${col.alts.join('/')}: cannot tell which subject this student takes (faculty: ${st.stream ?? 'not set'}). Set the student's faculty (Pre-Medical / Pre-Engineering / Computer Science) on their record, then upload again.` }); return }
         const subject = subjectNameFor(chosen, st.grade, subjects)
-        if (!subject) { errors.push({ row: s.row, message: `${where}${st.fullName} · ${chosen} is not a subject of Grade ${st.grade}.` }); return }
+        if (!subject) { errors.push({ row: s.row, message: `${where}${st.fullName} · ${chosen} is not a subject of Grade ${st.grade}. Add it on the Subjects page, then upload again.` }); return }
         const total = cell.total ?? totalFor(col.totals, col.alts, chosen, st)
         if (!total || total < 1 || total > 1000) { errors.push({ row: s.row, message: `${where}${st.fullName} · ${subject} ${col.date}: total marks for ${chosen} are missing in the header.` }); return }
         if (cell.score > total) { errors.push({ row: s.row, message: `${where}${st.fullName} · ${subject} ${col.date}: ${cell.score} is above the total ${total}.` }); return }
