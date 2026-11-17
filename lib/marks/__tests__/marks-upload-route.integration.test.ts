@@ -15,7 +15,7 @@ const APP = process.env.CARD_TEST_URL ?? 'http://localhost:3000'
 const admin = createClient<Database>(URL_, SERVICE, { auth: { autoRefreshToken: false, persistSession: false } })
 const runId = Date.now()
 const PASSWORD = `Test-${runId}-!Aa1`
-const roles = ['marks_admin', 'parent'] as const
+const roles = ['marks_admin', 'super_admin', 'parent'] as const
 type R = (typeof roles)[number]
 const ids = {} as Record<R, string>
 const tokens = {} as Record<R, string>
@@ -165,5 +165,49 @@ describe('marks CSV upload route (live)', { timeout: 60_000 }, () => {
     const broken = await send(new File(['this is not a zip'], 'results.xlsx'))
     expect(broken.status).toBe(400)
     expect(broken.body.error).toMatch(/Could not read the file/)
+  })
+})
+
+// The school's result-sheet layout, uploaded by the Super Admin: marks land on the right student, subject and total.
+describe('result-sheet upload by the Super Admin (live)', { timeout: 90_000 }, () => {
+  const ids2: string[] = []
+  const grs = [`ZW ${runId}1`, `ZW ${runId}2`]
+  const d = `${month}-01`
+  beforeAll(async () => {
+    const mk = async (i: number, stream: string) => {
+      const { data, error } = await admin.from('students').insert({
+        full_name: `Wide Test Student ${i}`, roll_number: `ZW${runId}${i}`, registration_number: `ZWR${runId}${i}`,
+        program: 'Science', grade_level: '11', section: 'A', academic_year: 2026, gr_number: grs[i], stream,
+      }).select('id').single()
+      if (error || !data) throw error ?? new Error('student insert failed')
+      ids2.push(data.id)
+    }
+    await mk(0, 'Pre-Medical'); await mk(1, 'Pre-Engineering')
+  })
+  afterAll(async () => {
+    await admin.from('marks').delete().in('student_id', ids2)
+    await admin.from('students').delete().in('id', ids2)
+  })
+
+  it('M/B column: biology for the pre-medical student, mathematics for the pre-engineering one; truncated total filled in', async () => {
+    const wb = new ExcelJS.Workbook()
+    const ws = wb.addWorksheet('xi a')
+    ws.addRow(['Sr #', 'Gr #', 'Name of students', d, d])
+    ws.addRow(['', '', '', 'B=35/M=', 'T=20'])
+    ws.addRow(['', '', '', 'M/B', 'PHY'])
+    ws.addRow([1, grs[0], 'Wide Test Student 0 XI A', 30, 15])
+    ws.addRow([2, grs[1], 'Wide Test Student 1', 'NILL', 'O'])
+    const form = new FormData()
+    form.append('file', new File([new Uint8Array(await wb.xlsx.writeBuffer())], 'result.xlsx'))
+    form.append('examType', 'monthly')
+    const res = await fetch(`${APP}/api/uploads/marks`, { method: 'POST', body: form, headers: { Authorization: `Bearer ${tokens.super_admin}` } })
+    const body = (await res.json()) as { mode: string; saved: number; errors: { message: string }[] }
+    expect(res.status).toBe(200)
+    expect(body.errors).toEqual([])
+    expect(body.saved).toBe(3)
+    const { data } = await admin.from('marks').select('student_id, subject, score, max_score').in('student_id', ids2)
+    const key = (r: { student_id: string; subject: string }) => `${r.student_id === ids2[0] ? 0 : 1}|${r.subject.toLowerCase()}`
+    const got = Object.fromEntries((data ?? []).map((r) => [key(r), `${r.score}/${r.max_score}`]))
+    expect(got).toEqual({ '0|biology': '30/35', '0|physics': '15/20', '1|physics': '0/20' })
   })
 })
