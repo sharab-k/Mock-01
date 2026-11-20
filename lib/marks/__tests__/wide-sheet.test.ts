@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseCell, parseTotals, parseWideSheets, parseAlts } from '../wide-sheet'
+import { facultyFromSheet, parseCell, parseTotals, parseWideSheets, parseAlts } from '../wide-sheet'
 import { buildMatcher, gradesForSheet, nameAgreement, type MatchStudent } from '../student-match'
 import { chooseAlternative, subjectNameFor, totalFor } from '../wide-subjects'
 
@@ -173,7 +173,11 @@ describe('matching a sheet row to a student', () => {
   it('G.R.-only mode (used by the upload): exact G.R. is the only key, a missing one is reported', () => {
     const strict = buildMatcher(students, { grOnly: true })
     expect(strict('fa 501', 'Someone Else', eleven)).toMatchObject({ ok: true, student: { id: 'a' } })
-    const noGr = strict('F 502', 'M. Ayan Siddiqui', eleven)
+    // same number, different letters, same child: accepted (the upload shows it as a warning)
+    expect(strict('F 502', 'M. Ayan Siddiqui', eleven)).toMatchObject({ ok: true, via: 'gr-number', student: { id: 'b' } })
+    // same number but a different person: refused
+    expect(strict('F 502', 'Totally Different Person', eleven).ok).toBe(false)
+    const noGr = strict('FA 999', 'Nobody Here', eleven)
     expect(noGr).toMatchObject({ ok: false })
     expect(noGr.ok === false && noGr.error).toMatch(/not in the system/)
     const blank = strict('', 'Ayesha Naz', eleven)
@@ -190,5 +194,31 @@ describe('matching a sheet row to a student', () => {
     expect([...gradesForSheet('xii com')]).toEqual(['ICOM-2'])
     expect([...gradesForSheet('com tcf')].sort()).toEqual(['ICOM-1', 'ICOM-2'])
     expect([...gradesForSheet('Sheet1')].sort()).toEqual(['11', '12', 'ICOM-1', 'ICOM-2'])
+  })
+})
+
+describe('the newer layout: subject names first, then dates, then totals, with a FACULTY column', () => {
+  const grid = {
+    name: 'xi a',
+    rows: [
+      ['Sr #', 'Gr #', 'Name of students', 'FACULTY', 'MATH / BIOLOGY', 'PHYSICS', 'CHEMISTRY / COMPUTER', 'ISLAMIAT / PAK STUDIES'],
+      ['', '', 'Name of students', 'FACULTY', '2026-09-01', '2026-09-04', '2026-09-08', '2026-09-15'],
+      ['', '', 'Name of students', 'FACULTY', 'T=20/35', 'T=30', 'CM=20/CH=15', 'T=30'],
+      ['1', 'FA 501', 'Javeria Shahzad', 'MEDICAL', '18', '19', '0', '28'],
+      ['2', 'FA 505', 'Nabeeha Arif', 'COMPUTER', '10', '0', 'NILL', '23'],
+    ],
+  }
+  it('reads subject names, dates, totals and each student\'s faculty', () => {
+    const [b] = parseWideSheets([grid], parseDate)
+    expect(b.columns.map((c) => [c.date, c.alts.join('/')])).toEqual([['2026-09-01', 'M/B'], ['2026-09-04', 'PHY'], ['2026-09-08', 'CH/CM'], ['2026-09-15', 'ISL/PST']])
+    expect(b.columns[0].totals.positional).toEqual([20, 35])
+    expect(b.students.map((s) => [s.gr, s.faculty])).toEqual([['FA 501', 'MEDICAL'], ['FA 505', 'COMPUTER']])
+    expect(b.students[0].values).toEqual(['18', '19', '0', '28'])
+  })
+  it('the sheet\'s faculty word means one faculty', () => {
+    expect(facultyFromSheet('MEDICAL')).toBe('Pre-Medical')
+    expect(facultyFromSheet('CHEMISTRY')).toBe('Pre-Engineering')
+    expect(facultyFromSheet('COMPUTER')).toBe('Computer Science')
+    expect(facultyFromSheet('CHEMISTRY / COMPUTER')).toBeNull()
   })
 })

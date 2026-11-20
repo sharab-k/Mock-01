@@ -31,12 +31,14 @@ export type WideColumn = {
   header: string
 }
 
-export type WideStudentRow = { row: number; gr: string; name: string; values: string[] }
+export type WideStudentRow = { row: number; gr: string; name: string; values: string[]; /** text of the sheet's FACULTY column, when it has one */ faculty: string }
 
 export type WideBlock = {
   sheet: string
   headerRow: number
   columns: WideColumn[]
+  /** index of the FACULTY column, or -1 */
+  facultyCol: number
   students: WideStudentRow[]
 }
 
@@ -86,18 +88,50 @@ export function parseTotals(raw: string): ColumnTotals {
   return out
 }
 
+// The newer sheets write the subject out in full ("MATH / BIOLOGY"); the older ones abbreviate it ("M/B"). Both come
+// out as the same short codes.
+const FULL_NAMES: Record<string, string> = {
+  MATH: 'M', MATHS: 'M', MATHEMATICS: 'M', BIOLOGY: 'B', CHEMISTRY: 'CH', COMPUTER: 'CM', COMPUTERSCIENCE: 'CM', COMPUTERSTUDIES: 'CM',
+  PHYSICS: 'PHY', URDU: 'URD', ISLAMIAT: 'ISL', ENGLISH: 'ENG', PAKSTUDIES: 'PST', PAKISTANSTUDIES: 'PST', ACCOUNTS: 'ACC', ACCOUNTING: 'ACC',
+  PRINCIPLEOFCOMMERCE: 'POC', PRINCIPLESOFCOMMERCE: 'POC', STATISTICS: 'STATS', BANKING: 'BANK',
+}
+
 export function parseAlts(raw: string): string[] {
   return raw
     .toUpperCase()
     .split('/')
     .map((a) => a.replace(/[^A-Z]/g, ''))
     .filter(Boolean)
+    .map((a) => FULL_NAMES[a] ?? a)
+}
+
+/** The sheet's FACULTY word as the system's faculty name; null when it does not name exactly one. */
+export function facultyFromSheet(raw: string): 'Pre-Medical' | 'Pre-Engineering' | 'Computer Science' | null {
+  const t = raw.toUpperCase().replace(/[^A-Z]/g, '')
+  if (t === 'MEDICAL' || t === 'PREMEDICAL' || t === 'BIOLOGY') return 'Pre-Medical'
+  if (t === 'CHEMISTRY' || t === 'ENGINEERING' || t === 'PREENGINEERING') return 'Pre-Engineering'
+  if (t === 'COMPUTER' || t === 'COMPUTERSCIENCE') return 'Computer Science'
+  return null
 }
 
 function isHeaderRow(row: string[], parseDate: (s: string) => string | null): boolean {
   let dates = 0
   for (let c = 3; c < row.length; c++) if (looksLikeDate(row[c] ?? '') && parseDate(row[c])) dates++
   return dates >= 1 && /^(sr|s\.?no|serial|gr|g\.?r)/i.test((row[0] || row[1] || '').trim())
+}
+
+const IS_TITLE = /^(sr|s.?no|serial|gr|g.?r)/i
+// The newer layout: subject names on the first row (Sr # | Gr # | Name | FACULTY | MATH / BIOLOGY | …), the dates on
+// the next row and the totals under that. The row itself holds no date.
+function isTitleRow(rows: string[][], r: number, parseDate: (s: string) => string | null): boolean {
+  const row = rows[r]
+  if (!IS_TITLE.test((row[0] || row[1] || '').trim())) return false
+  const next = rows[r + 1] ?? []
+  // the dates row has no Sr # / G.R. of its own — a row with one is a student row of a flat one-row-per-mark file
+  if ((next[0] ?? '').trim() || (next[1] ?? '').trim()) return false
+  let datesBelow = 0
+  for (let c = 3; c < next.length; c++) if (looksLikeDate(next[c] ?? '') && parseDate(next[c])) datesBelow++
+  return datesBelow >= 1
 }
 
 // Finds every table in every sheet. A sheet may hold several tables (each
@@ -110,12 +144,15 @@ export function parseWideSheets(sheets: WideGrid[], parseDate: (s: string) => st
     let current: WideBlock | null = null
     for (let r = 0; r < sheet.rows.length; r++) {
       const row = sheet.rows[r]
-      if (isHeaderRow(row, parseDate)) {
-        const totalsRow = sheet.rows[r + 1] ?? []
-        const subjectRow = sheet.rows[r + 2] ?? []
+      const dateFirst = isHeaderRow(row, parseDate)
+      if (dateFirst || isTitleRow(sheet.rows, r, parseDate)) {
+        const dateRow = dateFirst ? row : (sheet.rows[r + 1] ?? [])
+        const totalsRow = dateFirst ? (sheet.rows[r + 1] ?? []) : (sheet.rows[r + 2] ?? [])
+        const subjectRow = dateFirst ? (sheet.rows[r + 2] ?? []) : row
         const columns: WideColumn[] = []
-        for (let c = 3; c < row.length; c++) {
-          const date = looksLikeDate(row[c] ?? '') ? parseDate(row[c]) : null
+        const width = Math.max(row.length, dateRow.length)
+        for (let c = 3; c < width; c++) {
+          const date = looksLikeDate(dateRow[c] ?? '') ? parseDate(dateRow[c]) : null
           if (!date) continue
           columns.push({
             col: c,
@@ -125,7 +162,8 @@ export function parseWideSheets(sheets: WideGrid[], parseDate: (s: string) => st
             header: `${subjectRow[c] ?? ''} ${totalsRow[c] ?? ''}`.trim(),
           })
         }
-        current = { sheet: sheet.name, headerRow: r + 1, columns, students: [] }
+        const facultyCol = subjectRow.findIndex((t, i) => i >= 3 && /^faculty$/i.test((t ?? '').trim()))
+        current = { sheet: sheet.name, headerRow: r + 1, columns, facultyCol, students: [] }
         blocks.push(current)
         r += 2
         continue
@@ -135,7 +173,7 @@ export function parseWideSheets(sheets: WideGrid[], parseDate: (s: string) => st
       const name = (row[2] ?? '').trim()
       if (!gr && !name) continue
       if (/^name of student/i.test(name)) continue
-      current.students.push({ row: r + 1, gr, name, values: current.columns.map((c) => (row[c.col] ?? '').trim()) })
+      current.students.push({ row: r + 1, gr, name, values: current.columns.map((c) => (row[c.col] ?? '').trim()), faculty: current.facultyCol >= 0 ? (row[current.facultyCol] ?? '').trim() : '' })
     }
   }
   return blocks

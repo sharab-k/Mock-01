@@ -99,7 +99,17 @@ export function buildMatcher(students: MatchStudent[], opts: { grOnly?: boolean 
       const all = byKey.get(key) ?? []
       const scoped = all.filter(inScope)
       const exact = scoped.length > 0 ? scoped : all
-      if (exact.length === 0) return { ok: false, error: `G.R. "${gr}"${name ? ` (${name})` : ''} is not in the system — marks not saved.` }
+      if (exact.length === 0) {
+        // The school writes the letters of a G.R. differently in sheets and in the system (FA/FB/FC/FD/IC for the
+        // same child). Accept the same NUMBER only when the student's name also clearly agrees — shown as a warning.
+        const digits = digitsOf(gr)
+        const near = digits ? (byDigits.get(digits) ?? []).filter(inScope) : []
+        const ranked = name ? rank(near, name) : []
+        if (ranked[0] && isStrongAgreement(ranked[0]) && !(ranked[1] && ranked[1].hits >= ranked[0].hits)) {
+          return { ok: true, student: ranked[0].student, via: 'gr-number', ratio: ranked[0].ratio, hits: ranked[0].hits }
+        }
+        return { ok: false, error: `G.R. "${gr}"${name ? ` (${name})` : ''} is not in the system — marks not saved.` }
+      }
       if (exact.length > 1) {
         const ranked = rank(exact, name)
         if (name && isStrongAgreement(ranked[0]) && !(ranked[1] && ranked[1].hits >= ranked[0].hits)) {

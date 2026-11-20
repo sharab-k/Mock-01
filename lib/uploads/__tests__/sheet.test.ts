@@ -44,3 +44,30 @@ describe('header and id normalisation', () => {
     expect(pick({}, ['marks'])).toBe('')
   })
 })
+
+describe('readWorkbook: a file whose Excel "tables" the reader cannot parse', () => {
+  // The client's result sheet carries a table with no header row (Table_1, B46:B48), which the Excel reader crashes on.
+  async function fileWithHeaderlessTable(): Promise<File> {
+    const ExcelJS = (await import('exceljs')).default
+    const JSZip = (await import('jszip')).default
+    const wb = new ExcelJS.Workbook()
+    const ws = wb.addWorksheet('xi a')
+    ws.addRow(['Sr #', 'Gr #', 'Name of students'])
+    ws.addRow([1, 'FA 501', 'Javeria Shahzad'])
+    const zip = await JSZip.loadAsync(Buffer.from(await wb.xlsx.writeBuffer()))
+    zip.file('xl/tables/table1.xml', '<table id="1" name="Table_1" displayName="Table_1" ref="B2:B3" headerRowCount="0" xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><tableColumns count="1"><tableColumn id="1" name="Column1"/></tableColumns><tableStyleInfo name="xi a-style" showFirstColumn="1" showLastColumn="1" showRowStripes="1" showColumnStripes="0"/></table>')
+    zip.file('xl/worksheets/_rels/sheet1.xml.rels', '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/table" Target="/xl/tables/table1.xml" Id="rId1"/></Relationships>')
+    const sheetXml = await zip.file('xl/worksheets/sheet1.xml')!.async('string')
+    zip.file('xl/worksheets/sheet1.xml', sheetXml.replace('</worksheet>', '<tableParts count="1"><tablePart xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:id="rId1"/></tableParts></worksheet>'))
+    const ct = await zip.file('[Content_Types].xml')!.async('string')
+    zip.file('[Content_Types].xml', ct.replace('</Types>', '<Override PartName="/xl/tables/table1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.table+xml"/></Types>'))
+    return new File([new Uint8Array(await zip.generateAsync({ type: 'nodebuffer' }))], 'result.xlsx')
+  }
+
+  it('still reads every cell', async () => {
+    const { readWorkbook } = await import('../sheet')
+    const res = await readWorkbook(await fileWithHeaderlessTable())
+    expect(res.ok).toBe(true)
+    if (res.ok) expect(res.sheets[0].rows[1]).toEqual(['1', 'FA 501', 'Javeria Shahzad'])
+  })
+})

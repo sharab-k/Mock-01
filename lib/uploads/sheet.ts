@@ -1,5 +1,6 @@
 import 'server-only'
 import ExcelJS from 'exceljs'
+import JSZip from 'jszip'
 import { Readable } from 'node:stream'
 
 import { MAX_UPLOAD_BYTES, OLD_EXCEL_MESSAGE, UNREADABLE_MESSAGE, WRONG_TYPE_MESSAGE, tooLargeMessage } from './limits'
@@ -37,13 +38,20 @@ export async function readSheet(file: File): Promise<{ ok: true; rows: SheetRow[
   if (name.endsWith('.xls')) return { ok: false, error: OLD_EXCEL_MESSAGE }
   if (!isCsv && !name.endsWith('.xlsx')) return { ok: false, error: WRONG_TYPE_MESSAGE }
 
-  const workbook = new ExcelJS.Workbook()
+  let workbook = new ExcelJS.Workbook()
   try {
     const buffer = Buffer.from(await file.arrayBuffer())
     // `map` keeps every CSV cell as the text it was typed as. ExcelJS's default
     // would turn "2026-10-05" into a local-time Date (a day earlier in Karachi).
     if (isCsv) await workbook.csv.read(Readable.from(buffer), { map: (value: unknown) => (value === '' ? null : value), parserOptions: { delimiter: ',' } })
-    else await workbook.xlsx.load(buffer as unknown as ArrayBuffer)
+    else {
+      try {
+        await workbook.xlsx.load(buffer as unknown as ArrayBuffer)
+      } catch {
+        workbook = new ExcelJS.Workbook()
+        await workbook.xlsx.load((await withoutTables(buffer)) as unknown as ArrayBuffer)
+      }
+    }
   } catch {
     return { ok: false, error: UNREADABLE_MESSAGE }
   }
@@ -109,6 +117,21 @@ export const grKey = (raw: string): string => raw.toLowerCase().replace(/\s+/g, 
 
 export type Grid = { name: string; rows: string[][] }
 
+// Some programs write Excel "tables" (a named block of cells) in a form the reader cannot parse (for example a table
+// with no header row). The cells themselves are fine, so on failure the tables are removed from the file and it is
+// read again — only the table definitions are dropped, never any cell.
+async function withoutTables(buffer: Buffer): Promise<Buffer> {
+  const zip = await JSZip.loadAsync(buffer)
+  const rewrite = async (name: string, from: RegExp) => zip.file(name, (await zip.file(name)!.async('string')).replace(from, ''))
+  for (const name of Object.keys(zip.files)) {
+    if (/^xl\/tables\//.test(name)) zip.remove(name)
+    else if (/^xl\/worksheets\/sheet\d+\.xml$/.test(name)) await rewrite(name, /<tableParts[\s\S]*?<\/tableParts>/g)
+    else if (/^xl\/worksheets\/_rels\/sheet\d+\.xml\.rels$/.test(name)) await rewrite(name, /<Relationship [^>]*relationships\/table"[^>]*\/>/g)
+    else if (name === '[Content_Types].xml') await rewrite(name, /<Override [^>]*tables\/[^>]*\/>/g)
+  }
+  return zip.generateAsync({ type: 'nodebuffer' })
+}
+
 // Every worksheet of the file as a plain grid of trimmed text (rows[r][c],
 // zero-based). Used by the wide "one column per test" result sheets, where the
 // layout — header blocks, repeated tables, several sheets — matters more than
@@ -120,11 +143,19 @@ export async function readWorkbook(file: File): Promise<{ ok: true; sheets: Grid
   if (name.endsWith('.xls')) return { ok: false, error: OLD_EXCEL_MESSAGE }
   if (!isCsv && !name.endsWith('.xlsx')) return { ok: false, error: WRONG_TYPE_MESSAGE }
 
-  const workbook = new ExcelJS.Workbook()
+  let workbook = new ExcelJS.Workbook()
   try {
     const buffer = Buffer.from(await file.arrayBuffer())
     if (isCsv) await workbook.csv.read(Readable.from(buffer), { map: (value: unknown) => (value === '' ? null : value), parserOptions: { delimiter: ',' } })
-    else await workbook.xlsx.load(buffer as unknown as ArrayBuffer)
+    else {
+      try {
+        await workbook.xlsx.load(buffer as unknown as ArrayBuffer)
+      } catch {
+        // retry without the Excel "tables" (see withoutTables)
+        workbook = new ExcelJS.Workbook()
+        await workbook.xlsx.load((await withoutTables(buffer)) as unknown as ArrayBuffer)
+      }
+    }
   } catch {
     return { ok: false, error: UNREADABLE_MESSAGE }
   }

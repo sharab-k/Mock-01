@@ -4,7 +4,7 @@ import type { Database } from '@/types/supabase'
 import { saveMarksBatch, type BulkMarkRow } from '@/lib/marks/bulk-save'
 import { loadStudentLookup, resolveStudent } from '@/lib/uploads/students'
 import { gridToRows, parseDate, pick, readWorkbook, todayIso, type Grid } from '@/lib/uploads/sheet'
-import { parseCell, parseWideSheets, type WideBlock } from '@/lib/marks/wide-sheet'
+import { facultyFromSheet, parseCell, parseWideSheets, type WideBlock } from '@/lib/marks/wide-sheet'
 import { dateInMonth, monthOptionLabel } from '@/lib/reports/months'
 import { buildMatcher, gradesForSheet, type MatchStudent } from '@/lib/marks/student-match'
 import { EXAM_LABEL, type ExamType, type MarksUploadResult, type UploadRowError } from '@/lib/marks/upload-types'
@@ -127,6 +127,7 @@ async function planWide(supabase: SupabaseClient<Database>, blocks: WideBlock[],
   let noMark = 0
   const unknownAbbrs = new Set<string>()
   const warnedStudent = new Set<string>()
+  const warnedFaculty = new Set<string>()
 
   for (const block of blocks) {
     const where = `[${block.sheet}] `
@@ -152,6 +153,15 @@ async function planWide(supabase: SupabaseClient<Database>, blocks: WideBlock[],
         else if (m.ratio !== null && m.ratio < 0.5) warnings.push({ row: s.row, message: `${where}G.R. "${s.gr}" is ${st.fullName} in the system but "${s.name}" in the sheet — check it is the same student.` })
       }
 
+      // The sheet's own FACULTY column (when it has one) decides the shared columns (Maths/Biology, Chemistry/Computer);
+      // the student's faculty in the system is the fallback. A difference between the two is shown as a warning.
+      const sheetFaculty = s.faculty ? facultyFromSheet(s.faculty) : null
+      if (s.faculty && !sheetFaculty && !st.stream) warnings.push({ row: s.row, message: `${where}${st.fullName}: faculty "${s.faculty}" in the sheet is not one faculty and none is set in the system.` })
+      else if (sheetFaculty && st.stream && sheetFaculty !== st.stream && !warnedFaculty.has(st.id)) {
+        warnedFaculty.add(st.id)
+        warnings.push({ row: s.row, message: `${where}${st.fullName}: the sheet says faculty ${s.faculty} (${sheetFaculty}) but the system has ${st.stream}. The sheet's faculty was used for this upload.` })
+      }
+
       usable.forEach((col) => {
         const raw = s.values[block.columns.indexOf(col)]
         const cell = parseCell(raw)
@@ -159,7 +169,7 @@ async function planWide(supabase: SupabaseClient<Database>, blocks: WideBlock[],
         if (cell.kind === 'no-mark') { noMark++; return }
         if (cell.kind === 'error') { errors.push({ row: s.row, message: `${where}${st.fullName} · ${col.date} ${col.header}: ${cell.message}` }); return }
 
-        const chosen = chooseAlternative(col.alts, st)
+        const chosen = chooseAlternative(col.alts, { grade: st.grade, stream: sheetFaculty ?? st.stream })
         if (!chosen) { errors.push({ row: s.row, message: `${where}${st.fullName} · ${col.date} ${col.alts.join('/')}: cannot tell which subject this student takes (faculty: ${st.stream ?? 'not set'}). Set the student's faculty (Pre-Medical / Pre-Engineering / Computer Science) on their record, then upload again.` }); return }
         const subject = subjectNameFor(chosen, st.grade, subjects)
         if (!subject) { errors.push({ row: s.row, message: `${where}${st.fullName} · ${chosen} is not a subject of Grade ${st.grade}. Add it on the Subjects page, then upload again.` }); return }
